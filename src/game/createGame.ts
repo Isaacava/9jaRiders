@@ -61,6 +61,7 @@ class AbokiRaceScene extends Phaser.Scene {
   private controlGroup?: Phaser.GameObjects.Group;
   private laneMarkers: Phaser.GameObjects.Rectangle[] = [];
   private scenery: Phaser.GameObjects.Container[] = [];
+  private routeBackdrop?: Phaser.GameObjects.Image;
   private traffic: Phaser.GameObjects.Container[] = [];
   private items: Phaser.GameObjects.Container[] = [];
   private aiRiders: AIRider[] = [];
@@ -109,6 +110,16 @@ class AbokiRaceScene extends Phaser.Scene {
 
   constructor() {
     super("aboki-race");
+  }
+
+  preload() {
+    this.load.image("route-sky", "/assets/environments/route-lagos-sky.svg");
+    this.load.image("traffic-danfo", "/assets/traffic/danfo.svg");
+    this.load.image("traffic-keke", "/assets/traffic/keke.svg");
+    this.load.image("traffic-sedan", "/assets/traffic/sedan.svg");
+    this.load.image("route-shop", "/assets/props/shop.svg");
+    this.load.image("route-palm", "/assets/props/palm.svg");
+    this.load.image("route-barrier", "/assets/props/barrier.svg");
   }
 
   create() {
@@ -496,6 +507,12 @@ class AbokiRaceScene extends Phaser.Scene {
     const width = this.scale.width || 960;
     const height = this.scale.height || 540;
 
+    if (this.textures.exists("route-sky")) {
+      this.routeBackdrop = this.add.image(width / 2, height / 2, "route-sky");
+      this.routeBackdrop.setDepth(-25);
+      this.routeBackdrop.setDisplaySize(width, height);
+    }
+
     const horizon = this.add.rectangle(width / 2, height * 0.28, width, height * 0.58, 0x9fcfdf);
     horizon.setDepth(-20);
 
@@ -571,7 +588,16 @@ class AbokiRaceScene extends Phaser.Scene {
     templates.forEach((template, index) => {
       let object: Phaser.GameObjects.Container;
 
-      if (template.kind === "shop") object = createShop(template.color);
+      if (template.kind === "shop" && this.textures.exists("route-shop")) {
+        const image = this.add.image(0, 0, "route-shop").setDisplaySize(150, 120);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "palm" && this.textures.exists("route-palm")) {
+        const image = this.add.image(0, 0, "route-palm").setDisplaySize(95, 120);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "barrier" && this.textures.exists("route-barrier")) {
+        const image = this.add.image(0, 0, "route-barrier").setDisplaySize(125, 39);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "shop") object = createShop(template.color);
       else if (template.kind === "palm") object = createPalm();
       else if (template.kind === "stall") object = createMarketStall();
       else if (template.kind === "pole") object = createPole();
@@ -839,17 +865,25 @@ class AbokiRaceScene extends Phaser.Scene {
 
   private createTraffic() {
     const colors = COLORS.traffic;
+    const textureKeys = ["traffic-danfo", "traffic-keke", "traffic-sedan"];
 
     colors.forEach((color, index) => {
       const vehicle = this.add.container(0, 0);
-      const shell = this.add.rectangle(0, 0, 42, 70, color).setOrigin(0.5);
-      shell.setStrokeStyle(3, COLORS.ink);
 
-      const rear = this.add.rectangle(0, 25, 30, 7, 0x7b1f1f);
-      const window = this.add.rectangle(0, -14, 28, 20, 0x26343b);
-      window.setStrokeStyle(2, COLORS.ink);
+      if (this.textures.exists(textureKeys[index])) {
+        const image = this.add.image(0, 0, textureKeys[index]);
+        image.setDisplaySize(index === 0 ? 56 : 52, index === 0 ? 74 : 68);
+        vehicle.add(image);
+      } else {
+        const shell = this.add.rectangle(0, 0, 42, 70, color).setOrigin(0.5);
+        shell.setStrokeStyle(3, COLORS.ink);
 
-      vehicle.add([shell, rear, window]);
+        const rear = this.add.rectangle(0, 25, 30, 7, 0x7b1f1f);
+        const window = this.add.rectangle(0, -14, 28, 20, 0x26343b);
+        window.setStrokeStyle(2, COLORS.ink);
+
+        vehicle.add([shell, rear, window]);
+      }
       vehicle.setData("offset", index * 0.9);
       vehicle.setData("trafficSpeed", 0.65 + index * 0.08);
       this.traffic.push(vehicle);
@@ -1031,6 +1065,11 @@ class AbokiRaceScene extends Phaser.Scene {
     this.roadRight = this.roadLeft + this.roadWidth;
 
     this.road.clear();
+    if (this.routeBackdrop) {
+      this.routeBackdrop.setPosition(width / 2, height / 2);
+      this.routeBackdrop.setDisplaySize(width, height);
+    }
+
     const environmentChildren = this.children.list.filter(
       (child): child is Phaser.GameObjects.Rectangle =>
         child instanceof Phaser.GameObjects.Rectangle &&

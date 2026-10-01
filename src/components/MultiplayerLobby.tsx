@@ -52,7 +52,15 @@ export default function MultiplayerLobby() {
     };
   }, []);
 
-  useEffect(() => {\n    if (!state || !playerId) return;\n\n    if (state.status === "countdown" || state.status === "racing") {\n      router.push("/play?mode=multiplayer&room=" + encodeURIComponent(state.roomId) + "&player=" + encodeURIComponent(playerId));\n    }\n  }, [state, playerId, router]);\n\n  const displayName = name.trim().slice(0, 18) || "Rider";
+  useEffect(() => {
+    if (!state || !playerId) return;
+
+    if (state.status === "countdown" || state.status === "racing") {
+      router.push("/play?mode=multiplayer&room=" + encodeURIComponent(state.roomId) + "&player=" + encodeURIComponent(playerId));
+    }
+  }, [state, playerId, router]);
+
+  const displayName = name.trim().slice(0, 18) || "Rider";
 
   const create = () => {
     setError("");

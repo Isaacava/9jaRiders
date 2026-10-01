@@ -164,3 +164,27 @@ float, pulse, rotate, pickup, burst.
 
 ## Integration rule
 Gameplay must not depend on generated art being available. Phaser vector placeholders remain the fallback until each production asset exists.
+
+## Data usage and caching
+
+The game does **not** download the full asset library on every race.
+
+### Pack strategy
+
+- `core` is the small first-run race pack.
+- Route packs are loaded when a route is first selected and then kept in browser cache.
+- Extra rider and vehicle packs are optional.
+- Phaser runtime references stable asset paths; the browser cache prevents repeat downloads.
+- Multiplayer WebSocket traffic contains player/race state only. It never streams bike, rider, road or traffic artwork.
+
+### Target experience
+
+First visit downloads the minimum core pack. Later races reuse cached assets. A new route or cosmetic pack is downloaded once when first needed.
+
+### Source-to-runtime pipeline
+
+`licensed 3D source model → customize/livery → fixed camera render → optimized WebP/PNG → Phaser atlas → browser cache`
+
+Characters and Aboki Riders-specific identity art use original generated 2D assets.
+
+The exact final download size will be measured after the first production art pass; the size hints in `src/game/assetPacks.ts` are planning estimates only.

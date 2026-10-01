@@ -13,6 +13,11 @@
 - Added Render realtime-server skeleton using WebSockets.
 - Added MongoDB driver to the realtime server package.
 - Added `docs/GAME_DESIGN.md` as the current gameplay contract.
+- Added `assets.md` as the production asset bible and generation-script source of truth.
+- Added the runtime asset manifest contract at `src/game/assetManifest.ts`.
+- Added a real Render WebSocket room manager supporting 2–8 players and authoritative race simulation.
+- Added a multiplayer WebSocket client and a mobile-responsive room lobby at `/multiplayer`.
+- Added a home-screen link into the multiplayer lobby.
 
 ### Current playable prototype
 The browser now contains a playable solo VS Computer race foundation. It has steering, braking, minimal traffic, collisions, a 5 KM finish target, multiplier growth, near-miss bonuses, four collectible power-ups, responsive touch/keyboard controls, seven CPU riders, live race position, CPU lane changes, overtaking behavior, traffic reactions and CPU item usage.
@@ -26,10 +31,9 @@ The browser now contains a playable solo VS Computer race foundation. It has ste
 
 ### Not built yet
 - Production art integration from /assets/
-- 2–8 player rooms
-- WebSocket room state
-- Server-authoritative movement
-- Realtime interpolation
+- Phaser multiplayer rendering and client interpolation against the room state
+- Server-side item spawning/collision simulation
+- Player authentication/profile identity
 - MongoDB persistence
 - Garage
 - Leaderboards

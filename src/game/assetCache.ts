@@ -71,7 +71,20 @@ export async function cacheAssetPack(
     ? [...pack.preload, ...pack.optional]
     : pack.preload;
 
-  const cache = await caches.open(getPackCacheName(pack.id, pack.version));
+  const cacheName = getPackCacheName(pack.id, pack.version);
+  const cacheNames = await caches.keys();
+
+  await Promise.all(
+    cacheNames
+      .filter(
+        (name) =>
+          name.startsWith(`${CACHE_NAMESPACE}-${pack.id}-v`) &&
+          name !== cacheName
+      )
+      .map((name) => caches.delete(name))
+  );
+
+  const cache = await caches.open(cacheName);
   let cached = 0;
   let failed = 0;
 

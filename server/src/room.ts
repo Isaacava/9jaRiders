@@ -230,6 +230,14 @@ export class RoomManager {
     };
   }
 
+  listRoomIds() {
+    return [...this.rooms.keys()];
+  }
+
+  getRoom(roomId: string) {
+    return this.rooms.get(roomId.toUpperCase());
+  }
+
   broadcast(room: RaceRoom, message: unknown) {
     const encoded = JSON.stringify(message);
     for (const player of room.players.values()) {

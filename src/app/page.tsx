@@ -1,3 +1,4 @@
+import Link from "next/link";
 import GameCanvas from "@/components/GameCanvas";
 
 export default function Home() {
@@ -25,9 +26,9 @@ export default function Home() {
         </div>
 
         <div className="home-actions">
-          <button className="primary-action" type="button">
+          <Link className="primary-action" href="/play">
             OYÁ, RIDE!
-          </button>
+          </Link>
 
           <div className="secondary-actions">
             <button type="button">GARAGE</button>

@@ -33,6 +33,7 @@ The browser now contains a playable solo VS Computer race foundation. It has ste
 - Production art integration from /assets/
 - Phaser multiplayer rendering and client interpolation against the room state
 - Server-side item spawning/collision simulation
+- Production asset import and sprite/atlas replacement
 - Player authentication/profile identity
 - MongoDB persistence
 - Garage
@@ -48,7 +49,7 @@ Replace gameplay placeholders with the generated asset family while continuing t
 
 `start → steer → collect item → avoid traffic → race CPU riders → build multiplier → finish → result screen`
 
-Then connect the same race state to the Render multiplayer server.
+Then finish server-authoritative item/traffic simulation and replace the gameplay placeholders with the production asset packs.
 
 ### Verification note
 The repository changes were committed successfully. A local frontend build could not be run in this environment because outbound DNS access to GitHub is unavailable.

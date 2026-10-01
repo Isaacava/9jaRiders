@@ -8,8 +8,8 @@ const rooms = new RoomManager();
 
 type ClientMessage =
   | { type: "ping" }
-  | { type: "room:create"; name?: string }
-  | { type: "room:join"; roomId?: string; name?: string }
+  | { type: "room:create"; name?: string; loadout?: { bikeId?: string; riderId?: string } }
+  | { type: "room:join"; roomId?: string; name?: string; loadout?: { bikeId?: string; riderId?: string } }
   | { type: "room:ready"; roomId?: string; playerId?: string; ready?: boolean }
   | { type: "race:start"; roomId?: string; playerId?: string }
   | { type: "race:input"; roomId?: string; playerId?: string; input?: PlayerInput };
@@ -22,7 +22,7 @@ server.on("connection", (socket) => {
   send(socket, {
     type: "server:ready",
     game: "aboki-riders",
-    version: "0.2.0",
+    version: "0.3.0",
     maxPlayers: 8
   });
 
@@ -36,7 +36,7 @@ server.on("connection", (socket) => {
       }
 
       if (message.type === "room:create") {
-        const created = rooms.createRoom(socket, message.name ?? "Rider");
+        const created = rooms.createRoom(socket, message.name ?? "Rider", message.loadout);
         send(socket, {
           type: "room:created",
           roomId: created.roomId,
@@ -49,7 +49,7 @@ server.on("connection", (socket) => {
       if (message.type === "room:join") {
         if (!message.roomId) throw new Error("ROOM_ID_REQUIRED");
 
-        const joined = rooms.joinRoom(message.roomId, socket, message.name ?? "Rider");
+        const joined = rooms.joinRoom(message.roomId, socket, message.name ?? "Rider", message.loadout);
         send(socket, {
           type: "room:joined",
           roomId: joined.room.id,

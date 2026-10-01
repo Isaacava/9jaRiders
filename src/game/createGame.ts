@@ -60,6 +60,7 @@ class AbokiRaceScene extends Phaser.Scene {
   private resultGroup?: Phaser.GameObjects.Group;
   private controlGroup?: Phaser.GameObjects.Group;
   private laneMarkers: Phaser.GameObjects.Rectangle[] = [];
+  private scenery: Phaser.GameObjects.Container[] = [];
   private traffic: Phaser.GameObjects.Container[] = [];
   private items: Phaser.GameObjects.Container[] = [];
   private aiRiders: AIRider[] = [];
@@ -126,6 +127,7 @@ class AbokiRaceScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(COLORS.sky);
     this.createRoad();
+    this.createEnvironment();
     this.createRider();
     this.createAIRiders();
     this.createTraffic();
@@ -267,6 +269,18 @@ class AbokiRaceScene extends Phaser.Scene {
       marker.y += roadSpeed;
 
       if (marker.y > height + 60) marker.y = -60;
+    }
+
+    for (const prop of this.scenery) {
+      prop.y += roadSpeed * 0.84;
+
+      if (prop.y > height + 140) {
+        prop.y = -160 - Phaser.Math.Between(0, 260);
+        const side = (prop.getData("side") as number) || 1;
+        prop.x = side < 0
+          ? Phaser.Math.Between(12, Math.max(24, this.roadLeft - 24))
+          : Phaser.Math.Between(Math.min(width - 24, this.roadRight + 24), width - 12);
+      }
     }
 
     for (const vehicle of this.traffic) {
@@ -476,6 +490,103 @@ class AbokiRaceScene extends Phaser.Scene {
 
   private createRoad() {
     this.road = this.add.graphics();
+  }
+
+  private createEnvironment() {
+    const width = this.scale.width || 960;
+    const height = this.scale.height || 540;
+
+    const horizon = this.add.rectangle(width / 2, height * 0.28, width, height * 0.58, 0x9fcfdf);
+    horizon.setDepth(-20);
+
+    const ground = this.add.rectangle(width / 2, height * 0.67, width, height * 0.7, 0xb99a76);
+    ground.setDepth(-19);
+
+    const cloudA = this.add.ellipse(width * 0.17, height * 0.16, 120, 42, 0xffffff, 0.36);
+    const cloudB = this.add.ellipse(width * 0.78, height * 0.12, 150, 46, 0xffffff, 0.3);
+    cloudA.setDepth(-18);
+    cloudB.setDepth(-18);
+
+    const createShop = (color: number) => {
+      const body = this.add.rectangle(0, 0, 96, 64, color).setOrigin(0.5, 1);
+      body.setStrokeStyle(2, COLORS.ink);
+      const roof = this.add.rectangle(0, -68, 108, 10, 0x2a2522).setOrigin(0.5);
+      const awning = this.add.rectangle(0, -50, 88, 12, 0xe8d7ad).setOrigin(0.5);
+      const doorway = this.add.rectangle(-20, -24, 22, 38, 0x30444a).setOrigin(0.5);
+      const window = this.add.rectangle(22, -28, 28, 22, 0x6f9ca7).setOrigin(0.5);
+      const counter = this.add.rectangle(0, -4, 86, 7, 0x6a4430).setOrigin(0.5);
+      return this.add.container(0, 0, [body, roof, awning, doorway, window, counter]);
+    };
+
+    const createMarketStall = () => {
+      const canopy = this.add.triangle(0, -40, 0, 34, 62, 34, 31, 0, 0xf3c84f).setOrigin(0.5);
+      const postA = this.add.rectangle(-25, -12, 4, 40, 0x6c4e38);
+      const postB = this.add.rectangle(25, -12, 4, 40, 0x6c4e38);
+      const table = this.add.rectangle(0, 4, 62, 12, 0x6c4e38);
+      const crates = this.add.rectangle(0, 17, 44, 15, 0x9a6b40);
+      return this.add.container(0, 0, [canopy, postA, postB, table, crates]);
+    };
+
+    const createPalm = () => {
+      const trunk = this.add.rectangle(0, 0, 10, 100, 0x705238).setOrigin(0.5, 1);
+      trunk.angle = Phaser.Math.Between(-5, 5);
+      const crown = this.add.container(0, -100);
+      for (let i = 0; i < 7; i += 1) {
+        const leaf = this.add.ellipse(0, 0, 46, 12, 0x487744);
+        leaf.angle = i * 51 + 12;
+        leaf.x = Math.cos(Phaser.Math.DegToRad(leaf.angle)) * 20;
+        leaf.y = Math.sin(Phaser.Math.DegToRad(leaf.angle)) * 8;
+        crown.add(leaf);
+      }
+      return this.add.container(0, 0, [trunk, crown]);
+    };
+
+    const createPole = () => {
+      const pole = this.add.rectangle(0, 0, 8, 118, 0x5e5e58).setOrigin(0.5, 1);
+      const arm = this.add.rectangle(0, -110, 54, 5, 0x5e5e58);
+      const lamp = this.add.circle(25, -106, 7, 0xe9d58e);
+      return this.add.container(0, 0, [pole, arm, lamp]);
+    };
+
+    const createBarrier = () => {
+      const base = this.add.rectangle(0, 0, 86, 18, 0xb9b7ad);
+      const stripeA = this.add.rectangle(-22, 0, 26, 18, 0xe6d9c7);
+      const stripeB = this.add.rectangle(22, 0, 26, 18, 0xe6d9c7);
+      return this.add.container(0, 0, [base, stripeA, stripeB]);
+    };
+
+    const templates = [
+      { kind: "shop", side: -1, color: 0xd49e59 },
+      { kind: "palm", side: 1 },
+      { kind: "stall", side: -1 },
+      { kind: "pole", side: 1 },
+      { kind: "shop", side: 1, color: 0xb86f4f },
+      { kind: "barrier", side: -1 },
+      { kind: "palm", side: -1 },
+      { kind: "pole", side: 1 },
+      { kind: "stall", side: 1 },
+      { kind: "shop", side: -1, color: 0x8f9d62 }
+    ] as const;
+
+    templates.forEach((template, index) => {
+      let object: Phaser.GameObjects.Container;
+
+      if (template.kind === "shop") object = createShop(template.color);
+      else if (template.kind === "palm") object = createPalm();
+      else if (template.kind === "stall") object = createMarketStall();
+      else if (template.kind === "pole") object = createPole();
+      else object = createBarrier();
+
+      object.setDepth(-8);
+      object.setScale(template.kind === "palm" ? 0.68 : 0.82);
+      object.setData("side", template.side);
+      object.setData("kind", template.kind);
+      object.x = template.side < 0
+        ? Phaser.Math.Between(28, 140)
+        : Phaser.Math.Between(Math.max(width - 140, 0), width - 28);
+      object.y = height * (0.2 + (index / templates.length) * 0.75);
+      this.scenery.push(object);
+    });
   }
 
   private createRider() {
@@ -920,6 +1031,18 @@ class AbokiRaceScene extends Phaser.Scene {
     this.roadRight = this.roadLeft + this.roadWidth;
 
     this.road.clear();
+    const environmentChildren = this.children.list.filter(
+      (child): child is Phaser.GameObjects.Rectangle =>
+        child instanceof Phaser.GameObjects.Rectangle &&
+        child.depth <= -19
+    );
+    environmentChildren.forEach((child, index) => {
+      child.x = width / 2;
+      child.width = width;
+      if (index === 0) child.y = height * 0.28;
+      else if (index === 1) child.y = height * 0.67;
+    });
+
     this.road.fillStyle(COLORS.shoulder, 1);
     this.road.fillRect(0, 0, width, height);
 

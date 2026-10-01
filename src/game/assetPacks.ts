@@ -1,0 +1,106 @@
+export type AssetPackId = "core" | "route-lagos-01" | "route-expressway" | "route-market" | "route-night" | "route-rain" | "vehicles-extra" | "riders-extra";
+
+export type AssetPack = {
+  id: AssetPackId;
+  label: string;
+  version: number;
+  sizeHintMb: number;
+  preload: string[];
+  optional: string[];
+};
+
+export const ASSET_PACKS: AssetPack[] = [
+  {
+    id: "core",
+    label: "Core Race",
+    version: 1,
+    sizeHintMb: 8,
+    preload: [
+      "/assets/brand/app-icon.webp",
+      "/assets/bikes/hero.webp",
+      "/assets/riders/main.webp",
+      "/assets/traffic/danfo.webp",
+      "/assets/powerups/nitro.webp",
+      "/assets/powerups/shield.webp",
+      "/assets/powerups/surge.webp",
+      "/assets/powerups/mega.webp"
+    ],
+    optional: []
+  },
+  {
+    id: "route-lagos-01",
+    label: "Lagos Streets",
+    version: 1,
+    sizeHintMb: 7,
+    preload: [
+      "/assets/road/straight.webp",
+      "/assets/road/curve-left.webp",
+      "/assets/road/curve-right.webp"
+    ],
+    optional: [
+      "/assets/buildings/roadside-shop.webp",
+      "/assets/props/stall.webp",
+      "/assets/props/utility-pole.webp"
+    ]
+  },
+  {
+    id: "route-expressway",
+    label: "Expressway Rush",
+    version: 1,
+    sizeHintMb: 6,
+    preload: [
+      "/assets/road/bridge.webp",
+      "/assets/road/barrier.webp"
+    ],
+    optional: ["/assets/buildings/warehouse.webp"]
+  },
+  {
+    id: "route-market",
+    label: "Market Dash",
+    version: 1,
+    sizeHintMb: 6,
+    preload: ["/assets/road/intersection.webp"],
+    optional: ["/assets/props/umbrella.webp", "/assets/props/market-stall.webp"]
+  },
+  {
+    id: "route-night",
+    label: "Night Run",
+    version: 1,
+    sizeHintMb: 5,
+    preload: ["/assets/environments/night-sky.webp"],
+    optional: ["/assets/vfx/neon-glow.webp"]
+  },
+  {
+    id: "route-rain",
+    label: "Rain Rush",
+    version: 1,
+    sizeHintMb: 5,
+    preload: ["/assets/vfx/rain.webp", "/assets/vfx/road-splash.webp"],
+    optional: ["/assets/environments/rain-sky.webp"]
+  },
+  {
+    id: "vehicles-extra",
+    label: "Extra Vehicles",
+    version: 1,
+    sizeHintMb: 5,
+    preload: ["/assets/traffic/minibus.webp", "/assets/traffic/keke.webp", "/assets/traffic/sedan.webp"],
+    optional: ["/assets/traffic/suv.webp", "/assets/traffic/van.webp"]
+  },
+  {
+    id: "riders-extra",
+    label: "Extra Riders",
+    version: 1,
+    sizeHintMb: 4,
+    preload: [
+      "/assets/riders/cpu-01.webp",
+      "/assets/riders/cpu-02.webp",
+      "/assets/riders/cpu-03.webp"
+    ],
+    optional: [
+      "/assets/riders/cpu-04.webp",
+      "/assets/riders/cpu-05.webp",
+      "/assets/riders/cpu-06.webp",
+      "/assets/riders/cpu-07.webp"
+    ]
+  }
+];

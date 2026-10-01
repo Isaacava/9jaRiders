@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { RealtimeClient, type RealtimeState } from "@/game/multiplayer";
 
 export default function MultiplayerLobby() {
   const clientRef = useRef<RealtimeClient | null>(null);
+  const router = useRouter();
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [state, setState] = useState<RealtimeState | null>(null);
@@ -20,14 +22,6 @@ export default function MultiplayerLobby() {
     client.onState((next) => {
       setState(next);
       setHostId(next.hostId);
-      if (next.status === "countdown" || next.status === "racing") {
-        const currentPlayer = next.players.find((player) => player.id === playerId);
-        if (currentPlayer) {
-          window.dispatchEvent(new CustomEvent("aboki:racing", {
-            detail: { roomId: next.roomId, playerId: currentPlayer.id }
-          }));
-        }
-      }
     });
     client.onMessage((message) => {
       if (message.type === "server:ready") {
@@ -53,7 +47,7 @@ export default function MultiplayerLobby() {
     return () => client.disconnect();
   }, []);
 
-  const displayName = name.trim().slice(0, 18) || "Rider";
+  useEffect(() => {\n    if (!state || !playerId) return;\n\n    if (state.status === "countdown" || state.status === "racing") {\n      router.push("/play?mode=multiplayer&room=" + encodeURIComponent(state.roomId) + "&player=" + encodeURIComponent(playerId));\n    }\n  }, [state, playerId, router]);\n\n  const displayName = name.trim().slice(0, 18) || "Rider";
 
   const create = () => {
     setError("");

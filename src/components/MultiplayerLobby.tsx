@@ -17,7 +17,18 @@ export default function MultiplayerLobby() {
     const client = new RealtimeClient();
     clientRef.current = client;
 
-    client.onState((next) => {\n      setState(next);\n      setHostId(next.hostId);\n    });
+    client.onState((next) => {
+      setState(next);
+      setHostId(next.hostId);
+      if (next.status === "countdown" || next.status === "racing") {
+        const currentPlayer = next.players.find((player) => player.id === playerId);
+        if (currentPlayer) {
+          window.dispatchEvent(new CustomEvent("aboki:racing", {
+            detail: { roomId: next.roomId, playerId: currentPlayer.id }
+          }));
+        }
+      }
+    });
     client.onMessage((message) => {
       if (message.type === "server:ready") {
         setStatus("ONLINE");

@@ -274,6 +274,7 @@ class AbokiRaceScene extends Phaser.Scene {
 
   private updateWorld(dt: number) {
     const roadSpeed = this.speed * dt * 58;
+    const width = this.scale.width;
     const height = this.scale.height;
 
     for (const marker of this.laneMarkers) {

@@ -6,6 +6,8 @@ export type RealtimeState = {
   players: Array<{
     id: string;
     name: string;
+    bikeId: string;
+    riderId: string;
     ready: boolean;
     lane: number;
     speed: number;
@@ -74,12 +76,21 @@ export class RealtimeClient {
     };
   }
 
-  createRoom(name: string) {
-    this.send({ type: "room:create", name });
+  createRoom(name: string, loadout?: { bikeId: string; riderId: string }) {
+    this.send({ type: "room:create", name, loadout });
   }
 
-  joinRoom(roomId: string, name: string) {
-    this.send({ type: "room:join", roomId: roomId.trim().toUpperCase(), name });
+  joinRoom(
+    roomId: string,
+    name: string,
+    loadout?: { bikeId: string; riderId: string }
+  ) {
+    this.send({
+      type: "room:join",
+      roomId: roomId.trim().toUpperCase(),
+      name,
+      loadout
+    });
   }
 
   setReady(roomId: string, playerId: string, ready: boolean) {

@@ -200,3 +200,13 @@ For the first Lagos route, the source layer is intentionally separated from the 
 - **Sky/lighting reference:** Poly Haven assets are CC0; its sky assets can be used commercially. citeturn930999search0turn930999search1
 
 The game should keep a copy of the source URL and license in the repository even when the final runtime art is rendered/modified.
+
+## Production art pass — bike + rider family
+
+The first production-ready runtime art pass is now integrated.
+
+- Bike SVGs: `public/assets/bikes/starter.svg`, `speed.svg`, `heavy.svg`, `elite.svg`, `legendary.svg`.
+- Rider SVGs: `public/assets/riders/main.svg`, `ada.svg`, `kobby.svg`, `tobi.svg`.
+- Phaser loads these assets as the primary race visuals and keeps the existing vector geometry as a fallback.
+- Garage previews use the same runtime art files, keeping selection and race presentation visually consistent.
+- The SVGs are original lightweight vector artwork with transparent backgrounds; no external game artwork is embedded.

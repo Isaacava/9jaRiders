@@ -9,8 +9,6 @@ const BIKE_KEY = "aboki:bike";
 const RIDER_KEY = "aboki:rider";
 const DIFFICULTY_KEY = "aboki:difficulty";
 
-const hex = (value: number) => "#" + value.toString(16).padStart(6, "0");
-
 export default function Garage() {
   const [bike, setBike] = useState<BikeId>("starter");
   const [rider, setRider] = useState<RiderId>("main");

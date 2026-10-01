@@ -63,7 +63,7 @@ class AbokiPreviewScene extends Phaser.Scene {
     this.animateRider();
   }
 
-  private handleResize(size: Phaser.Structs.Size) {
+  private handleResize(size: { width: number; height: number }) {
     const width = Math.max(1, size.width);
     const height = Math.max(1, size.height);
 
@@ -251,7 +251,7 @@ class AbokiPreviewScene extends Phaser.Scene {
 
   private animateRider() {
     const bob = Math.sin(this.time / 110) * 1.5;
-    this.rider.y += bob * 0.02;
+    this.rider.y = this.scale.height * 0.82 + bob;
   }
 }
 

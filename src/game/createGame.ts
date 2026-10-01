@@ -124,6 +124,15 @@ class AbokiRaceScene extends Phaser.Scene {
     this.load.image("route-shop", "/assets/props/shop.svg");
     this.load.image("route-palm", "/assets/props/palm.svg");
     this.load.image("route-barrier", "/assets/props/barrier.svg");
+    this.load.image("bike-starter", "/assets/bikes/starter.svg");
+    this.load.image("bike-speed", "/assets/bikes/speed.svg");
+    this.load.image("bike-heavy", "/assets/bikes/heavy.svg");
+    this.load.image("bike-elite", "/assets/bikes/elite.svg");
+    this.load.image("bike-legendary", "/assets/bikes/legendary.svg");
+    this.load.image("rider-main", "/assets/riders/main.svg");
+    this.load.image("rider-ada", "/assets/riders/ada.svg");
+    this.load.image("rider-kobby", "/assets/riders/kobby.svg");
+    this.load.image("rider-tobi", "/assets/riders/tobi.svg");
   }
 
   create() {
@@ -637,49 +646,55 @@ class AbokiRaceScene extends Phaser.Scene {
     });
   }
 
+  private createRacerVisual(bikeKey: string, riderKey: string, scale = 1) {
+    const visual = this.add.container(0, 0);
+
+    if (this.textures.exists(bikeKey)) {
+      const bike = this.add.image(0, 28, bikeKey);
+      bike.setDisplaySize(112, 162);
+      visual.add(bike);
+    } else {
+      const wheelA = this.add.ellipse(-18, 38, 12, 28, COLORS.ink);
+      const wheelB = this.add.ellipse(18, 38, 12, 28, COLORS.ink);
+      const shell = this.add.rectangle(0, 18, 34, 52, this.selectedBike?.color ?? COLORS.bike).setStrokeStyle(3, COLORS.ink);
+      visual.add([wheelA, wheelB, shell]);
+    }
+
+    if (this.textures.exists(riderKey)) {
+      const rider = this.add.image(0, -34, riderKey);
+      rider.setDisplaySize(86, 120);
+      visual.add(rider);
+    } else {
+      const body = this.add.rectangle(0, -20, 36, 52, this.selectedRider?.color ?? COLORS.bikeLight).setStrokeStyle(3, COLORS.ink);
+      const helmet = this.add.circle(0, -54, 13, this.selectedRider?.color ?? COLORS.bikeLight).setStrokeStyle(3, COLORS.ink);
+      visual.add([body, helmet]);
+    }
+
+    visual.setScale(scale);
+    return visual;
+  }
+
   private createRider() {
-    const bikeColor = this.selectedBike?.color ?? COLORS.bike;
-    const riderColor = this.selectedRider?.color ?? COLORS.bikeLight;
+    const bikeKey = `bike-${this.selectedBike.id}`;
+    const riderKey = `rider-${this.selectedRider.id}`;
 
-    const body = this.add.rectangle(0, 2, 38, 52, riderColor).setOrigin(0.5);
-    body.setStrokeStyle(3, COLORS.ink);
-
-    const bikeShell = this.add.rectangle(0, 10, 26, 33, bikeColor).setOrigin(0.5);
-    bikeShell.setStrokeStyle(2, COLORS.ink);
-    const seat = this.add.rectangle(0, -1, 20, 23, 0x16191c);
-    const helmet = this.add.circle(0, -30, 12, riderColor);
-    helmet.setStrokeStyle(3, COLORS.ink);
-
-    const front = this.add.rectangle(0, -21, 4, 12, 0xf6c453);
-    const rear = this.add.rectangle(0, 28, 4, 8, 0xd95f4e);
-    const wheelA = this.add.ellipse(-11, 28, 9, 20, COLORS.ink);
-    const wheelB = this.add.ellipse(11, 28, 9, 20, COLORS.ink);
-
-    this.riderGlow = this.add.circle(0, 0, 0, COLORS.shield);
+    this.riderGlow = this.add.circle(0, 0, 66, COLORS.shield, 0.16);
     this.riderGlow.setVisible(false);
 
-    this.rider = this.add.container(0, 0, [
-      this.riderGlow,
-      wheelA,
-      wheelB,
-      body,
-      bikeShell,
-      seat,
-      helmet,
-      front,
-      rear
-    ]);
+    const visual = this.createRacerVisual(bikeKey, riderKey, 1);
+    this.rider = this.add.container(0, 0, [this.riderGlow, visual]);
+    this.rider.setDepth(9);
   }
 
   private createAIRiders() {
     const configs = [
-      { name: "Mazi", color: 0xe8b74b, lane: 0.25, skill: 0.9, aggression: 0.45 },
-      { name: "Kobby", color: 0xe45b4f, lane: 0.5, skill: 1.0, aggression: 0.62 },
-      { name: "Ada", color: 0x8d69e8, lane: 0.72, skill: 1.04, aggression: 0.7 },
-      { name: "Chike", color: 0x55b987, lane: 0.35, skill: 0.95, aggression: 0.55 },
-      { name: "Zee", color: 0x4c91dd, lane: 0.62, skill: 1.08, aggression: 0.76 },
-      { name: "Bayo", color: 0xf08a38, lane: 0.2, skill: 0.98, aggression: 0.58 },
-      { name: "Tobi", color: 0xc45b8f, lane: 0.78, skill: 1.02, aggression: 0.66 }
+      { name: "Mazi", rider: "rider-main", bike: "bike-speed", lane: 0.25, skill: 0.9, aggression: 0.45 },
+      { name: "Kobby", rider: "rider-kobby", bike: "bike-heavy", lane: 0.5, skill: 1.0, aggression: 0.62 },
+      { name: "Ada", rider: "rider-ada", bike: "bike-elite", lane: 0.72, skill: 1.04, aggression: 0.7 },
+      { name: "Tobi", rider: "rider-tobi", bike: "bike-starter", lane: 0.35, skill: 0.95, aggression: 0.55 },
+      { name: "Mazi", rider: "rider-main", bike: "bike-heavy", lane: 0.62, skill: 1.08, aggression: 0.76 },
+      { name: "Ada", rider: "rider-ada", bike: "bike-speed", lane: 0.2, skill: 0.98, aggression: 0.58 },
+      { name: "Kobby", rider: "rider-kobby", bike: "bike-legendary", lane: 0.78, skill: 1.02, aggression: 0.66 }
     ];
 
     const difficultyFactor =
@@ -687,15 +702,7 @@ class AbokiRaceScene extends Phaser.Scene {
       this.aiDifficulty === "hard" ? 1.08 : 1;
 
     configs.forEach((config, index) => {
-      const body = this.add.rectangle(0, 0, 31, 46, config.color).setOrigin(0.5);
-      body.setStrokeStyle(3, COLORS.ink);
-      const seat = this.add.rectangle(0, -1, 18, 20, 0x171a1d);
-      const helmet = this.add.circle(0, -25, 10, 0xf3ead6);
-      helmet.setStrokeStyle(3, COLORS.ink);
-      const headlight = this.add.rectangle(0, -18, 4, 9, 0xf6c453);
-      const wheelA = this.add.ellipse(-9, 22, 7, 17, COLORS.ink);
-      const wheelB = this.add.ellipse(9, 22, 7, 17, COLORS.ink);
-      const container = this.add.container(0, 0, [wheelA, wheelB, body, seat, helmet, headlight]);
+      const container = this.createRacerVisual(config.bike, config.rider, 0.72);
       container.setDepth(7);
 
       const skill = config.skill * difficultyFactor;
@@ -1335,7 +1342,8 @@ class AbokiRaceScene extends Phaser.Scene {
     const local = this.networkState.players.find((player) => player.id === this.networkPlayerId);
     if (!local) return;
 
-    const palette = [0xe8b74b, 0xe45b4f, 0x8d69e8, 0x55b987, 0x4c91dd, 0xf08a38, 0xc45b8f];
+    const riderKeys = ["rider-main", "rider-ada", "rider-kobby", "rider-tobi"];
+    const bikeKeys = ["bike-speed", "bike-heavy", "bike-elite", "bike-starter"];
 
     this.networkState.players
       .filter((player) => player.id !== this.networkPlayerId)
@@ -1343,13 +1351,11 @@ class AbokiRaceScene extends Phaser.Scene {
         let remote = this.remoteRiders.get(player.id);
 
         if (!remote) {
-          const body = this.add.rectangle(0, 0, 31, 46, palette[index % palette.length]).setOrigin(0.5);
-          body.setStrokeStyle(3, COLORS.ink);
-          const helmet = this.add.circle(0, -25, 10, 0xf3ead6);
-          helmet.setStrokeStyle(3, COLORS.ink);
-          const wheelA = this.add.ellipse(-9, 22, 7, 17, COLORS.ink);
-          const wheelB = this.add.ellipse(9, 22, 7, 17, COLORS.ink);
-          remote = this.add.container(0, 0, [wheelA, wheelB, body, helmet]);
+          remote = this.createRacerVisual(
+            bikeKeys[index % bikeKeys.length],
+            riderKeys[index % riderKeys.length],
+            0.72
+          );
           remote.setDepth(7);
           this.remoteRiders.set(player.id, remote);
         }

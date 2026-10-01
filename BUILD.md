@@ -15,7 +15,7 @@
 - Added `docs/GAME_DESIGN.md` as the current gameplay contract.
 
 ### Current prototype
-The browser currently renders a vertical road scene with a rider, sparse NPC traffic, moving lane markers and collectible item visuals.
+The browser now contains the first playable solo race slice. It has steering, braking, minimal traffic, collisions, a 5 KM finish target, multiplier growth, near-miss bonuses, four collectible power-ups and responsive touch/keyboard controls.
 
 ### Responsive work completed
 - Portrait mode uses a 9:16 game composition.
@@ -25,14 +25,10 @@ The browser currently renders a vertical road scene with a rider, sparse NPC tra
 - The road, rider, traffic and item positions recalculate when orientation changes.
 
 ### Not built yet
-- Real player input
 - 2–8 player rooms
 - WebSocket room state
 - Server-authoritative movement
 - Realtime interpolation
-- Collision system
-- Real item pickup/effects
-- Race countdown/finish logic
 - MongoDB persistence
 - Garage
 - Leaderboards

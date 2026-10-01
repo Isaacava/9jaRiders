@@ -14,8 +14,8 @@
 - Added MongoDB driver to the realtime server package.
 - Added `docs/GAME_DESIGN.md` as the current gameplay contract.
 
-### Current prototype
-The browser now contains the first playable solo race slice. It has steering, braking, minimal traffic, collisions, a 5 KM finish target, multiplier growth, near-miss bonuses, four collectible power-ups and responsive touch/keyboard controls.
+### Current playable prototype
+The browser now contains a playable solo VS Computer race foundation. It has steering, braking, minimal traffic, collisions, a 5 KM finish target, multiplier growth, near-miss bonuses, four collectible power-ups, responsive touch/keyboard controls, seven CPU riders, live race position, CPU lane changes, overtaking behavior, traffic reactions and CPU item usage.
 
 ### Responsive work completed
 - Portrait mode uses a 9:16 game composition.
@@ -25,6 +25,7 @@ The browser now contains the first playable solo race slice. It has steering, br
 - The road, rider, traffic and item positions recalculate when orientation changes.
 
 ### Not built yet
+- Production art integration from /assets/
 - 2–8 player rooms
 - WebSocket room state
 - Server-authoritative movement
@@ -39,9 +40,9 @@ The browser now contains the first playable solo race slice. It has steering, br
 
 ## Next milestone
 
-Build the first complete local race loop:
+Replace gameplay placeholders with the generated asset family while continuing the realtime architecture, then build the first 2–8 player room loop:
 
-`start → steer → collect item → avoid traffic → build multiplier → finish → result screen`
+`start → steer → collect item → avoid traffic → race CPU riders → build multiplier → finish → result screen`
 
 Then connect the same race state to the Render multiplayer server.
 

@@ -63,6 +63,8 @@ class AbokiRaceScene extends Phaser.Scene {
   private laneMarkers: Phaser.GameObjects.Rectangle[] = [];
   private scenery: Phaser.GameObjects.Container[] = [];
   private routeBackdrop?: Phaser.GameObjects.Image;
+  private routeSkyline?: Phaser.GameObjects.Image;
+  private roadTexture?: Phaser.GameObjects.Image;
   private traffic: Phaser.GameObjects.Container[] = [];
   private items: Phaser.GameObjects.Container[] = [];
   private aiRiders: AIRider[] = [];
@@ -118,12 +120,24 @@ class AbokiRaceScene extends Phaser.Scene {
 
   preload() {
     this.load.image("route-sky", "/assets/environments/route-lagos-sky.svg");
+    this.load.image("route-skyline", "/assets/environments/lagos-skyline.svg");
+    this.load.image("road-texture", "/assets/road/road-texture.svg");
     this.load.image("traffic-danfo", "/assets/traffic/danfo.svg");
     this.load.image("traffic-keke", "/assets/traffic/keke.svg");
     this.load.image("traffic-sedan", "/assets/traffic/sedan.svg");
     this.load.image("route-shop", "/assets/props/shop.svg");
     this.load.image("route-palm", "/assets/props/palm.svg");
     this.load.image("route-barrier", "/assets/props/barrier.svg");
+    this.load.image("route-sign", "/assets/props/route-sign.svg");
+    this.load.image("route-market", "/assets/props/market-stall.svg");
+    this.load.image("route-pole", "/assets/props/utility-pole.svg");
+    this.load.image("traffic-minibus", "/assets/traffic/minibus.svg");
+    this.load.image("traffic-suv", "/assets/traffic/suv.svg");
+    this.load.image("traffic-van", "/assets/traffic/van.svg");
+    this.load.image("powerup-nitro", "/assets/powerups/nitro.svg");
+    this.load.image("powerup-shield", "/assets/powerups/shield.svg");
+    this.load.image("powerup-surge", "/assets/powerups/surge.svg");
+    this.load.image("powerup-mega", "/assets/powerups/mega.svg");
     this.load.image("bike-starter", "/assets/bikes/starter.svg");
     this.load.image("bike-speed", "/assets/bikes/speed.svg");
     this.load.image("bike-heavy", "/assets/bikes/heavy.svg");
@@ -543,6 +557,20 @@ class AbokiRaceScene extends Phaser.Scene {
       this.routeBackdrop.setDepth(-25);
       this.routeBackdrop.setDisplaySize(width, height);
     }
+    if (this.textures.exists("route-skyline")) {
+      this.routeSkyline = this.add.image(width / 2, height * 0.39, "route-skyline");
+      this.routeSkyline.setDepth(-22);
+      this.routeSkyline.setDisplaySize(width, Math.max(150, height * 0.52));
+      this.routeSkyline.setAlpha(0.9);
+    }
+
+    if (this.textures.exists("road-texture")) {
+      this.roadTexture = this.add.image(width / 2, height / 2, "road-texture");
+      this.roadTexture.setDepth(-1);
+      this.roadTexture.setAlpha(0.82);
+      this.roadTexture.setDisplaySize(this.roadWidth, height);
+    }
+
 
     const horizon = this.add.rectangle(width / 2, height * 0.28, width, height * 0.58, 0x9fcfdf);
     horizon.setDepth(-20);
@@ -613,7 +641,11 @@ class AbokiRaceScene extends Phaser.Scene {
       { kind: "palm", side: -1 },
       { kind: "pole", side: 1 },
       { kind: "stall", side: 1 },
-      { kind: "shop", side: -1, color: 0x8f9d62 }
+      { kind: "shop", side: -1, color: 0x8f9d62 },
+      { kind: "sign", side: 1 },
+      { kind: "market", side: -1 },
+      { kind: "pole", side: -1 },
+      { kind: "sign", side: -1 }
     ] as const;
 
     templates.forEach((template, index) => {
@@ -627,6 +659,15 @@ class AbokiRaceScene extends Phaser.Scene {
         object = this.add.container(0, 0, [image]);
       } else if (template.kind === "barrier" && this.textures.exists("route-barrier")) {
         const image = this.add.image(0, 0, "route-barrier").setDisplaySize(125, 39);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "sign" && this.textures.exists("route-sign")) {
+        const image = this.add.image(0, 0, "route-sign").setDisplaySize(105, 78);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "market" && this.textures.exists("route-market")) {
+        const image = this.add.image(0, 0, "route-market").setDisplaySize(105, 91);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "pole" && this.textures.exists("route-pole")) {
+        const image = this.add.image(0, 0, "route-pole").setDisplaySize(56, 100);
         object = this.add.container(0, 0, [image]);
       } else if (template.kind === "shop") object = createShop(template.color);
       else if (template.kind === "palm") object = createPalm();
@@ -900,14 +941,17 @@ class AbokiRaceScene extends Phaser.Scene {
 
   private createTraffic() {
     const colors = COLORS.traffic;
-    const textureKeys = ["traffic-danfo", "traffic-keke", "traffic-sedan"];
+    const textureKeys = ["traffic-danfo", "traffic-keke", "traffic-sedan", "traffic-minibus", "traffic-suv", "traffic-van"];
 
-    colors.forEach((color, index) => {
+    const trafficColors = [0xe6bb31, 0x2f7b58, 0x6e7e88, 0xe0b12c, 0x294d63, 0xe7e1d6];
+    trafficColors.forEach((color, index) => {
       const vehicle = this.add.container(0, 0);
 
       if (this.textures.exists(textureKeys[index])) {
         const image = this.add.image(0, 0, textureKeys[index]);
-        image.setDisplaySize(index === 0 ? 56 : 52, index === 0 ? 74 : 68);
+        const widths = [58, 52, 58, 58, 62, 60];
+        const heights = [74, 68, 68, 72, 70, 72];
+        image.setDisplaySize(widths[index], heights[index]);
         vehicle.add(image);
       } else {
         const shell = this.add.rectangle(0, 0, 42, 70, color).setOrigin(0.5);
@@ -921,6 +965,7 @@ class AbokiRaceScene extends Phaser.Scene {
       }
       vehicle.setData("offset", index * 0.9);
       vehicle.setData("trafficSpeed", 0.65 + index * 0.08);
+      vehicle.setDepth(6);
       this.traffic.push(vehicle);
     });
   }
@@ -932,18 +977,22 @@ class AbokiRaceScene extends Phaser.Scene {
       const item = this.add.container(0, 0);
       const definition = POWER_UPS[type];
 
-      const glow = this.add.circle(0, 0, 21, definition.color, 0.15);
-      const ring = this.add.circle(0, 0, 13, definition.color, 0.92);
-      ring.setStrokeStyle(2, 0xf9f1dc);
-
-      const text = this.add.text(0, 0, definition.label, {
-        color: "#111417",
-        fontFamily: "Arial",
-        fontSize: type === "surge" ? "10px" : "12px",
-        fontStyle: "bold"
-      }).setOrigin(0.5);
-
-      item.add([glow, ring, text]);
+      const glow = this.add.circle(0, 0, 23, definition.color, 0.12);
+      if (this.textures.exists(`powerup-${type}`)) {
+        const image = this.add.image(0, 0, `powerup-${type}`);
+        image.setDisplaySize(46, 46);
+        item.add([glow, image]);
+      } else {
+        const ring = this.add.circle(0, 0, 13, definition.color, 0.92);
+        ring.setStrokeStyle(2, 0xf9f1dc);
+        const text = this.add.text(0, 0, definition.label, {
+          color: "#111417",
+          fontFamily: "Arial",
+          fontSize: type === "surge" ? "10px" : "12px",
+          fontStyle: "bold"
+        }).setOrigin(0.5);
+        item.add([glow, ring, text]);
+      }
       item.setData("type", type);
       this.items.push(item);
     });
@@ -1103,6 +1152,14 @@ class AbokiRaceScene extends Phaser.Scene {
     if (this.routeBackdrop) {
       this.routeBackdrop.setPosition(width / 2, height / 2);
       this.routeBackdrop.setDisplaySize(width, height);
+    }
+    if (this.routeSkyline) {
+      this.routeSkyline.setPosition(width / 2, height * 0.39);
+      this.routeSkyline.setDisplaySize(width, Math.max(150, height * 0.52));
+    }
+    if (this.roadTexture) {
+      this.roadTexture.setPosition(width / 2, height / 2);
+      this.roadTexture.setDisplaySize(this.roadWidth, height);
     }
 
     const environmentChildren = this.children.list.filter(

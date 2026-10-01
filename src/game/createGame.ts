@@ -117,6 +117,10 @@ class AbokiRaceScene extends Phaser.Scene {
     const steering = this.getSteering();
     const braking = this.getBraking();
 
+    if (this.keys.e?.isDown || this.keys.space?.isDown) {
+      this.activateItem();
+    }
+
     this.updatePlayer(dt, steering, braking);
     this.updateWorld(dt);
     this.updateItems(dt);

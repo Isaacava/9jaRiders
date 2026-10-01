@@ -19,10 +19,15 @@ class AbokiPreviewScene extends Phaser.Scene {
   private laneMarkers: Phaser.GameObjects.Rectangle[] = [];
   private traffic: Phaser.GameObjects.Container[] = [];
   private items: Phaser.GameObjects.Container[] = [];
+  private roadWidth = 340;
+  private roadLeft = 0;
+  private roadRight = 0;
   private speed = 0.56;
   private distance = 0;
   private multiplier = 1;
   private time = 0;
+  private lastWidth = 0;
+  private lastHeight = 0;
 
   constructor() {
     super("aboki-preview");
@@ -30,18 +35,27 @@ class AbokiPreviewScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(COLORS.sky);
-    this.createRoad();
-    this.createStreetDetails();
+    this.buildRoad();
     this.createRider();
     this.createTraffic();
     this.createItems();
+
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+    this.handleResize({
+      width: this.scale.width,
+      height: this.scale.height
+    } as Phaser.Structs.Size);
+  }
+
+  shutdown() {
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
   }
 
   update(_time: number, delta: number) {
     const dt = delta / 16.6667;
     this.time += delta;
     this.distance += this.speed * dt;
-    this.multiplier = Math.min(9.99, 1 + this.distance / 720);
+    this.multiplier = Math.min(99.99, 1 + this.distance / 720);
 
     this.moveRoad(dt);
     this.moveTraffic(dt);
@@ -49,40 +63,86 @@ class AbokiPreviewScene extends Phaser.Scene {
     this.animateRider();
   }
 
-  private createRoad() {
-    this.road = this.add.graphics();
+  private handleResize(size: Phaser.Structs.Size) {
+    const width = Math.max(1, size.width);
+    const height = Math.max(1, size.height);
 
-    this.road.fillStyle(COLORS.sand, 1);
-    this.road.fillRect(0, 0, 420, 760);
+    if (width === this.lastWidth && height === this.lastHeight) return;
 
-    this.road.fillStyle(COLORS.road, 1);
-    this.road.fillRect(70, 0, 280, 760);
+    this.lastWidth = width;
+    this.lastHeight = height;
 
-    this.road.fillStyle(COLORS.roadEdge, 1);
-    this.road.fillRect(70, 0, 10, 760);
-    this.road.fillRect(340, 0, 10, 760);
-
-    for (let y = -40; y < 800; y += 92) {
-      const marker = this.add.rectangle(210, y, 10, 52, COLORS.lane);
-      marker.setAlpha(0.9);
-      this.laneMarkers.push(marker);
-    }
+    this.layoutScene(width, height);
   }
 
-  private createStreetDetails() {
-    for (const y of [80, 260, 460, 650]) {
-      const sign = this.add.rectangle(40, y, 26, 38, 0x335c67);
-      sign.setStrokeStyle(2, 0xe8d6b5);
-      const pole = this.add.rectangle(40, y + 31, 5, 58, 0x7b6a55);
-      pole.setOrigin(0.5, 0);
+  private layoutScene(width: number, height: number) {
+    this.roadWidth = Math.min(width * 0.64, height * 0.7, 430);
+    this.roadLeft = (width - this.roadWidth) / 2;
+    this.roadRight = this.roadLeft + this.roadWidth;
+
+    this.road.clear();
+    this.road.fillStyle(COLORS.sand, 1);
+    this.road.fillRect(0, 0, width, height);
+
+    this.road.fillStyle(COLORS.road, 1);
+    this.road.fillRect(this.roadLeft, 0, this.roadWidth, height);
+
+    this.road.fillStyle(COLORS.roadEdge, 1);
+    this.road.fillRect(this.roadLeft, 0, 8, height);
+    this.road.fillRect(this.roadRight - 8, 0, 8, height);
+
+    const laneX = this.roadLeft + this.roadWidth / 2;
+    const markerHeight = Math.max(34, Math.min(70, height * 0.09));
+    const markerWidth = Math.max(7, Math.min(11, width * 0.012));
+
+    if (this.laneMarkers.length === 0) {
+      for (let y = -markerHeight; y < height + markerHeight; y += markerHeight * 1.75) {
+        const marker = this.add.rectangle(laneX, y, markerWidth, markerHeight, COLORS.lane);
+        marker.setAlpha(0.88);
+        this.laneMarkers.push(marker);
+      }
     }
 
-    for (const y of [140, 380, 600]) {
-      const shop = this.add.rectangle(380, y, 52, 78, 0xa76c48);
-      shop.setStrokeStyle(3, 0x593a2b);
-      const roof = this.add.rectangle(380, y - 46, 62, 16, 0x133f4a);
-      roof.setAngle(-2);
+    for (const marker of this.laneMarkers) {
+      marker.x = laneX;
+      marker.width = markerWidth;
+      marker.height = markerHeight;
     }
+
+    if (this.rider) {
+      this.rider.x = laneX;
+      this.rider.y = height * 0.82;
+      this.rider.setScale(Math.max(0.75, Math.min(1.2, width / 420)));
+    }
+
+    const trafficPositions = [
+      { lane: 0.25, progress: 0.23 },
+      { lane: 0.72, progress: 0.45 },
+      { lane: 0.36, progress: 0.68 }
+    ];
+
+    this.traffic.forEach((vehicle, index) => {
+      const setup = trafficPositions[index];
+      vehicle.x = this.roadLeft + this.roadWidth * setup.lane;
+      vehicle.y = height * setup.progress;
+      vehicle.setData("baseY", vehicle.y);
+    });
+
+    const itemPositions = [
+      { lane: 0.25, progress: 0.38 },
+      { lane: 0.72, progress: 0.58 },
+      { lane: 0.5, progress: 0.16 }
+    ];
+
+    this.items.forEach((item, index) => {
+      const setup = itemPositions[index];
+      item.x = this.roadLeft + this.roadWidth * setup.lane;
+      item.y = height * setup.progress;
+    });
+  }
+
+  private buildRoad() {
+    this.road = this.add.graphics();
   }
 
   private createRider() {
@@ -99,7 +159,7 @@ class AbokiPreviewScene extends Phaser.Scene {
     const wheelA = this.add.ellipse(-10, 25, 8, 18, 0x111417);
     const wheelB = this.add.ellipse(10, 25, 8, 18, 0x111417);
 
-    this.rider = this.add.container(210, 630, [
+    this.rider = this.add.container(0, 0, [
       wheelA,
       wheelB,
       body,
@@ -111,14 +171,10 @@ class AbokiPreviewScene extends Phaser.Scene {
   }
 
   private createTraffic() {
-    const placements = [
-      { x: 140, y: 170, color: 0xe66b58 },
-      { x: 275, y: 330, color: 0xe6dfcf },
-      { x: 125, y: 505, color: 0x4f7ea0 }
-    ];
+    const colors = [0xe66b58, 0xe6dfcf, 0x4f7ea0];
 
-    placements.forEach(({ x, y, color }, index) => {
-      const vehicle = this.add.container(x, y);
+    colors.forEach((color, index) => {
+      const vehicle = this.add.container(0, 0);
       const shell = this.add.rectangle(0, 0, 42, 70, color).setOrigin(0.5);
       shell.setStrokeStyle(3, 0x101316);
 
@@ -134,13 +190,13 @@ class AbokiPreviewScene extends Phaser.Scene {
 
   private createItems() {
     const definitions = [
-      { x: 135, y: 250, color: COLORS.itemNitro, label: "N" },
-      { x: 285, y: 420, color: COLORS.itemShield, label: "S" },
-      { x: 210, y: 95, color: COLORS.itemSurge, label: "×" }
+      { color: COLORS.itemNitro, label: "N" },
+      { color: COLORS.itemShield, label: "S" },
+      { color: COLORS.itemSurge, label: "×" }
     ];
 
-    definitions.forEach(({ x, y, color, label }) => {
-      const item = this.add.container(x, y);
+    definitions.forEach(({ color, label }) => {
+      const item = this.add.container(0, 0);
       const glow = this.add.circle(0, 0, 19, color, 0.15);
       const ring = this.add.circle(0, 0, 12, color, 0.9);
       ring.setStrokeStyle(2, 0xf9f1dc);
@@ -157,40 +213,45 @@ class AbokiPreviewScene extends Phaser.Scene {
   }
 
   private moveRoad(dt: number) {
+    const height = this.scale.height;
     for (const marker of this.laneMarkers) {
-      marker.y += this.speed * dt * 3;
+      marker.y += this.speed * dt * Math.max(2.4, height / 210);
 
-      if (marker.y > 800) {
-        marker.y = -40;
+      if (marker.y > height + 60) {
+        marker.y = -60;
       }
     }
   }
 
   private moveTraffic(dt: number) {
+    const height = this.scale.height;
+
     for (const vehicle of this.traffic) {
       const wobble = Math.sin((this.time / 380) + (vehicle.getData("offset") as number)) * 0.6;
-      vehicle.y += this.speed * dt * (2.2 + wobble);
+      vehicle.y += this.speed * dt * (2.2 + wobble) * Math.max(0.75, height / 760);
 
-      if (vehicle.y > 820) {
-        vehicle.y = -90;
+      if (vehicle.y > height + 90) {
+        vehicle.y = -100;
       }
     }
   }
 
   private moveItems(dt: number) {
+    const height = this.scale.height;
+
     for (const item of this.items) {
-      item.y += this.speed * dt * 2.15;
+      item.y += this.speed * dt * 2.15 * Math.max(0.75, height / 760);
       item.rotation += 0.006 * dt;
 
-      if (item.y > 820) {
-        item.y = -80;
+      if (item.y > height + 80) {
+        item.y = -90;
       }
     }
   }
 
   private animateRider() {
     const bob = Math.sin(this.time / 110) * 1.5;
-    this.rider.y = 630 + bob;
+    this.rider.y += bob * 0.02;
   }
 }
 
@@ -198,14 +259,12 @@ export function createGame(parent: HTMLElement) {
   return new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: 420,
-    height: 760,
     backgroundColor: "#8fc7e8",
     scale: {
-      mode: Phaser.Scale.FIT,
+      mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
-      width: 420,
-      height: 760
+      width: parent.clientWidth || 960,
+      height: parent.clientHeight || 540
     },
     scene: AbokiPreviewScene,
     render: {

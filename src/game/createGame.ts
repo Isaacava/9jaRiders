@@ -53,6 +53,7 @@ class AbokiRaceScene extends Phaser.Scene {
   private road!: Phaser.GameObjects.Graphics;
   private rider!: Phaser.GameObjects.Container;
   private riderGlow!: Phaser.GameObjects.Arc;
+  private boostFx!: Phaser.GameObjects.Container;
   private hudMultiplier!: Phaser.GameObjects.Text;
   private hudDistance!: Phaser.GameObjects.Text;
   private hudItem!: Phaser.GameObjects.Text;
@@ -224,6 +225,9 @@ class AbokiRaceScene extends Phaser.Scene {
     this.updateWorld(dt);
     this.updateItems(dt);
     this.updateTraffic(dt);
+
+    this.boostFx.setVisible(this.isBoosting());
+    this.boostFx.scale = 0.92 + Math.sin(this.elapsed / 70) * 0.08;
 
     if (this.mode === "solo") {
       this.updateAIOpponents(dt);
@@ -673,6 +677,7 @@ class AbokiRaceScene extends Phaser.Scene {
       else if (template.kind === "palm") object = createPalm();
       else if (template.kind === "stall") object = createMarketStall();
       else if (template.kind === "pole") object = createPole();
+      else if (template.kind === "market") object = createMarketStall();
       else object = createBarrier();
 
       object.setDepth(-8);
@@ -722,8 +727,15 @@ class AbokiRaceScene extends Phaser.Scene {
     this.riderGlow = this.add.circle(0, 0, 66, COLORS.shield, 0.16);
     this.riderGlow.setVisible(false);
 
+    this.boostFx = this.add.container(0, 0);
+    const flameA = this.add.triangle(-11, 104, 0, 0, 22, 0, 11, 54, COLORS.nitro, 0.88);
+    const flameB = this.add.triangle(11, 108, 0, 0, 18, 0, 9, 46, COLORS.mega, 0.82);
+    const flameC = this.add.triangle(0, 112, 0, 0, 14, 0, 7, 38, 0xffffff, 0.92);
+    this.boostFx.add([flameA, flameB, flameC]);
+    this.boostFx.setVisible(false);
+
     const visual = this.createRacerVisual(bikeKey, riderKey, 1);
-    this.rider = this.add.container(0, 0, [this.riderGlow, visual]);
+    this.rider = this.add.container(0, 0, [this.boostFx, this.riderGlow, visual]);
     this.rider.setDepth(9);
   }
 
@@ -940,7 +952,6 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 
   private createTraffic() {
-    const colors = COLORS.traffic;
     const textureKeys = ["traffic-danfo", "traffic-keke", "traffic-sedan", "traffic-minibus", "traffic-suv", "traffic-van"];
 
     const trafficColors = [0xe6bb31, 0x2f7b58, 0x6e7e88, 0xe0b12c, 0x294d63, 0xe7e1d6];

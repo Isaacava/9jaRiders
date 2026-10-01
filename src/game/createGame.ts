@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { RealtimeClient, type RealtimeState } from "./multiplayer";
 
 type PowerUp = "nitro" | "shield" | "surge" | "mega";
 
@@ -97,6 +98,13 @@ class AbokiRaceScene extends Phaser.Scene {
   private lastMissedTraffic = new Set<Phaser.GameObjects.Container>();
   private lastWidth = 0;
   private lastHeight = 0;
+  private mode: "solo" | "multiplayer" = "solo";
+  private networkRoomId = "";
+  private networkPlayerId = "";
+  private realtime?: RealtimeClient;
+  private networkState?: RealtimeState;
+  private lastNetworkInputAt = 0;
+  private remoteRiders = new Map<string, Phaser.GameObjects.Container>();
 
   constructor() {
     super("aboki-race");
@@ -111,6 +119,11 @@ class AbokiRaceScene extends Phaser.Scene {
     this.keys.d = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D) as Phaser.Input.Keyboard.Key;
     this.keys.s = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S) as Phaser.Input.Keyboard.Key;
 
+    const query = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    this.mode = query?.get("mode") === "multiplayer" ? "multiplayer" : "solo";
+    this.networkRoomId = query?.get("room") ?? "";
+    this.networkPlayerId = query?.get("player") ?? "";
+
     this.cameras.main.setBackgroundColor(COLORS.sky);
     this.createRoad();
     this.createRider();
@@ -123,17 +136,26 @@ class AbokiRaceScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.handleResize({ width: this.scale.width, height: this.scale.height });
 
-    this.startCountdown();
+    if (this.mode === "multiplayer") {
+      this.setupMultiplayer();
+    } else {
+      this.startCountdown();
+    }
   }
 
   shutdown() {
     this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.countdownTimer?.remove(false);
+    this.realtime?.disconnect();
   }
 
   update(_time: number, delta: number) {
     const dt = delta / 1000;
     this.elapsed += delta;
+
+    if (this.mode === "multiplayer") {
+      this.updateMultiplayer(dt);
+    }
 
     if (!this.raceStarted || this.finished) {
       this.animateRider();
@@ -143,7 +165,7 @@ class AbokiRaceScene extends Phaser.Scene {
     const steering = this.getSteering();
     const braking = this.getBraking();
 
-    if (this.keys.e?.isDown || this.keys.space?.isDown) {
+    if (this.mode === "solo" && (this.keys.e?.isDown || this.keys.space?.isDown)) {
       this.activateItem();
     }
 
@@ -151,12 +173,19 @@ class AbokiRaceScene extends Phaser.Scene {
     this.updateWorld(dt);
     this.updateItems(dt);
     this.updateTraffic(dt);
-    this.updateAIOpponents(dt);
-    this.checkAIPickups();
-    this.updateMultiplier(dt);
-    this.checkPickup();
-    this.checkTrafficCollisions();
-    this.updateRacePosition();
+
+    if (this.mode === "solo") {
+      this.updateAIOpponents(dt);
+      this.checkAIPickups();
+      this.updateMultiplier(dt);
+      this.checkPickup();
+      this.checkTrafficCollisions();
+      this.updateRacePosition();
+    } else {
+      this.syncLocalPlayerFromServer();
+      this.syncRemoteRiders();
+      this.sendNetworkInput(steering, braking);
+    }
     this.updateHud();
 
     if (this.distance >= this.goalDistance) {
@@ -676,6 +705,15 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 
   private getRacePosition() {
+    if (this.mode === "multiplayer" && this.networkState) {
+      const local = this.networkState.players.find((player) => player.id === this.networkPlayerId);
+      if (local) {
+        return 1 + this.networkState.players.filter(
+          (player) => player.id !== local.id && player.distance > local.distance
+        ).length;
+      }
+    }
+
     const ahead = this.aiRiders.filter((ai) => ai.distance > this.distance).length;
     return 1 + ahead;
   }
@@ -963,7 +1001,10 @@ class AbokiRaceScene extends Phaser.Scene {
   private updateHud() {
     this.hudMultiplier.setText(`${this.multiplier.toFixed(2)}×`);
     this.hudDistance.setText(`${Math.min(5, this.distance / 1000).toFixed(2)} / 5 KM`);
-    this.hudPosition.setText(`${this.getRacePosition()}/${this.aiRiders.length + 1}`);
+    const totalRacers = this.mode === "multiplayer"
+      ? (this.networkState?.players.length ?? 1)
+      : this.aiRiders.length + 1;
+    this.hudPosition.setText(`${this.getRacePosition()}/${totalRacers}`);
     this.riderGlow.setVisible(this.shieldActive);
 
     if (this.activeItem) {
@@ -996,6 +1037,139 @@ class AbokiRaceScene extends Phaser.Scene {
     });
   }
 
+  private setupMultiplayer() {
+    if (!this.networkRoomId || !this.networkPlayerId) {
+      this.showMessage("MULTIPLAYER SESSION IS MISSING");
+      return;
+    }
+
+    this.items.forEach((item) => item.setVisible(false));
+    this.hudItem.setText("ITEMS: SERVER SYNC NEXT");
+
+    this.realtime = new RealtimeClient();
+
+    this.realtime.onState((state) => {
+      this.networkState = state;
+
+      const local = state.players.find((player) => player.id === this.networkPlayerId);
+
+      if (state.status === "countdown") {
+        this.raceStarted = false;
+        const seconds = Math.max(1, Math.ceil((state.countdownMs ?? 3000) / 1000));
+        this.countdownText.setText(String(seconds));
+        this.countdownText.setVisible(true);
+      }
+
+      if (state.status === "racing") {
+        if (!this.raceStarted) {
+          this.raceStarted = true;
+          this.speed = local?.speed ?? this.baseSpeed;
+          this.showMessage("RACE LIVE");
+        }
+
+        this.countdownText.setText("GO!");
+        this.time.delayedCall(450, () => {
+          if (!this.finished) this.countdownText.setVisible(false);
+        });
+      }
+
+      if (local?.finishPosition && !this.finished) {
+        this.finishRace();
+      }
+    });
+
+    this.realtime.onMessage((message) => {
+      if (message.type === "error") {
+        this.showMessage(String(message.code ?? "NETWORK ERROR"));
+      }
+    });
+
+    void this.realtime.connect()
+      .then(() => this.showMessage("CONNECTED · WAITING FOR START"))
+      .catch(() => this.showMessage("NETWORK OFFLINE"));
+  }
+
+  private updateMultiplayer(dt: number) {
+    if (!this.networkState) return;
+
+    const local = this.networkState.players.find((player) => player.id === this.networkPlayerId);
+    if (!local) return;
+
+    if (this.networkState.status === "countdown") {
+      this.rider.y = this.scale.height * 0.82;
+      return;
+    }
+
+    if (this.networkState.status !== "racing") return;
+
+    this.distance = local.distance;
+    this.speed = local.speed;
+    this.multiplier = local.multiplier;
+
+    const targetX = this.roadLeft + this.roadWidth * local.lane;
+    this.rider.x = Phaser.Math.Linear(this.rider.x, targetX, Math.min(1, dt * 10));
+  }
+
+  private syncLocalPlayerFromServer() {
+    const local = this.networkState?.players.find((player) => player.id === this.networkPlayerId);
+    if (!local) return;
+
+    this.distance = local.distance;
+    this.speed = local.speed;
+    this.multiplier = local.multiplier;
+  }
+
+  private sendNetworkInput(steering: number, braking: boolean) {
+    if (!this.realtime || !this.networkRoomId || !this.networkPlayerId) return;
+
+    const now = performance.now();
+    if (now - this.lastNetworkInputAt < 50) return;
+
+    this.lastNetworkInputAt = now;
+
+    try {
+      this.realtime.sendInput(this.networkRoomId, this.networkPlayerId, {
+        steering,
+        braking,
+        useItem: Boolean(this.keys.e?.isDown || this.keys.space?.isDown || this.touchItem)
+      });
+    } catch {
+      // The socket can briefly be between reconnect states.
+    }
+  }
+
+  private syncRemoteRiders() {
+    if (!this.networkState) return;
+
+    const local = this.networkState.players.find((player) => player.id === this.networkPlayerId);
+    if (!local) return;
+
+    const palette = [0xe8b74b, 0xe45b4f, 0x8d69e8, 0x55b987, 0x4c91dd, 0xf08a38, 0xc45b8f];
+
+    this.networkState.players
+      .filter((player) => player.id !== this.networkPlayerId)
+      .forEach((player, index) => {
+        let remote = this.remoteRiders.get(player.id);
+
+        if (!remote) {
+          const body = this.add.rectangle(0, 0, 31, 46, palette[index % palette.length]).setOrigin(0.5);
+          body.setStrokeStyle(3, COLORS.ink);
+          const helmet = this.add.circle(0, -25, 10, 0xf3ead6);
+          helmet.setStrokeStyle(3, COLORS.ink);
+          const wheelA = this.add.ellipse(-9, 22, 7, 17, COLORS.ink);
+          const wheelB = this.add.ellipse(9, 22, 7, 17, COLORS.ink);
+          remote = this.add.container(0, 0, [wheelA, wheelB, body, helmet]);
+          remote.setDepth(7);
+          this.remoteRiders.set(player.id, remote);
+        }
+
+        remote.x = this.roadLeft + this.roadWidth * player.lane;
+        remote.y = this.rider.y - (player.distance - local.distance) * 1.9;
+        remote.angle = Phaser.Math.Clamp((0.5 - player.lane) * 18, -10, 10);
+        remote.setVisible(remote.y > -180 && remote.y < this.scale.height + 180);
+      });
+  }
+
   private respawnTraffic(vehicle: Phaser.GameObjects.Container) {
     vehicle.y = -100 - Phaser.Math.Between(0, 240);
     const lanes = [0.25, 0.5, 0.72];
@@ -1005,7 +1179,7 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 }
 
-export function createGame(parent: HTMLElement) {
+export function createGame(parent: HTMLElement, _options?: { mode?: "solo" | "multiplayer" }) {
   return new Phaser.Game({
     type: Phaser.AUTO,
     parent,

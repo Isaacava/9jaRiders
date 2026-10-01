@@ -140,6 +140,12 @@ class AbokiRaceScene extends Phaser.Scene {
     this.load.image("route-sign", getReadyAssetPath("AR-40-SIGN"));
     this.load.image("route-market", getReadyAssetPath("AR-41-MARKET"));
     this.load.image("route-pole", getReadyAssetPath("AR-43-POLE"));
+    this.load.image("route-fuel", getReadyAssetPath("AR-45-FUEL"));
+    this.load.image("route-workshop", getReadyAssetPath("AR-46-WORKSHOP"));
+    this.load.image("route-danfo-stop", getReadyAssetPath("AR-47-DANFO-STOP"));
+    this.load.image("route-billboard", getReadyAssetPath("AR-48-BILLBOARD"));
+    this.load.image("route-drainage", getReadyAssetPath("AR-49-DRAINAGE"));
+    this.load.image("route-wall", getReadyAssetPath("AR-50-WALL"));
     this.load.image("traffic-minibus", getReadyAssetPath("AR-22-MINIBUS"));
     this.load.image("traffic-suv", getReadyAssetPath("AR-25"));
     this.load.image("traffic-van", getReadyAssetPath("AR-26"));
@@ -156,6 +162,13 @@ class AbokiRaceScene extends Phaser.Scene {
     this.load.image("rider-ada", getReadyAssetPath("AR-06"));
     this.load.image("rider-kobby", getReadyAssetPath("AR-07"));
     this.load.image("rider-tobi", getReadyAssetPath("AR-08"));
+    this.load.image("rider-cpu-01", getReadyAssetPath("AR-09"));
+    this.load.image("rider-cpu-02", getReadyAssetPath("AR-10"));
+    this.load.image("rider-cpu-03", getReadyAssetPath("AR-11"));
+    this.load.image("rider-cpu-04", getReadyAssetPath("AR-12"));
+    this.load.image("rider-cpu-05", getReadyAssetPath("AR-13"));
+    this.load.image("rider-cpu-06", getReadyAssetPath("AR-14"));
+    this.load.image("rider-cpu-07", getReadyAssetPath("AR-15"));
   }
 
   create() {
@@ -660,6 +673,60 @@ class AbokiRaceScene extends Phaser.Scene {
       return this.add.container(0, 0, [base, stripeA, stripeB]);
     };
 
+    const createFuelStation = () => {
+      const building = this.add.rectangle(0, 0, 128, 66, 0xd7d0bf).setOrigin(0.5, 1);
+      building.setStrokeStyle(3, COLORS.ink);
+      const canopy = this.add.rectangle(0, -70, 144, 10, 0xe75d3f);
+      const window = this.add.rectangle(-28, -30, 42, 28, 0x20383d);
+      const pump = this.add.rectangle(38, -18, 14, 40, 0xf2c64f);
+      const sign = this.add.rectangle(0, -96, 54, 20, 0x31565a);
+      return this.add.container(0, 0, [building, canopy, window, pump, sign]);
+    };
+
+    const createWorkshop = () => {
+      const building = this.add.rectangle(0, 0, 128, 72, 0x8a6f58).setOrigin(0.5, 1);
+      building.setStrokeStyle(3, COLORS.ink);
+      const roof = this.add.rectangle(0, -78, 138, 11, 0x2e4e55);
+      const door = this.add.rectangle(-28, -35, 42, 58, 0x222a2e);
+      const sign = this.add.rectangle(24, -60, 58, 15, 0xd6b45a);
+      return this.add.container(0, 0, [building, roof, door, sign]);
+    };
+
+    const createDanfoStop = () => {
+      const roof = this.add.rectangle(0, -42, 118, 10, 0xfff3d4);
+      const body = this.add.rectangle(0, 6, 104, 48, 0xd9b63a);
+      body.setStrokeStyle(3, COLORS.ink);
+      const windowA = this.add.rectangle(-30, 2, 23, 17, 0x23343a);
+      const windowB = this.add.rectangle(0, 2, 23, 17, 0x23343a);
+      const windowC = this.add.rectangle(30, 2, 23, 17, 0x23343a);
+      const stripe = this.add.rectangle(0, 22, 74, 7, 0x8b201e);
+      return this.add.container(0, 0, [roof, body, windowA, windowB, windowC, stripe]);
+    };
+
+    const createBillboard = () => {
+      const board = this.add.rectangle(0, -22, 125, 58, 0x31565a);
+      board.setStrokeStyle(3, COLORS.ink);
+      const pole = this.add.rectangle(0, 38, 7, 74, 0x69706f);
+      return this.add.container(0, 0, [board, pole]);
+    };
+
+    const createDrainage = () => {
+      const slab = this.add.rectangle(0, 0, 115, 24, 0x8d877b);
+      slab.setStrokeStyle(2, COLORS.ink);
+      const lines = [];
+      for (let i = -45; i <= 45; i += 22) lines.push(this.add.rectangle(i, 0, 3, 20, 0x5a5652));
+      return this.add.container(0, 0, [slab, ...lines]);
+    };
+
+    const createWall = () => {
+      const wall = this.add.rectangle(0, 0, 145, 58, 0xa9a79d);
+      wall.setStrokeStyle(3, COLORS.ink);
+      const jointA = this.add.rectangle(-36, 0, 3, 58, 0x7d7b74);
+      const jointB = this.add.rectangle(10, 0, 3, 58, 0x7d7b74);
+      const jointC = this.add.rectangle(55, 0, 3, 58, 0x7d7b74);
+      return this.add.container(0, 0, [wall, jointA, jointB, jointC]);
+    };
+
     const templates = [
       { kind: "shop", side: -1, color: 0xd49e59 },
       { kind: "palm", side: 1 },
@@ -673,6 +740,12 @@ class AbokiRaceScene extends Phaser.Scene {
       { kind: "shop", side: -1, color: 0x8f9d62 },
       { kind: "sign", side: 1 },
       { kind: "market", side: -1 },
+      { kind: "fuel", side: 1 },
+      { kind: "workshop", side: -1 },
+      { kind: "danfo-stop", side: 1 },
+      { kind: "billboard", side: -1 },
+      { kind: "drainage", side: 1 },
+      { kind: "wall", side: -1 },
       { kind: "pole", side: -1 },
       { kind: "sign", side: -1 }
     ] as const;
@@ -698,11 +771,35 @@ class AbokiRaceScene extends Phaser.Scene {
       } else if (template.kind === "pole" && this.textures.exists("route-pole")) {
         const image = this.add.image(0, 0, "route-pole").setDisplaySize(56, 100);
         object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "fuel" && this.textures.exists("route-fuel")) {
+        const image = this.add.image(0, 0, "route-fuel").setDisplaySize(150, 110);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "workshop" && this.textures.exists("route-workshop")) {
+        const image = this.add.image(0, 0, "route-workshop").setDisplaySize(145, 110);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "danfo-stop" && this.textures.exists("route-danfo-stop")) {
+        const image = this.add.image(0, 0, "route-danfo-stop").setDisplaySize(125, 102);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "billboard" && this.textures.exists("route-billboard")) {
+        const image = this.add.image(0, 0, "route-billboard").setDisplaySize(120, 104);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "drainage" && this.textures.exists("route-drainage")) {
+        const image = this.add.image(0, 0, "route-drainage").setDisplaySize(130, 52);
+        object = this.add.container(0, 0, [image]);
+      } else if (template.kind === "wall" && this.textures.exists("route-wall")) {
+        const image = this.add.image(0, 0, "route-wall").setDisplaySize(150, 80);
+        object = this.add.container(0, 0, [image]);
       } else if (template.kind === "shop") object = createShop(template.color);
       else if (template.kind === "palm") object = createPalm();
       else if (template.kind === "stall") object = createMarketStall();
       else if (template.kind === "pole") object = createPole();
       else if (template.kind === "market") object = createMarketStall();
+      else if (template.kind === "fuel") object = createFuelStation();
+      else if (template.kind === "workshop") object = createWorkshop();
+      else if (template.kind === "danfo-stop") object = createDanfoStop();
+      else if (template.kind === "billboard") object = createBillboard();
+      else if (template.kind === "drainage") object = createDrainage();
+      else if (template.kind === "wall") object = createWall();
       else object = createBarrier();
 
       object.setDepth(-8);
@@ -768,13 +865,13 @@ class AbokiRaceScene extends Phaser.Scene {
 
   private createAIRiders() {
     const configs = [
-      { name: "Mazi", rider: "rider-main", bike: "bike-speed", lane: 0.25, skill: 0.9, aggression: 0.45 },
-      { name: "Kobby", rider: "rider-kobby", bike: "bike-heavy", lane: 0.5, skill: 1.0, aggression: 0.62 },
-      { name: "Ada", rider: "rider-ada", bike: "bike-elite", lane: 0.72, skill: 1.04, aggression: 0.7 },
-      { name: "Tobi", rider: "rider-tobi", bike: "bike-starter", lane: 0.35, skill: 0.95, aggression: 0.55 },
-      { name: "Mazi", rider: "rider-main", bike: "bike-heavy", lane: 0.62, skill: 1.08, aggression: 0.76 },
-      { name: "Ada", rider: "rider-ada", bike: "bike-speed", lane: 0.2, skill: 0.98, aggression: 0.58 },
-      { name: "Kobby", rider: "rider-kobby", bike: "bike-legendary", lane: 0.78, skill: 1.02, aggression: 0.66 }
+      { name: "Tega", rider: "rider-cpu-01", bike: "bike-speed", lane: 0.25, skill: 0.9, aggression: 0.45 },
+      { name: "Chidi", rider: "rider-cpu-02", bike: "bike-heavy", lane: 0.5, skill: 1.0, aggression: 0.62 },
+      { name: "Zina", rider: "rider-cpu-03", bike: "bike-elite", lane: 0.72, skill: 1.04, aggression: 0.7 },
+      { name: "Emeka", rider: "rider-cpu-04", bike: "bike-starter", lane: 0.35, skill: 0.95, aggression: 0.55 },
+      { name: "Bisi", rider: "rider-cpu-05", bike: "bike-heavy", lane: 0.62, skill: 1.08, aggression: 0.76 },
+      { name: "Femi", rider: "rider-cpu-06", bike: "bike-speed", lane: 0.2, skill: 0.98, aggression: 0.58 },
+      { name: "Yemi", rider: "rider-cpu-07", bike: "bike-legendary", lane: 0.78, skill: 1.02, aggression: 0.66 }
     ];
 
     const difficultyFactor =

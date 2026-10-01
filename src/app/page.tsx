@@ -32,7 +32,7 @@ export default function Home() {
 
           <div className="secondary-actions">
             <button type="button">GARAGE</button>
-            <button type="button">LEADERS</button>
+            <Link className="secondary-link" href="/multiplayer">MULTIPLAYER</Link>
           </div>
         </div>
 

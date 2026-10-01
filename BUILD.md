@@ -17,6 +17,13 @@
 ### Current prototype
 The browser currently renders a vertical road scene with a rider, sparse NPC traffic, moving lane markers and collectible item visuals.
 
+### Responsive work completed
+- Portrait mode uses a 9:16 game composition.
+- Landscape mode uses a 16:9 game composition.
+- Phaser now resizes its game viewport to the available screen.
+- Desktop/tablet layouts place the game beside compact controls when space allows.
+- The road, rider, traffic and item positions recalculate when orientation changes.
+
 ### Not built yet
 - Real player input
 - 2–8 player rooms
@@ -41,3 +48,6 @@ Build the first complete local race loop:
 `start → steer → collect item → avoid traffic → build multiplier → finish → result screen`
 
 Then connect the same race state to the Render multiplayer server.
+
+### Verification note
+The repository changes were committed successfully. A local frontend build could not be run in this environment because outbound DNS access to GitHub is unavailable.

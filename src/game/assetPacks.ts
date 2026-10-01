@@ -16,14 +16,13 @@ export const ASSET_PACKS: AssetPack[] = [
     version: 1,
     sizeHintMb: 8,
     preload: [
-      "/assets/brand/app-icon.webp",
-      "/assets/bikes/hero.webp",
-      "/assets/riders/main.webp",
-      "/assets/traffic/danfo.webp",
-      "/assets/powerups/nitro.webp",
-      "/assets/powerups/shield.webp",
-      "/assets/powerups/surge.webp",
-      "/assets/powerups/mega.webp"
+      "/assets/traffic/danfo.svg",
+      "/assets/traffic/keke.svg",
+      "/assets/traffic/sedan.svg",
+      "/assets/props/shop.svg",
+      "/assets/props/palm.svg",
+      "/assets/props/barrier.svg",
+      "/assets/environments/route-lagos-sky.svg"
     ],
     optional: []
   },
@@ -33,14 +32,12 @@ export const ASSET_PACKS: AssetPack[] = [
     version: 1,
     sizeHintMb: 7,
     preload: [
-      "/assets/road/straight.webp",
-      "/assets/road/curve-left.webp",
-      "/assets/road/curve-right.webp"
+      "/assets/environments/route-lagos-sky.svg"
     ],
     optional: [
-      "/assets/buildings/roadside-shop.webp",
-      "/assets/props/stall.webp",
-      "/assets/props/utility-pole.webp"
+      "/assets/props/shop.svg",
+      "/assets/props/palm.svg",
+      "/assets/props/barrier.svg"
     ]
   },
   {

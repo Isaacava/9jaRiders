@@ -1,10 +1,27 @@
+import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import type WebSocket from "ws";
 import { RoomManager, type PlayerInput } from "./room.js";
 
 const PORT = Number(process.env.PORT ?? 8080);
-const server = new WebSocketServer({ port: PORT });
 const rooms = new RoomManager();
+
+const httpServer = createServer((request, response) => {
+  if (request.url === "/health") {
+    response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({
+      ok: true,
+      service: "aboki-riders-server",
+      rooms: rooms.listRoomIds().length
+    }));
+    return;
+  }
+
+  response.writeHead(404);
+  response.end();
+});
+
+const server = new WebSocketServer({ server: httpServer });
 
 type ClientMessage =
   | { type: "ping" }
@@ -116,4 +133,6 @@ setInterval(() => {
   }
 }, 50);
 
-console.log(`Aboki Riders realtime server listening on :${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`Aboki Riders realtime server listening on :${PORT}`);
+});

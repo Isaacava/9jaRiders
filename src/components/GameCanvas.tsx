@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { createGame } from "../game/createGame";
 
 export default function GameCanvas() {
   const mountRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let game: Phaser.Game | undefined;
+    let game: ReturnType<typeof createGame> | undefined;
     let disposed = false;
 
-    void import("../game/createGame").then(({ createGame }) => {
+    void import("../game/createGame").then(({ createGame: startGame }) => {
       if (!mountRef.current || disposed) return;
-      game = createGame(mountRef.current);
+      game = startGame(mountRef.current);
     });
 
     return () => {

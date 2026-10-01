@@ -1636,8 +1636,8 @@ class AbokiRaceScene extends Phaser.Scene {
     const local = this.networkState.players.find((player) => player.id === this.networkPlayerId);
     if (!local) return;
 
-    const riderKeys = ["rider-main", "rider-ada", "rider-kobby", "rider-tobi"];
-    const bikeKeys = ["bike-speed", "bike-heavy", "bike-elite", "bike-starter"];
+    const fallbackRiderKeys = ["rider-cpu-01", "rider-cpu-02", "rider-cpu-03", "rider-cpu-04", "rider-cpu-05", "rider-cpu-06", "rider-cpu-07"];
+    const fallbackBikeKeys = ["bike-speed", "bike-heavy", "bike-elite", "bike-starter", "bike-legendary"];
 
     this.networkState.players
       .filter((player) => player.id !== this.networkPlayerId)
@@ -1645,9 +1645,12 @@ class AbokiRaceScene extends Phaser.Scene {
         let remote = this.remoteRiders.get(player.id);
 
         if (!remote) {
+          const riderKey = player.riderId ? `rider-${player.riderId}` : fallbackRiderKeys[index % fallbackRiderKeys.length];
+          const bikeKey = player.bikeId ? `bike-${player.bikeId}` : fallbackBikeKeys[index % fallbackBikeKeys.length];
+
           remote = this.createRacerVisual(
-            bikeKeys[index % bikeKeys.length],
-            riderKeys[index % riderKeys.length],
+            bikeKey,
+            riderKey,
             0.72
           );
           remote.setDepth(7);

@@ -40,5 +40,7 @@ export const ASSET_MANIFEST: AssetDefinition[] = [
   { id:"AR-41-MARKET", category:"props", path:"/assets/props/market-stall.svg", status:"ready" },
   { id:"AR-43-POLE", category:"props", path:"/assets/props/utility-pole.svg", status:"ready" },
   { id:"AR-ROUTE-SKYLINE", category:"environments", path:"/assets/environments/lagos-skyline.svg", status:"ready" },
-  { id:"AR-ROUTE-LAGOS-SKY", category:"environments", path:"/assets/environments/route-lagos-sky.svg", status:"prototype" }
+  { id:"AR-ROUTE-LAGOS-SKY", category:"environments", path:"/assets/environments/route-lagos-sky.svg", status:"prototype" },
+  { id:"AR-01-REAR3Q", category:"bikes", path:"/assets/bikes/hero-rear-3q.svg", status:"ready" },
+  { id:"AR-05-REAR", category:"riders", path:"/assets/riders/main-rear.svg", status:"ready" }
 ];

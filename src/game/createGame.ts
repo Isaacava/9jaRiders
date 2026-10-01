@@ -2,6 +2,28 @@ import Phaser from "phaser";
 
 type PowerUp = "nitro" | "shield" | "surge" | "mega";
 
+type AIDifficulty = "easy" | "normal" | "hard";
+
+type AIRider = {
+  id: number;
+  name: string;
+  lane: number;
+  laneTarget: number;
+  laneCooldown: number;
+  speed: number;
+  baseSpeed: number;
+  skill: number;
+  aggression: number;
+  distance: number;
+  container: Phaser.GameObjects.Container;
+  heldItem: PowerUp | null;
+  itemCooldown: number;
+  boostUntil: number;
+  shieldUntil: number;
+  mistakeUntil: number;
+  finished: boolean;
+};
+
 const COLORS = {
   sky: 0x8fc7e8,
   road: 0x2a2b2d,
@@ -39,6 +61,9 @@ class AbokiRaceScene extends Phaser.Scene {
   private laneMarkers: Phaser.GameObjects.Rectangle[] = [];
   private traffic: Phaser.GameObjects.Container[] = [];
   private items: Phaser.GameObjects.Container[] = [];
+  private aiRiders: AIRider[] = [];
+  private aiDifficulty: AIDifficulty = "normal";
+  private hudPosition!: Phaser.GameObjects.Text;
   private keyboard?: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys: Record<string, Phaser.Input.Keyboard.Key> = {};
   private touchLeft = false;
@@ -89,6 +114,7 @@ class AbokiRaceScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.sky);
     this.createRoad();
     this.createRider();
+    this.createAIRiders();
     this.createTraffic();
     this.createItems();
     this.createHud();
@@ -125,9 +151,12 @@ class AbokiRaceScene extends Phaser.Scene {
     this.updateWorld(dt);
     this.updateItems(dt);
     this.updateTraffic(dt);
+    this.updateAIOpponents(dt);
+    this.checkAIPickups();
     this.updateMultiplier(dt);
     this.checkPickup();
     this.checkTrafficCollisions();
+    this.updateRacePosition();
     this.updateHud();
 
     if (this.distance >= this.goalDistance) {
@@ -363,6 +392,7 @@ class AbokiRaceScene extends Phaser.Scene {
   private finishRace() {
     this.finished = true;
     this.speed = 0;
+    const finishingPosition = this.getRacePosition();
     this.countdownText.setVisible(false);
     this.hudMessage.setVisible(false);
 
@@ -391,7 +421,7 @@ class AbokiRaceScene extends Phaser.Scene {
       fontStyle: "bold"
     }).setOrigin(0.5);
 
-    const subtitle = this.add.text(0, 58, "SOLO RACE FOUNDATION · MULTIPLAYER NEXT", {
+    const subtitle = this.add.text(0, 58, `POSITION \${finishingPosition}/\${this.aiRiders.length + 1} · VS COMPUTER`, {
       color: "#ffffff",
       fontFamily: "Arial",
       fontSize: "11px",
@@ -445,6 +475,217 @@ class AbokiRaceScene extends Phaser.Scene {
       front,
       rear
     ]);
+  }
+
+  private createAIRiders() {
+    const configs = [
+      { name: "Mazi", color: 0xe8b74b, lane: 0.25, skill: 0.9, aggression: 0.45 },
+      { name: "Kobby", color: 0xe45b4f, lane: 0.5, skill: 1.0, aggression: 0.62 },
+      { name: "Ada", color: 0x8d69e8, lane: 0.72, skill: 1.04, aggression: 0.7 },
+      { name: "Chike", color: 0x55b987, lane: 0.35, skill: 0.95, aggression: 0.55 },
+      { name: "Zee", color: 0x4c91dd, lane: 0.62, skill: 1.08, aggression: 0.76 },
+      { name: "Bayo", color: 0xf08a38, lane: 0.2, skill: 0.98, aggression: 0.58 },
+      { name: "Tobi", color: 0xc45b8f, lane: 0.78, skill: 1.02, aggression: 0.66 }
+    ];
+
+    const difficultyFactor =
+      this.aiDifficulty === "easy" ? 0.9 :
+      this.aiDifficulty === "hard" ? 1.08 : 1;
+
+    configs.forEach((config, index) => {
+      const body = this.add.rectangle(0, 0, 31, 46, config.color).setOrigin(0.5);
+      body.setStrokeStyle(3, COLORS.ink);
+      const seat = this.add.rectangle(0, -1, 18, 20, 0x171a1d);
+      const helmet = this.add.circle(0, -25, 10, 0xf3ead6);
+      helmet.setStrokeStyle(3, COLORS.ink);
+      const headlight = this.add.rectangle(0, -18, 4, 9, 0xf6c453);
+      const wheelA = this.add.ellipse(-9, 22, 7, 17, COLORS.ink);
+      const wheelB = this.add.ellipse(9, 22, 7, 17, COLORS.ink);
+      const container = this.add.container(0, 0, [wheelA, wheelB, body, seat, helmet, headlight]);
+      container.setDepth(7);
+
+      const skill = config.skill * difficultyFactor;
+      const baseSpeed = this.baseSpeed * skill;
+
+      this.aiRiders.push({
+        id: index,
+        name: config.name,
+        lane: config.lane,
+        laneTarget: config.lane,
+        laneCooldown: performance.now() + Phaser.Math.Between(500, 1300),
+        speed: baseSpeed,
+        baseSpeed,
+        skill,
+        aggression: config.aggression,
+        distance: Phaser.Math.Between(-25, 30),
+        container,
+        heldItem: null,
+        itemCooldown: performance.now() + Phaser.Math.Between(900, 2200),
+        boostUntil: 0,
+        shieldUntil: 0,
+        mistakeUntil: 0,
+        finished: false
+      });
+    });
+  }
+
+  private updateAIOpponents(dt: number) {
+    const now = performance.now();
+
+    for (const ai of this.aiRiders) {
+      if (ai.finished) continue;
+
+      if (now >= ai.laneCooldown) {
+        ai.laneTarget = this.pickAILane(ai);
+        ai.laneCooldown = now + Phaser.Math.Between(700, 1800);
+      }
+
+      const laneDelta = ai.laneTarget - ai.lane;
+      ai.lane += laneDelta * Math.min(1, dt * (2.5 + ai.aggression * 2.2));
+
+      const nearbyTraffic = this.traffic.find((vehicle) =>
+        Math.abs(vehicle.y - ai.container.y) < 115 &&
+        Math.abs(vehicle.x - ai.container.x) < 44
+      );
+
+      if (nearbyTraffic) {
+        ai.laneTarget = this.pickAILane(ai, nearbyTraffic.x);
+        ai.laneCooldown = now + 500;
+      }
+
+      const nearbyRival = this.aiRiders.find((other) =>
+        other !== ai &&
+        !other.finished &&
+        other.distance > ai.distance &&
+        Math.abs(other.container.y - ai.container.y) < 75 &&
+        Math.abs(other.container.x - ai.container.x) < 43
+      );
+
+      if (nearbyRival) {
+        ai.laneTarget = this.pickAILane(ai, nearbyRival.container.x);
+      }
+
+      let targetSpeed = ai.baseSpeed;
+
+      if (now < ai.boostUntil) targetSpeed *= 1.18;
+      if (now < ai.mistakeUntil) {
+        targetSpeed *= 0.7;
+      } else if (Math.random() < dt * (0.018 + (1 - ai.skill) * 0.015)) {
+        ai.mistakeUntil = now + Phaser.Math.Between(180, 420);
+      }
+
+      if (ai.heldItem && now >= ai.itemCooldown && Math.random() < dt * 0.08) {
+        this.useAIItem(ai, now);
+      }
+
+      ai.speed = Phaser.Math.Linear(ai.speed, targetSpeed, Math.min(1, dt * 3.5));
+      ai.distance += ai.speed * dt * 9;
+
+      this.handleAITrafficCollision(ai, now);
+
+      if (ai.distance >= this.goalDistance) {
+        ai.finished = true;
+        ai.distance = this.goalDistance;
+        ai.container.alpha = 0.35;
+      }
+
+      ai.container.x = this.roadLeft + this.roadWidth * ai.lane;
+      ai.container.y = this.rider.y - (ai.distance - this.distance) * 1.9;
+      ai.container.angle = Phaser.Math.Clamp(laneDelta * -22, -12, 12);
+      ai.container.setVisible(
+        ai.container.y > -180 && ai.container.y < this.scale.height + 180
+      );
+    }
+  }
+
+  private pickAILane(ai: AIRider, blockedX?: number) {
+    const candidates = [0.22, 0.36, 0.5, 0.64, 0.78];
+
+    if (blockedX !== undefined) {
+      const safe = candidates.filter((lane) => {
+        const x = this.roadLeft + this.roadWidth * lane;
+        return Math.abs(x - blockedX) > 55;
+      });
+
+      if (safe.length) return Phaser.Utils.Array.GetRandom(safe);
+    }
+
+    const direction = Math.random() < 0.5 ? -1 : 1;
+    const step = direction * (Math.random() < ai.aggression ? 0.14 : 0.08);
+    return Phaser.Math.Clamp(ai.lane + step, 0.18, 0.82);
+  }
+
+  private handleAITrafficCollision(ai: AIRider, now: number) {
+    for (const vehicle of this.traffic) {
+      if (
+        Math.abs(vehicle.x - ai.container.x) > 39 ||
+        Math.abs(vehicle.y - ai.container.y) > 48
+      ) continue;
+
+      if (ai.shieldUntil > now) {
+        ai.shieldUntil = 0;
+        this.respawnTraffic(vehicle);
+        return;
+      }
+
+      ai.speed *= 0.66;
+      ai.mistakeUntil = now + 480;
+      ai.laneTarget = this.pickAILane(ai, vehicle.x);
+      this.respawnTraffic(vehicle);
+      return;
+    }
+  }
+
+  private checkAIPickups() {
+    const now = performance.now();
+
+    for (const ai of this.aiRiders) {
+      if (ai.finished) continue;
+
+      for (const item of this.items) {
+        if (!item.visible || ai.heldItem) continue;
+
+        if (Phaser.Math.Distance.Between(ai.container.x, ai.container.y, item.x, item.y) < 38) {
+          ai.heldItem = item.getData("type") as PowerUp;
+          item.setVisible(false);
+          this.itemRespawns.set(item, now + 5200 + Phaser.Math.Between(0, 1800));
+          break;
+        }
+      }
+
+      if (ai.heldItem && now >= ai.itemCooldown) {
+        const gapToPlayer = ai.distance - this.distance;
+        if (gapToPlayer > -120 || Math.random() < 0.025) {
+          this.useAIItem(ai, now);
+        }
+      }
+    }
+  }
+
+  private useAIItem(ai: AIRider, now: number) {
+    if (!ai.heldItem) return;
+
+    const item = ai.heldItem;
+    ai.heldItem = null;
+    ai.itemCooldown = now + Phaser.Math.Between(1600, 3000);
+
+    if (item === "nitro") ai.boostUntil = now + 1700;
+    else if (item === "mega") ai.boostUntil = now + 2600;
+    else if (item === "shield") ai.shieldUntil = now + 4500;
+    else if (item === "surge") ai.boostUntil = now + 1200;
+  }
+
+  private getRacePosition() {
+    const ahead = this.aiRiders.filter((ai) => ai.distance > this.distance).length;
+    return 1 + ahead;
+  }
+
+  private updateRacePosition() {
+    if (this.finished) return;
+
+    for (const ai of this.aiRiders) {
+      if (ai.distance >= this.goalDistance) ai.finished = true;
+    }
   }
 
   private createTraffic() {
@@ -508,6 +749,15 @@ class AbokiRaceScene extends Phaser.Scene {
       stroke: "#111417",
       strokeThickness: 3
     });
+
+    this.hudPosition = this.add.text(this.scale.width - 18, 52, "1/8", {
+      color: "#fffaf0",
+      backgroundColor: "#111417",
+      padding: { x: 8, y: 6 },
+      fontFamily: "Arial",
+      fontSize: "11px",
+      fontStyle: "bold"
+    }).setOrigin(1, 0);
 
     this.hudItem = this.add.text(this.scale.width - 18, 18, "ITEM: —", {
       color: "#fffaf0",
@@ -676,6 +926,11 @@ class AbokiRaceScene extends Phaser.Scene {
       vehicle.y = height * setup.progress;
     });
 
+    this.aiRiders.forEach((ai) => {
+      ai.container.x = this.roadLeft + this.roadWidth * ai.lane;
+      ai.container.y = this.rider.y - (ai.distance - this.distance) * 1.9;
+    });
+
     const itemPositions = [
       { lane: 0.25, progress: 0.35 },
       { lane: 0.72, progress: 0.57 },
@@ -690,6 +945,7 @@ class AbokiRaceScene extends Phaser.Scene {
     });
 
     this.hudItem.setPosition(width - 18, 18);
+    this.hudPosition.setPosition(width - 18, 52);
     this.hudMessage.setPosition(width / 2, 92);
     this.countdownText.setPosition(width / 2, height / 2);
     this.updateTouchControlLayout();
@@ -707,6 +963,7 @@ class AbokiRaceScene extends Phaser.Scene {
   private updateHud() {
     this.hudMultiplier.setText(`${this.multiplier.toFixed(2)}×`);
     this.hudDistance.setText(`${Math.min(5, this.distance / 1000).toFixed(2)} / 5 KM`);
+    this.hudPosition.setText(`${this.getRacePosition()}/${this.aiRiders.length + 1}`);
     this.riderGlow.setVisible(this.shieldActive);
 
     if (this.activeItem) {

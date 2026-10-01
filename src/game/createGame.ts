@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { getSharedRealtimeClient, type RealtimeState } from "./multiplayer";
+import { getBike, getRider, getDifficulty, type BikeDefinition, type RiderDefinition } from "./loadout";
 
 type PowerUp = "nitro" | "shield" | "surge" | "mega";
 
@@ -107,6 +108,9 @@ class AbokiRaceScene extends Phaser.Scene {
   private networkState?: RealtimeState;
   private lastNetworkInputAt = 0;
   private remoteRiders = new Map<string, Phaser.GameObjects.Container>();
+  private selectedBike!: BikeDefinition;
+  private selectedRider!: RiderDefinition;
+  private boostPower = 9.4;
 
   constructor() {
     super("aboki-race");
@@ -135,6 +139,17 @@ class AbokiRaceScene extends Phaser.Scene {
     this.mode = query?.get("mode") === "multiplayer" ? "multiplayer" : "solo";
     this.networkRoomId = query?.get("room") ?? "";
     this.networkPlayerId = query?.get("player") ?? "";
+    const storedBike = typeof window !== "undefined" ? window.localStorage.getItem("aboki:bike") : null;
+    const storedRider = typeof window !== "undefined" ? window.localStorage.getItem("aboki:rider") : null;
+    const requestedDifficulty = query?.get("difficulty");
+    const storedDifficulty = typeof window !== "undefined" ? window.localStorage.getItem("aboki:difficulty") : null;
+
+    this.selectedBike = getBike(storedBike);
+    this.selectedRider = getRider(storedRider);
+    this.aiDifficulty = getDifficulty(requestedDifficulty ?? storedDifficulty);
+    this.baseSpeed = 5.4 * (this.selectedBike.acceleration / 7.2);
+    this.maxSpeed = 9 * (this.selectedBike.topSpeed / 9.1);
+    this.steerSpeed = 300 + this.selectedBike.handling * 20;
 
     this.cameras.main.setBackgroundColor(COLORS.sky);
     this.createRoad();
@@ -258,7 +273,7 @@ class AbokiRaceScene extends Phaser.Scene {
     let targetSpeed = targetBaseSpeed;
 
     if (this.isBoosting()) {
-      targetSpeed = this.activeItem === "mega" ? 10.8 : 9.4;
+      targetSpeed = this.boostPower;
     }
 
     this.speed = Phaser.Math.Linear(this.speed, targetSpeed, Math.min(1, dt * 4));
@@ -418,11 +433,13 @@ class AbokiRaceScene extends Phaser.Scene {
 
     switch (item) {
       case "nitro":
+        this.boostPower = Math.min(this.maxSpeed + 2.1, 9.4);
         this.boostUntil = performance.now() + 2200;
         this.multiplier = Math.min(99.99, this.multiplier + 0.35);
         this.showMessage("NITRO!");
         break;
       case "mega":
+        this.boostPower = Math.min(this.maxSpeed + 2.8, 10.8);
         this.boostUntil = performance.now() + 3200;
         this.multiplier = Math.min(99.99, this.multiplier + 0.7);
         this.showMessage("MEGA BOOST!");
@@ -617,17 +634,22 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 
   private createRider() {
-    const body = this.add.rectangle(0, 0, 34, 50, COLORS.bike).setOrigin(0.5);
+    const bikeColor = this.selectedBike?.color ?? COLORS.bike;
+    const riderColor = this.selectedRider?.color ?? COLORS.bikeLight;
+
+    const body = this.add.rectangle(0, 2, 38, 52, riderColor).setOrigin(0.5);
     body.setStrokeStyle(3, COLORS.ink);
 
+    const bikeShell = this.add.rectangle(0, 10, 26, 33, bikeColor).setOrigin(0.5);
+    bikeShell.setStrokeStyle(2, COLORS.ink);
     const seat = this.add.rectangle(0, -1, 20, 23, 0x16191c);
-    const helmet = this.add.circle(0, -28, 11, COLORS.bikeLight);
+    const helmet = this.add.circle(0, -30, 12, riderColor);
     helmet.setStrokeStyle(3, COLORS.ink);
 
-    const front = this.add.rectangle(0, -20, 4, 12, 0xf6c453);
-    const rear = this.add.rectangle(0, 20, 4, 8, 0xd95f4e);
-    const wheelA = this.add.ellipse(-10, 25, 8, 18, COLORS.ink);
-    const wheelB = this.add.ellipse(10, 25, 8, 18, COLORS.ink);
+    const front = this.add.rectangle(0, -21, 4, 12, 0xf6c453);
+    const rear = this.add.rectangle(0, 28, 4, 8, 0xd95f4e);
+    const wheelA = this.add.ellipse(-11, 28, 9, 20, COLORS.ink);
+    const wheelB = this.add.ellipse(11, 28, 9, 20, COLORS.ink);
 
     this.riderGlow = this.add.circle(0, 0, 0, COLORS.shield);
     this.riderGlow.setVisible(false);
@@ -637,6 +659,7 @@ class AbokiRaceScene extends Phaser.Scene {
       wheelA,
       wheelB,
       body,
+      bikeShell,
       seat,
       helmet,
       front,
@@ -647,6 +670,7 @@ class AbokiRaceScene extends Phaser.Scene {
   private createAIRiders() {
     const configs = [
       { name: "Mazi", color: 0xe8b74b, lane: 0.25, skill: 0.9, aggression: 0.45 },
+      { name: "Lagos", color: 0x2d8b7f, lane: 0.44, skill: 0.96, aggression: 0.5 },
       { name: "Kobby", color: 0xe45b4f, lane: 0.5, skill: 1.0, aggression: 0.62 },
       { name: "Ada", color: 0x8d69e8, lane: 0.72, skill: 1.04, aggression: 0.7 },
       { name: "Chike", color: 0x55b987, lane: 0.35, skill: 0.95, aggression: 0.55 },

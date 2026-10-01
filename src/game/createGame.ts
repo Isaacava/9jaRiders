@@ -670,7 +670,6 @@ class AbokiRaceScene extends Phaser.Scene {
   private createAIRiders() {
     const configs = [
       { name: "Mazi", color: 0xe8b74b, lane: 0.25, skill: 0.9, aggression: 0.45 },
-      { name: "Lagos", color: 0x2d8b7f, lane: 0.44, skill: 0.96, aggression: 0.5 },
       { name: "Kobby", color: 0xe45b4f, lane: 0.5, skill: 1.0, aggression: 0.62 },
       { name: "Ada", color: 0x8d69e8, lane: 0.72, skill: 1.04, aggression: 0.7 },
       { name: "Chike", color: 0x55b987, lane: 0.35, skill: 0.95, aggression: 0.55 },

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { RealtimeClient, type RealtimeState } from "./multiplayer";
+import { getSharedRealtimeClient, type RealtimeState } from "./multiplayer";
 
 type PowerUp = "nitro" | "shield" | "surge" | "mega";
 
@@ -1046,7 +1046,7 @@ class AbokiRaceScene extends Phaser.Scene {
     this.items.forEach((item) => item.setVisible(false));
     this.hudItem.setText("ITEMS: SERVER SYNC NEXT");
 
-    this.realtime = new RealtimeClient();
+    this.realtime = getSharedRealtimeClient();
 
     this.realtime.onState((state) => {
       this.networkState = state;

@@ -210,3 +210,14 @@ The first production-ready runtime art pass is now integrated.
 - Phaser loads these assets as the primary race visuals and keeps the existing vector geometry as a fallback.
 - Garage previews use the same runtime art files, keeping selection and race presentation visually consistent.
 - The SVGs are original lightweight vector artwork with transparent backgrounds; no external game artwork is embedded.
+
+## Lagos world visual pass — route 01
+
+The first environment upgrade adds lightweight modular world assets alongside the original route kit.
+
+- **World backdrop:** `environments/lagos-skyline.svg` layered over the existing sky.
+- **Road:** `road/road-texture.svg` adds a subtle asphalt/grain layer while Phaser keeps the road geometry procedural.
+- **Roadside identity:** `props/route-sign.svg`, `market-stall.svg`, and `utility-pole.svg`.
+- **Traffic:** `traffic/minibus.svg`, `suv.svg`, and `van.svg` expand the sparse Lagos traffic family.
+- **Power-ups:** Nitro, Shield, Surge ×2 and Mega Boost now use dedicated SVG icons.
+- **Caching:** all current first-race art remains in the lightweight core pack; later route packs can add heavier environment variations without changing the race architecture.

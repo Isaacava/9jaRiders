@@ -1207,13 +1207,16 @@ class AbokiRaceScene extends Phaser.Scene {
     this.rider.setScale(Math.max(0.78, Math.min(1.18, Math.min(width / 420, height / 760))));
 
     const trafficPositions = [
-      { lane: 0.25, progress: 0.22 },
-      { lane: 0.72, progress: 0.43 },
-      { lane: 0.36, progress: 0.67 }
+      { lane: 0.18, progress: 0.18 },
+      { lane: 0.78, progress: 0.31 },
+      { lane: 0.36, progress: 0.44 },
+      { lane: 0.62, progress: 0.57 },
+      { lane: 0.26, progress: 0.69 },
+      { lane: 0.5, progress: 0.82 }
     ];
 
     this.traffic.forEach((vehicle, index) => {
-      const setup = trafficPositions[index];
+      const setup = trafficPositions[index % trafficPositions.length];
       vehicle.x = this.roadLeft + this.roadWidth * setup.lane;
       vehicle.y = height * setup.progress;
     });

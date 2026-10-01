@@ -8,11 +8,9 @@ const COLORS = {
   sand: 0xd2b184,
   bike: 0x0c7b72,
   bikeLight: 0xe8efe9,
-  traffic: 0xffb84d,
   itemNitro: 0x38bdf8,
   itemShield: 0x7c3aed,
-  itemSurge: 0xf97316,
-  text: 0xf6f2e9
+  itemSurge: 0xf97316
 };
 
 class AbokiPreviewScene extends Phaser.Scene {
@@ -44,6 +42,7 @@ class AbokiPreviewScene extends Phaser.Scene {
     this.time += delta;
     this.distance += this.speed * dt;
     this.multiplier = Math.min(9.99, 1 + this.distance / 720);
+
     this.moveRoad(dt);
     this.moveTraffic(dt);
     this.moveItems(dt);
@@ -63,9 +62,10 @@ class AbokiPreviewScene extends Phaser.Scene {
     this.road.fillRect(70, 0, 10, 760);
     this.road.fillRect(340, 0, 10, 760);
 
-    this.road.fillStyle(COLORS.lane, 0.9);
     for (let y = -40; y < 800; y += 92) {
-      this.road.fillRect(205, y, 10, 52);
+      const marker = this.add.rectangle(210, y, 10, 52, COLORS.lane);
+      marker.setAlpha(0.9);
+      this.laneMarkers.push(marker);
     }
   }
 
@@ -127,7 +127,6 @@ class AbokiPreviewScene extends Phaser.Scene {
       window.setStrokeStyle(2, 0x101316);
 
       vehicle.add([shell, rear, window]);
-      vehicle.setData("baseY", y);
       vehicle.setData("offset", index * 0.9);
       this.traffic.push(vehicle);
     });
@@ -153,7 +152,6 @@ class AbokiPreviewScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       item.add([glow, ring, text]);
-      item.setData("phase", y);
       this.items.push(item);
     });
   }
@@ -161,7 +159,10 @@ class AbokiPreviewScene extends Phaser.Scene {
   private moveRoad(dt: number) {
     for (const marker of this.laneMarkers) {
       marker.y += this.speed * dt * 3;
-      if (marker.y > 760) marker.y = -40;
+
+      if (marker.y > 800) {
+        marker.y = -40;
+      }
     }
   }
 
@@ -169,6 +170,7 @@ class AbokiPreviewScene extends Phaser.Scene {
     for (const vehicle of this.traffic) {
       const wobble = Math.sin((this.time / 380) + (vehicle.getData("offset") as number)) * 0.6;
       vehicle.y += this.speed * dt * (2.2 + wobble);
+
       if (vehicle.y > 820) {
         vehicle.y = -90;
       }
@@ -179,6 +181,7 @@ class AbokiPreviewScene extends Phaser.Scene {
     for (const item of this.items) {
       item.y += this.speed * dt * 2.15;
       item.rotation += 0.006 * dt;
+
       if (item.y > 820) {
         item.y = -80;
       }

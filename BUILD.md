@@ -30,13 +30,11 @@ The browser now contains a playable solo VS Computer race foundation. It has ste
 - The road, rider, traffic and item positions recalculate when orientation changes.
 
 ### Not built yet
-- Production art integration from /assets/
+- Production animation sheets and atlas packing
 - Phaser multiplayer rendering and client interpolation against the room state
 - Server-side item spawning/collision simulation
-- Production asset import and sprite/atlas replacement
-- Player authentication/profile identity
+- Production asset atlas optimization- Player authentication/profile identity
 - MongoDB persistence
-- Garage
 - Leaderboards
 - Authentication/profile system
 - Render deployment
@@ -45,7 +43,7 @@ The browser now contains a playable solo VS Computer race foundation. It has ste
 
 ## Next milestone
 
-Replace gameplay placeholders with the generated asset family while continuing the realtime architecture, then build the first 2–8 player room loop:
+Expand the generated asset family with animation sheets, route variants and VFX while continuing the realtime architecture, then build the first 2–8 player room loop:
 
 `start → steer → collect item → avoid traffic → race CPU riders → build multiplier → finish → result screen`
 

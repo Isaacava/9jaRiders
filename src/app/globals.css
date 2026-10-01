@@ -994,3 +994,70 @@ a {
 .mini-bike-image{width:100%;height:84px;object-fit:contain;filter:drop-shadow(0 5px 4px rgba(17,20,23,.16))}
 .rider-avatar{display:grid;place-items:center;background:linear-gradient(180deg,#15242a 0%,#0e171b 100%)}
 .rider-avatar-image{width:100%;height:112px;object-fit:contain}
+
+
+/* Cached race bootstrap */
+.game-canvas-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100svh;
+  overflow: hidden;
+  background: #111417;
+}
+
+.game-canvas-shell .game-canvas {
+  position: absolute;
+  inset: 0;
+  min-height: 100%;
+}
+
+.game-loading,
+.game-load-notice {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 20;
+  transform: translate(-50%, -50%);
+  width: min(88vw, 340px);
+  padding: 18px 20px;
+  border: 3px solid var(--ink);
+  background: #fffaf0;
+  color: var(--ink);
+  box-shadow: 7px 7px 0 var(--ink);
+  text-align: center;
+}
+
+.game-loading {
+  display: grid;
+  gap: 6px;
+}
+
+.game-loading strong {
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.game-loading span {
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.game-loading small {
+  margin-top: 4px;
+  font-size: 8px;
+  font-weight: 800;
+  opacity: 0.58;
+  letter-spacing: 0.08em;
+}
+
+.game-load-notice {
+  top: auto;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(92vw, 520px);
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 800;
+}

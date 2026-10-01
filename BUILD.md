@@ -30,10 +30,11 @@ The browser now contains a playable solo VS Computer race foundation. It has ste
 - The road, rider, traffic and item positions recalculate when orientation changes.
 
 ### Not built yet
-- Production animation sheets and atlas packing
+- Dedicated animation atlases and frame-by-frame polish
 - Phaser multiplayer rendering and client interpolation against the room state
 - Server-side item spawning/collision simulation
-- Production asset atlas optimization- Player authentication/profile identity
+- Production asset atlas optimization
+- Player authentication/profile identity
 - MongoDB persistence
 - Leaderboards
 - Authentication/profile system
@@ -43,7 +44,7 @@ The browser now contains a playable solo VS Computer race foundation. It has ste
 
 ## Next milestone
 
-Expand the generated asset family with animation sheets, route variants and VFX while continuing the realtime architecture, then build the first 2–8 player room loop:
+Expand the animation atlases with frame-by-frame variants, add route variants and VFX, then continue the realtime architecture and first 2–8 player room loop:
 
 `start → steer → collect item → avoid traffic → race CPU riders → build multiplier → finish → result screen`
 
@@ -57,3 +58,8 @@ The repository changes were committed successfully. A local frontend build could
 The race scene now uses a layered Lagos visual stack: sky, skyline silhouette, procedural shoulder/road geometry, asphalt texture, roadside shops/market/sign/pole props, six traffic vehicle variants, and dedicated power-up icons. Production bike/rider art and these route assets remain modular and cached through the core asset pack.
 
 The environment upgrade does not change race rules or network state. The existing placeholders remain safe fallbacks where an individual production texture is unavailable.
+
+
+## Visual milestone — racer motion
+
+The Phaser race scene now has a procedural player animation state system for idle, lean, brake, nitro, pickup, crash, airborne and finish states. CPU racers receive lightweight motion and lane-change lean. This keeps the current core pack small while leaving a clean path to sprite atlases later.

@@ -119,3 +119,16 @@ The realtime server continues to send race state only; artwork remains client-si
 
 ### Art pipeline direction
 The runtime still uses lightweight SVG assets for this pass so gameplay remains fast and cache-friendly. These files are the stable runtime targets that can later be replaced by rendered multi-angle 3D source outputs without changing loadout, race, or multiplayer state code.
+
+
+## 2026-10-02 — Multiplayer loadout sync
+
+### Completed
+- Room players now carry validated bike and rider IDs.
+- The lobby sends the current Garage loadout when creating or joining a room.
+- Room snapshots return bike/rider identities to every client.
+- Multiplayer Phaser rendering uses each remote player's synced loadout instead of cycling local placeholder identities.
+- Realtime server version advanced to 0.3.0.
+
+### Render verification
+The repository-side multiplayer changes are ready to deploy, but the connected Render account requires an explicit workspace selection before service/deploy inspection or mutation. The available workspace is My Workspace (tea-dafeo6tbedkc738utnmg).

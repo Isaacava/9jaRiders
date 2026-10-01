@@ -16,5 +16,12 @@ export const ASSET_MANIFEST: AssetDefinition[] = [
   { id:"AR-49", category:"powerups", path:"/assets/powerups/nitro.webp", status:"planned" },
   { id:"AR-50", category:"powerups", path:"/assets/powerups/shield.webp", status:"planned" },
   { id:"AR-51", category:"powerups", path:"/assets/powerups/surge.webp", status:"planned" },
-  { id:"AR-52", category:"powerups", path:"/assets/powerups/mega.webp", status:"planned" }
+  { id:"AR-52", category:"powerups", path:"/assets/powerups/mega.webp", status:"planned" },
+  { id:"AR-21-DANFO", category:"traffic", path:"/assets/traffic/danfo.svg", status:"prototype" },
+  { id:"AR-23-KEKE", category:"traffic", path:"/assets/traffic/keke.svg", status:"prototype" },
+  { id:"AR-24-SEDAN", category:"traffic", path:"/assets/traffic/sedan.svg", status:"prototype" },
+  { id:"AR-36-SHOP", category:"props", path:"/assets/props/shop.svg", status:"prototype" },
+  { id:"AR-42-PALM", category:"props", path:"/assets/props/palm.svg", status:"prototype" },
+  { id:"AR-44-BARRIER", category:"props", path:"/assets/props/barrier.svg", status:"prototype" },
+  { id:"AR-ROUTE-LAGOS-SKY", category:"environments", path:"/assets/environments/route-lagos-sky.svg", status:"prototype" }
 ];

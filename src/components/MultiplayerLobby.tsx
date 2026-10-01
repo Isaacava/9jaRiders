@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RealtimeClient, type RealtimeState } from "@/game/multiplayer";
+import { getSharedRealtimeClient, type RealtimeState } from "@/game/multiplayer";
 
 export default function MultiplayerLobby() {
-  const clientRef = useRef<RealtimeClient | null>(null);
+  const clientRef = useRef<ReturnType<typeof getSharedRealtimeClient> | null>(null);
+  const preserveConnectionRef = useRef(false);
   const router = useRouter();
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
@@ -16,12 +17,14 @@ export default function MultiplayerLobby() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const client = new RealtimeClient();
+    const client = getSharedRealtimeClient();
     clientRef.current = client;
 
     client.onState((next) => {
       setState(next);
       setHostId(next.hostId);
+      preserveConnectionRef.current =
+        next.status === "countdown" || next.status === "racing";
     });
     client.onMessage((message) => {
       if (message.type === "server:ready") {
@@ -44,7 +47,9 @@ export default function MultiplayerLobby() {
       setError("Realtime server is not reachable yet.");
     });
 
-    return () => client.disconnect();
+    return () => {
+      if (!preserveConnectionRef.current) client.disconnect();
+    };
   }, []);
 
   useEffect(() => {\n    if (!state || !playerId) return;\n\n    if (state.status === "countdown" || state.status === "racing") {\n      router.push("/play?mode=multiplayer&room=" + encodeURIComponent(state.roomId) + "&player=" + encodeURIComponent(playerId));\n    }\n  }, [state, playerId, router]);\n\n  const displayName = name.trim().slice(0, 18) || "Rider";

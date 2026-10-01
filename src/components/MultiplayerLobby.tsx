@@ -62,9 +62,14 @@ export default function MultiplayerLobby() {
 
   const displayName = name.trim().slice(0, 18) || "Rider";
 
+  const getLoadout = () => ({
+    bikeId: window.localStorage.getItem("aboki:bike") ?? "starter",
+    riderId: window.localStorage.getItem("aboki:rider") ?? "main"
+  });
+
   const create = () => {
     setError("");
-    clientRef.current?.createRoom(displayName);
+    clientRef.current?.createRoom(displayName, getLoadout());
   };
 
   const join = () => {
@@ -73,7 +78,7 @@ export default function MultiplayerLobby() {
       setError("Enter a room code.");
       return;
     }
-    clientRef.current?.joinRoom(roomCode, displayName);
+    clientRef.current?.joinRoom(roomCode, displayName, getLoadout());
   };
 
   const toggleReady = () => {

@@ -31,7 +31,7 @@ export default function Home() {
           </Link>
 
           <div className="secondary-actions">
-            <button type="button">GARAGE</button>
+            <Link className="secondary-link" href="/garage">GARAGE</Link>
             <Link className="secondary-link" href="/multiplayer">MULTIPLAYER</Link>
           </div>
         </div>

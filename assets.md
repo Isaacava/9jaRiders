@@ -221,3 +221,19 @@ The first environment upgrade adds lightweight modular world assets alongside th
 - **Traffic:** `traffic/minibus.svg`, `suv.svg`, and `van.svg` expand the sparse Lagos traffic family.
 - **Power-ups:** Nitro, Shield, Surge ×2 and Mega Boost now use dedicated SVG icons.
 - **Caching:** all current first-race art remains in the lightweight core pack; later route packs can add heavier environment variations without changing the race architecture.
+
+## Racer animation pass — runtime state system
+
+The first animation pass is implemented directly in Phaser so the core pack stays lightweight.
+
+Player states:
+- **Idle:** subtle suspension/bob.
+- **Lean:** steering-linked body/bike lean.
+- **Brake:** forward pitch and compressed suspension feel.
+- **Nitro:** tighter lean, vibration and existing exhaust flame VFX.
+- **Pickup:** short lift, scale pulse and snap-back.
+- **Crash:** impact roll followed by a brief airborne arc.
+- **Airborne:** jump arc with rotational recovery.
+- **Finish:** celebratory sway/bounce.
+
+CPU racers reuse the same production bike/rider visuals with lightweight motion/bob and lane-change lean. This is intentionally a procedural first pass; dedicated animation atlases can replace the transforms later without changing gameplay code.

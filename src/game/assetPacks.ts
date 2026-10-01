@@ -25,7 +25,7 @@ export const ASSET_PACKS: AssetPack[] = [
     kind: "core",
     label: "Core Race",
     version: 2,
-    sizeHintMb: 3,
+    sizeHintMb: 4,
     preload: [
       ...assets(
         "AR-01",
@@ -37,6 +37,13 @@ export const ASSET_PACKS: AssetPack[] = [
         "AR-06",
         "AR-07",
         "AR-08",
+        "AR-09",
+        "AR-10",
+        "AR-11",
+        "AR-12",
+        "AR-13",
+        "AR-14",
+        "AR-15",
         "AR-21-DANFO",
         "AR-22-MINIBUS",
         "AR-23-KEKE",
@@ -56,7 +63,7 @@ export const ASSET_PACKS: AssetPack[] = [
     kind: "route",
     label: "Lagos Streets",
     version: 2,
-    sizeHintMb: 1,
+    sizeHintMb: 2,
     preload: [
       ...assets(
         "AR-30",
@@ -66,6 +73,12 @@ export const ASSET_PACKS: AssetPack[] = [
         "AR-42-PALM",
         "AR-43-POLE",
         "AR-44-BARRIER",
+        "AR-45-FUEL",
+        "AR-46-WORKSHOP",
+        "AR-47-DANFO-STOP",
+        "AR-48-BILLBOARD",
+        "AR-49-DRAINAGE",
+        "AR-50-WALL",
         "AR-ROUTE-SKYLINE",
         "AR-ROUTE-LAGOS-SKY"
       )

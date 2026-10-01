@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BIKES, RIDERS, DIFFICULTIES, type BikeId, type RiderId, type Difficulty } from "@/game/loadout";
@@ -45,13 +46,23 @@ export default function Garage() {
         </header>
 
         <section className="loadout-hero">
-          <div className="garage-bike-art" aria-hidden="true">
+          <div className="garage-bike-art">
             <div className="garage-bike-shadow" />
-            <div className="garage-bike-wheel garage-wheel-left" />
-            <div className="garage-bike-wheel garage-wheel-right" />
-            <div className="garage-bike-body" style={{ background: hex(activeBike.color) }} />
-            <div className="garage-bike-rider" style={{ background: hex(activeRider.color) }} />
-            <div className="garage-bike-light" />
+            <Image
+              className="garage-bike-image"
+              src={`/assets/bikes/${activeBike.id}.svg`}
+              alt=""
+              width={220}
+              height={320}
+              priority
+            />
+            <Image
+              className="garage-bike-rider-image"
+              src={`/assets/riders/${activeRider.id}.svg`}
+              alt={activeRider.name}
+              width={180}
+              height={250}
+            />
           </div>
           <div className="loadout-copy">
             <span className="loadout-class">{activeBike.className}</span>
@@ -75,7 +86,9 @@ export default function Garage() {
           <div className="garage-grid">
             {BIKES.map((item) => (
               <button key={item.id} type="button" className={item.id === bike ? "garage-card garage-card--selected" : "garage-card"} onClick={() => selectBike(item.id)}>
-                <div className="mini-bike"><div className="mini-bike-wheel mini-bike-wheel-a" /><div className="mini-bike-wheel mini-bike-wheel-b" /><div className="mini-bike-shell" style={{ background: hex(item.color) }} /></div>
+                <div className="mini-bike">
+                  <Image className="mini-bike-image" src={`/assets/bikes/${item.id}.svg`} alt="" width={220} height={320} />
+                </div>
                 <span>{item.className}</span><strong>{item.name}</strong>
               </button>
             ))}
@@ -87,7 +100,9 @@ export default function Garage() {
           <div className="rider-grid">
             {RIDERS.map((item) => (
               <button key={item.id} type="button" className={item.id === rider ? "rider-card rider-card--selected" : "rider-card"} onClick={() => selectRider(item.id)}>
-                <div className="rider-avatar" style={{ background: hex(item.color) }}><div className="rider-helmet" /><div className="rider-jacket" /></div>
+                <div className="rider-avatar">
+                  <Image className="rider-avatar-image" src={`/assets/riders/${item.id}.svg`} alt={item.name} width={180} height={250} />
+                </div>
                 <div><span>{item.style}</span><strong>{item.name}</strong><small>{item.personality}</small></div>
               </button>
             ))}

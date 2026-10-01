@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { getSharedRealtimeClient, type RealtimeState } from "./multiplayer";
 import { getBike, getRider, getDifficulty, type BikeDefinition, type RiderDefinition } from "./loadout";
+import { getReadyAssetPath } from "./assetManifest";
 
 type PowerUp = "nitro" | "shield" | "surge" | "mega";
 
@@ -125,36 +126,36 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image("route-sky", "/assets/environments/route-lagos-sky.svg");
-    this.load.image("hero-bike-rear3q", "/assets/bikes/hero-rear-3q.svg");
-    this.load.image("hero-rider-rear", "/assets/riders/main-rear.svg");
-    this.load.image("route-skyline", "/assets/environments/lagos-skyline.svg");
-    this.load.image("road-texture", "/assets/road/road-texture.svg");
-    this.load.image("traffic-danfo", "/assets/traffic/danfo.svg");
-    this.load.image("traffic-keke", "/assets/traffic/keke.svg");
-    this.load.image("traffic-sedan", "/assets/traffic/sedan.svg");
-    this.load.image("route-shop", "/assets/props/shop.svg");
-    this.load.image("route-palm", "/assets/props/palm.svg");
-    this.load.image("route-barrier", "/assets/props/barrier.svg");
-    this.load.image("route-sign", "/assets/props/route-sign.svg");
-    this.load.image("route-market", "/assets/props/market-stall.svg");
-    this.load.image("route-pole", "/assets/props/utility-pole.svg");
-    this.load.image("traffic-minibus", "/assets/traffic/minibus.svg");
-    this.load.image("traffic-suv", "/assets/traffic/suv.svg");
-    this.load.image("traffic-van", "/assets/traffic/van.svg");
-    this.load.image("powerup-nitro", "/assets/powerups/nitro.svg");
-    this.load.image("powerup-shield", "/assets/powerups/shield.svg");
-    this.load.image("powerup-surge", "/assets/powerups/surge.svg");
-    this.load.image("powerup-mega", "/assets/powerups/mega.svg");
-    this.load.image("bike-starter", "/assets/bikes/starter.svg");
-    this.load.image("bike-speed", "/assets/bikes/speed.svg");
-    this.load.image("bike-heavy", "/assets/bikes/heavy.svg");
-    this.load.image("bike-elite", "/assets/bikes/elite.svg");
-    this.load.image("bike-legendary", "/assets/bikes/legendary.svg");
-    this.load.image("rider-main", "/assets/riders/main.svg");
-    this.load.image("rider-ada", "/assets/riders/ada.svg");
-    this.load.image("rider-kobby", "/assets/riders/kobby.svg");
-    this.load.image("rider-tobi", "/assets/riders/tobi.svg");
+    this.load.image("route-sky", getReadyAssetPath("AR-ROUTE-LAGOS-SKY"));
+    this.load.image("hero-bike-rear3q", getReadyAssetPath("AR-01-REAR3Q"));
+    this.load.image("hero-rider-rear", getReadyAssetPath("AR-05-REAR"));
+    this.load.image("route-skyline", getReadyAssetPath("AR-ROUTE-SKYLINE"));
+    this.load.image("road-texture", getReadyAssetPath("AR-30"));
+    this.load.image("traffic-danfo", getReadyAssetPath("AR-21-DANFO"));
+    this.load.image("traffic-keke", getReadyAssetPath("AR-23-KEKE"));
+    this.load.image("traffic-sedan", getReadyAssetPath("AR-24-SEDAN"));
+    this.load.image("route-shop", getReadyAssetPath("AR-36-SHOP"));
+    this.load.image("route-palm", getReadyAssetPath("AR-42-PALM"));
+    this.load.image("route-barrier", getReadyAssetPath("AR-44-BARRIER"));
+    this.load.image("route-sign", getReadyAssetPath("AR-40-SIGN"));
+    this.load.image("route-market", getReadyAssetPath("AR-41-MARKET"));
+    this.load.image("route-pole", getReadyAssetPath("AR-43-POLE"));
+    this.load.image("traffic-minibus", getReadyAssetPath("AR-22-MINIBUS"));
+    this.load.image("traffic-suv", getReadyAssetPath("AR-25"));
+    this.load.image("traffic-van", getReadyAssetPath("AR-26"));
+    this.load.image("powerup-nitro", getReadyAssetPath("AR-49"));
+    this.load.image("powerup-shield", getReadyAssetPath("AR-50"));
+    this.load.image("powerup-surge", getReadyAssetPath("AR-51"));
+    this.load.image("powerup-mega", getReadyAssetPath("AR-52"));
+    this.load.image("bike-starter", getReadyAssetPath("AR-01"));
+    this.load.image("bike-speed", getReadyAssetPath("AR-02"));
+    this.load.image("bike-heavy", getReadyAssetPath("AR-03"));
+    this.load.image("bike-elite", getReadyAssetPath("AR-04"));
+    this.load.image("bike-legendary", getReadyAssetPath("AR-05-BIKE"));
+    this.load.image("rider-main", getReadyAssetPath("AR-05"));
+    this.load.image("rider-ada", getReadyAssetPath("AR-06"));
+    this.load.image("rider-kobby", getReadyAssetPath("AR-07"));
+    this.load.image("rider-tobi", getReadyAssetPath("AR-08"));
   }
 
   create() {

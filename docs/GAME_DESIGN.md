@@ -6,8 +6,17 @@ Friends race motorcycles together through a recognizable Nigerian street environ
 
 The game must feel like a game first. Menus should remain compact and the road/game world should dominate the experience.
 
-## Race format
+## Race formats
 
+### Solo VS Computer
+- 1 human rider + 7 CPU riders
+- Normal free race is always available without another player
+- CPU opponents have different skill/aggression profiles
+- CPU riders change lanes, overtake, react to traffic and use collected items
+- Race position is calculated from live race distance
+- Easy/Normal/Hard difficulty is supported in the race engine contract
+
+### Multiplayer
 - 2–8 players
 - Create a room or join by code
 - Shared realtime race

@@ -421,7 +421,7 @@ class AbokiRaceScene extends Phaser.Scene {
       fontStyle: "bold"
     }).setOrigin(0.5);
 
-    const subtitle = this.add.text(0, 58, `POSITION \${finishingPosition}/\${this.aiRiders.length + 1} · VS COMPUTER`, {
+    const subtitle = this.add.text(0, 58, `POSITION ${finishingPosition}/${this.aiRiders.length + 1} · VS COMPUTER`, {
       color: "#ffffff",
       fontFamily: "Arial",
       fontSize: "11px",

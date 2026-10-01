@@ -104,3 +104,18 @@ Later races:
 `service worker → cached asset → Phaser`
 
 The realtime server continues to send race state only; artwork remains client-side.
+
+
+## 2026-10-02 — Production racer + Lagos identity pass
+
+### Completed
+- Upgraded the hero starter motorcycle vector with richer body panels, materials, cockpit details, lighting and rear geometry.
+- Upgraded the Mazi production rider vector with a more readable helmet, suit structure and accent treatment.
+- Added seven distinct CPU rider identities: Tega, Chidi, Zina, Emeka, Bisi, Femi and Yemi.
+- Added reusable Lagos roadside assets for fuel station, mechanic workshop, danfo stop, billboard, drainage and concrete wall.
+- Integrated the new CPU riders into the seven-rider solo roster instead of recycling the four selectable garage riders.
+- Integrated the new roadside assets into the Route 01 scenery template with runtime-image fallbacks.
+- Expanded the core and Lagos route packs and bumped the runtime asset-cache version to 3.
+
+### Art pipeline direction
+The runtime still uses lightweight SVG assets for this pass so gameplay remains fast and cache-friendly. These files are the stable runtime targets that can later be replaced by rendered multi-angle 3D source outputs without changing loadout, race, or multiplayer state code.

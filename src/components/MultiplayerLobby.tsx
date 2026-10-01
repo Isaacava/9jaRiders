@@ -17,7 +17,7 @@ export default function MultiplayerLobby() {
     const client = new RealtimeClient();
     clientRef.current = client;
 
-    client.onState((next) => setState(next));
+    client.onState((next) => {\n      setState(next);\n      setHostId(next.hostId);\n    });
     client.onMessage((message) => {
       if (message.type === "server:ready") {
         setStatus("ONLINE");

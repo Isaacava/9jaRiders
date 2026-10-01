@@ -53,3 +53,9 @@ Then finish server-authoritative item/traffic simulation and replace the gamepla
 
 ### Verification note
 The repository changes were committed successfully. A local frontend build could not be run in this environment because outbound DNS access to GitHub is unavailable.
+
+## Visual milestone — Lagos route world kit
+
+The race scene now uses a layered Lagos visual stack: sky, skyline silhouette, procedural shoulder/road geometry, asphalt texture, roadside shops/market/sign/pole props, six traffic vehicle variants, and dedicated power-up icons. Production bike/rider art and these route assets remain modular and cached through the core asset pack.
+
+The environment upgrade does not change race rules or network state. The existing placeholders remain safe fallbacks where an individual production texture is unavailable.

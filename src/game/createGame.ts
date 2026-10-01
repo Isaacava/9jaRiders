@@ -493,7 +493,11 @@ class AbokiRaceScene extends Phaser.Scene {
       fontStyle: "bold"
     }).setOrigin(0.5);
 
-    const subtitle = this.add.text(0, 58, `POSITION ${finishingPosition}/${this.aiRiders.length + 1} · VS COMPUTER`, {
+    const totalRacers = this.mode === "multiplayer"
+      ? (this.networkState?.players.length ?? 1)
+      : this.aiRiders.length + 1;
+    const modeLabel = this.mode === "multiplayer" ? "MULTIPLAYER" : "VS COMPUTER";
+    const subtitle = this.add.text(0, 58, "POSITION " + finishingPosition + "/" + totalRacers + " · " + modeLabel, {
       color: "#ffffff",
       fontFamily: "Arial",
       fontSize: "11px",
@@ -1291,6 +1295,7 @@ class AbokiRaceScene extends Phaser.Scene {
     this.distance = local.distance;
     this.speed = local.speed;
     this.multiplier = local.multiplier;
+    this.bestMultiplier = Math.max(this.bestMultiplier, this.multiplier);
 
     const targetX = this.roadLeft + this.roadWidth * local.lane;
     this.rider.x = Phaser.Math.Linear(this.rider.x, targetX, Math.min(1, dt * 10));

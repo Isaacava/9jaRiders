@@ -43,7 +43,9 @@ export const ASSET_PACKS: AssetPack[] = [
       "/assets/props/shop.svg",
       "/assets/props/palm.svg",
       "/assets/props/barrier.svg",
-      "/assets/environments/route-lagos-sky.svg"
+      "/assets/environments/route-lagos-sky.svg",
+      "/assets/bikes/hero-rear-3q.svg",
+      "/assets/riders/main-rear.svg"
     ],
     optional: []
   },

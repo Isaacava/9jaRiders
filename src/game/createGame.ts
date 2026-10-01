@@ -113,6 +113,11 @@ class AbokiRaceScene extends Phaser.Scene {
   private remoteRiders = new Map<string, Phaser.GameObjects.Container>();
   private selectedBike!: BikeDefinition;
   private selectedRider!: RiderDefinition;
+  private playerVisual!: Phaser.GameObjects.Container;
+  private visualState: "idle" | "lean" | "brake" | "nitro" | "pickup" | "crash" | "airborne" | "finish" = "idle";
+  private visualStateStarted = 0;
+  private visualStateUntil = 0;
+  private visualCrashDirection = 1;
   private boostPower = 9.4;
 
   constructor() {
@@ -222,6 +227,7 @@ class AbokiRaceScene extends Phaser.Scene {
     }
 
     this.updatePlayer(dt, steering, braking);
+    this.animateRiderMotion(steering, braking);
     this.updateWorld(dt);
     this.updateItems(dt);
     this.updateTraffic(dt);
@@ -311,7 +317,14 @@ class AbokiRaceScene extends Phaser.Scene {
     this.rider.x = Phaser.Math.Clamp(this.rider.x, minX, maxX);
 
     const lean = steering * 7;
-    this.rider.angle = Phaser.Math.Linear(this.rider.angle, lean, Math.min(1, dt * 8));
+    this.rider.angle = Phaser.Math.Linear(this.rider.angle, 0, Math.min(1, dt * 10));
+    if (Math.abs(steering) > 0) {
+      this.setVisualState("lean", 120);
+    } else if (braking) {
+      this.setVisualState("brake", 140);
+    } else if (performance.now() >= this.visualStateUntil) {
+      this.setVisualState("idle", 120);
+    }
   }
 
   private updateWorld(dt: number) {
@@ -437,6 +450,7 @@ class AbokiRaceScene extends Phaser.Scene {
         this.invulnerableUntil = performance.now() + 900;
         this.showMessage("SHIELD SAVED YOU");
         this.flashRider(POWER_UPS.shield.color);
+        this.triggerRiderAnimation("crash", 520);
         this.respawnTraffic(vehicle);
         return;
       }
@@ -446,6 +460,7 @@ class AbokiRaceScene extends Phaser.Scene {
       this.invulnerableUntil = performance.now() + 1300;
       this.showMessage("CRASH! MULTIPLIER DAMAGED");
       this.flashRider(0xe66b58);
+      this.triggerRiderAnimation("crash", 520);
       this.respawnTraffic(vehicle);
       return;
     }
@@ -460,22 +475,26 @@ class AbokiRaceScene extends Phaser.Scene {
 
     switch (item) {
       case "nitro":
+        this.triggerRiderAnimation("nitro", 2400);
         this.boostPower = Math.min(this.maxSpeed + 2.1, 9.4);
         this.boostUntil = performance.now() + 2200;
         this.multiplier = Math.min(99.99, this.multiplier + 0.35);
         this.showMessage("NITRO!");
         break;
       case "mega":
+        this.triggerRiderAnimation("nitro", 3400);
         this.boostPower = Math.min(this.maxSpeed + 2.8, 10.8);
         this.boostUntil = performance.now() + 3200;
         this.multiplier = Math.min(99.99, this.multiplier + 0.7);
         this.showMessage("MEGA BOOST!");
         break;
       case "shield":
+        this.triggerRiderAnimation("pickup", 480);
         this.shieldActive = true;
         this.showMessage("SHIELD READY");
         break;
       case "surge":
+        this.triggerRiderAnimation("pickup", 480);
         this.surgeUntil = performance.now() + 5000;
         this.multiplier = Math.min(99.99, this.multiplier + 0.55);
         this.showMessage("2× MULTIPLIER SURGE");
@@ -490,6 +509,9 @@ class AbokiRaceScene extends Phaser.Scene {
 
   private finishRace() {
     this.finished = true;
+    this.setVisualState("finish", 0);
+    this.playFinishPulse();
+
     this.speed = 0;
     const finishingPosition = this.getRacePosition();
     this.countdownText.setVisible(false);
@@ -735,6 +757,7 @@ class AbokiRaceScene extends Phaser.Scene {
     this.boostFx.setVisible(false);
 
     const visual = this.createRacerVisual(bikeKey, riderKey, 1);
+    this.playerVisual = visual;
     this.rider = this.add.container(0, 0, [this.boostFx, this.riderGlow, visual]);
     this.rider.setDepth(9);
   }
@@ -846,6 +869,7 @@ class AbokiRaceScene extends Phaser.Scene {
       ai.container.x = this.roadLeft + this.roadWidth * ai.lane;
       ai.container.y = this.rider.y - (ai.distance - this.distance) * 1.9;
       ai.container.angle = Phaser.Math.Clamp(laneDelta * -22, -12, 12);
+      ai.container.y += Math.sin((this.elapsed + ai.id * 130) / 90) * 0.35;
       ai.container.setVisible(
         ai.container.y > -180 && ai.container.y < this.scale.height + 180
       );
@@ -1257,13 +1281,111 @@ class AbokiRaceScene extends Phaser.Scene {
     this.updateTouchControlLayout();
   }
 
+  private setVisualState(
+    state: "idle" | "lean" | "brake" | "nitro" | "pickup" | "crash" | "airborne" | "finish",
+    duration: number
+  ) {
+    const now = performance.now();
+    if (this.visualState === state && now < this.visualStateUntil && duration > 0) return;
+    this.visualState = state;
+    this.visualStateStarted = now;
+    this.visualStateUntil = duration > 0 ? now + duration : Number.POSITIVE_INFINITY;
+    if (state === "crash") {
+      this.visualCrashDirection = Math.random() < 0.5 ? -1 : 1;
+    }
+  }
+
+  private triggerRiderAnimation(
+    state: "nitro" | "pickup" | "crash",
+    duration: number
+  ) {
+    this.setVisualState(state, duration);
+
+    if (state === "crash") {
+      this.time.delayedCall(170, () => {
+        if (!this.finished) this.setVisualState("airborne", 230);
+      });
+      this.time.delayedCall(400, () => {
+        if (!this.finished) this.setVisualState("idle", 140);
+      });
+    }
+  }
+
+  private animateRiderMotion(steering: number, braking: boolean) {
+    if (!this.playerVisual) return;
+
+    const now = performance.now();
+    const stateElapsed = now - this.visualStateStarted;
+    const bob = Math.sin(this.elapsed / 110) * 1.2;
+
+    let angle = 0;
+    let y = bob;
+    let scaleX = 1;
+    let scaleY = 1;
+
+    if (this.visualState === "lean") {
+      angle = Phaser.Math.Clamp(steering * 12, -12, 12);
+      y += Math.sin(this.elapsed / 70) * 0.9;
+    } else if (this.visualState === "brake") {
+      angle = -steering * 7 + 5;
+      y += 2 + Math.sin(this.elapsed / 55) * 0.7;
+      scaleY = 0.97;
+    } else if (this.visualState === "nitro") {
+      angle = steering * 5;
+      y += Math.sin(this.elapsed / 38) * 1.8;
+      scaleX = 1.025;
+      scaleY = 0.985;
+    } else if (this.visualState === "pickup") {
+      const t = Phaser.Math.Clamp(stateElapsed / 480, 0, 1);
+      const lift = Math.sin(t * Math.PI) * -15;
+      angle = Math.sin(t * Math.PI * 2) * 4;
+      y += lift;
+      scaleX = 1 + Math.sin(t * Math.PI) * 0.055;
+      scaleY = 1 - Math.sin(t * Math.PI) * 0.035;
+    } else if (this.visualState === "crash") {
+      const t = Phaser.Math.Clamp(stateElapsed / 170, 0, 1);
+      angle = this.visualCrashDirection * Phaser.Math.Easing.Quadratic.Out(t) * 26;
+      y += Math.sin(t * Math.PI) * 7;
+      scaleX = 1 - t * 0.06;
+      scaleY = 1 - t * 0.12;
+    } else if (this.visualState === "airborne") {
+      const t = Phaser.Math.Clamp(stateElapsed / 230, 0, 1);
+      y += -Math.sin(t * Math.PI) * 28;
+      angle = this.visualCrashDirection * (12 + t * 18);
+      scaleY = 1 - Math.sin(t * Math.PI) * 0.08;
+    } else if (this.visualState === "finish") {
+      angle = Math.sin(this.elapsed / 110) * 7;
+      y += -Math.abs(Math.sin(this.elapsed / 180)) * 8;
+      scaleX = 1 + Math.sin(this.elapsed / 120) * 0.03;
+      scaleY = 1 + Math.cos(this.elapsed / 150) * 0.025;
+    }
+
+    this.playerVisual.angle = Phaser.Math.Linear(this.playerVisual.angle, angle, 0.28);
+    this.playerVisual.x = Phaser.Math.Linear(this.playerVisual.x, steering * 2, 0.2);
+    this.playerVisual.y = Phaser.Math.Linear(this.playerVisual.y, y, 0.24);
+    this.playerVisual.scaleX = Phaser.Math.Linear(this.playerVisual.scaleX, scaleX, 0.24);
+    this.playerVisual.scaleY = Phaser.Math.Linear(this.playerVisual.scaleY, scaleY, 0.24);
+
+    if (now >= this.visualStateUntil && this.visualState !== "finish") {
+      this.visualState = Math.abs(steering) > 0 ? "lean" : braking ? "brake" : "idle";
+    }
+  }
+
   private animateRider() {
     const bob = Math.sin(this.elapsed / 110) * 1.2;
     this.rider.y = this.scale.height * 0.82 + bob;
+    this.animateRiderMotion(0, false);
 
     if (this.riderGlow.visible) {
       this.riderGlow.scale = 1 + Math.sin(this.elapsed / 100) * 0.08;
     }
+  }
+
+  private playFinishPulse() {
+    this.triggerRiderAnimation("pickup", 500);
+    this.time.delayedCall(520, () => {
+      if (this.finished) this.setVisualState("finish", 0);
+    });
   }
 
   private updateHud() {

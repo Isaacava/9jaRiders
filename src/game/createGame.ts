@@ -126,6 +126,8 @@ class AbokiRaceScene extends Phaser.Scene {
 
   preload() {
     this.load.image("route-sky", "/assets/environments/route-lagos-sky.svg");
+    this.load.image("hero-bike-rear3q", "/assets/bikes/hero-rear-3q.svg");
+    this.load.image("hero-rider-rear", "/assets/riders/main-rear.svg");
     this.load.image("route-skyline", "/assets/environments/lagos-skyline.svg");
     this.load.image("road-texture", "/assets/road/road-texture.svg");
     this.load.image("traffic-danfo", "/assets/traffic/danfo.svg");
@@ -743,8 +745,9 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 
   private createRider() {
-    const bikeKey = `bike-${this.selectedBike.id}`;
-    const riderKey = `rider-${this.selectedRider.id}`;
+    const useHeroRear = this.selectedBike.id === "starter" && this.selectedRider.id === "main";
+    const bikeKey = useHeroRear ? "hero-bike-rear3q" : `bike-${this.selectedBike.id}`;
+    const riderKey = useHeroRear ? "hero-rider-rear" : `rider-${this.selectedRider.id}`;
 
     this.riderGlow = this.add.circle(0, 0, 66, COLORS.shield, 0.16);
     this.riderGlow.setVisible(false);

@@ -32,15 +32,15 @@ button {
   min-height: 100svh;
   display: grid;
   place-items: center;
-  padding: 18px;
-  background:
-    linear-gradient(180deg, #f7efdf 0%, #e9ddc7 100%);
+  padding: clamp(12px, 2vw, 28px);
+  background: linear-gradient(180deg, #f7efdf 0%, #e9ddc7 100%);
+  overflow-x: hidden;
 }
 
 .home-screen {
-  width: min(100%, 520px);
+  width: min(100%, 1180px);
   display: grid;
-  gap: 18px;
+  gap: clamp(12px, 2vw, 22px);
 }
 
 .brand-lockup {
@@ -57,7 +57,7 @@ button {
 
 .brand-lockup h1 {
   margin: 0;
-  font-size: clamp(38px, 12vw, 62px);
+  font-size: clamp(38px, 6vw, 68px);
   line-height: 0.9;
   letter-spacing: -0.055em;
   font-weight: 950;
@@ -72,8 +72,9 @@ button {
 .game-preview {
   position: relative;
   overflow: hidden;
-  width: min(100%, 420px);
-  aspect-ratio: 420 / 760;
+  width: min(100%, 1120px);
+  height: auto;
+  aspect-ratio: 16 / 9;
   margin: 0 auto;
   background: #8fc7e8;
   border: 4px solid var(--ink);
@@ -114,7 +115,7 @@ button {
 }
 
 .preview-hud strong {
-  font-size: 12px;
+  font-size: clamp(10px, 1.4vw, 14px);
 }
 
 .preview-multiplier {
@@ -123,12 +124,14 @@ button {
 
 .preview-multiplier strong {
   color: #ffd166;
-  font-size: 20px;
+  font-size: clamp(18px, 2.6vw, 28px);
 }
 
 .home-actions {
   display: grid;
   gap: 10px;
+  width: min(100%, 560px);
+  margin: 0 auto;
 }
 
 .primary-action,
@@ -139,6 +142,7 @@ button {
   font-weight: 950;
   letter-spacing: 0.02em;
   transition: transform 120ms ease, box-shadow 120ms ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .primary-action {
@@ -169,7 +173,7 @@ button {
 }
 
 .home-note {
-  width: min(100%, 420px);
+  width: min(100%, 560px);
   margin: 0 auto;
   text-align: center;
   font-size: 12px;
@@ -178,12 +182,85 @@ button {
   opacity: 0.72;
 }
 
-@media (min-width: 700px) {
+@media (orientation: portrait) {
   .game-shell {
-    padding: 32px;
+    align-items: start;
+  }
+
+  .game-preview {
+    width: min(100%, 520px);
+    aspect-ratio: 9 / 16;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .game-shell {
+    padding: 10px 16px;
   }
 
   .home-screen {
-    gap: 22px;
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+    grid-template-areas:
+      "brand game"
+      "actions game"
+      "note game";
+    column-gap: clamp(18px, 3vw, 36px);
+    align-items: center;
+  }
+
+  .brand-lockup {
+    grid-area: brand;
+    text-align: left;
+  }
+
+  .game-preview {
+    grid-area: game;
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .home-actions {
+    grid-area: actions;
+    width: 100%;
+  }
+
+  .home-note {
+    grid-area: note;
+    width: 100%;
+    text-align: left;
+    align-self: start;
+  }
+}
+
+@media (min-width: 900px) and (min-height: 700px) {
+  .home-screen {
+    grid-template-columns: minmax(190px, 290px) minmax(0, 1fr);
+    grid-template-areas:
+      "brand game"
+      "actions game"
+      "note game";
+    column-gap: 28px;
+    align-items: center;
+  }
+
+  .brand-lockup {
+    grid-area: brand;
+    text-align: left;
+  }
+
+  .game-preview {
+    grid-area: game;
+    width: 100%;
+  }
+
+  .home-actions {
+    grid-area: actions;
+    width: 100%;
+  }
+
+  .home-note {
+    grid-area: note;
+    width: 100%;
+    text-align: left;
   }
 }

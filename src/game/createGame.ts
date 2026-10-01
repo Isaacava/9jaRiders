@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getSharedRealtimeClient, type RealtimeState } from "./multiplayer";
+import { getSharedRealtimeClient, RealtimeClient, type RealtimeState } from "./multiplayer";
 import { getBike, getRider, getDifficulty, type BikeDefinition, type RiderDefinition } from "./loadout";
 import { getReadyAssetPath } from "./assetManifest";
 

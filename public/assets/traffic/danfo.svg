@@ -1,1 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><path d="M74 34h108l27 39v121H47V73z" fill="#e3bf2f" stroke="#111417" stroke-width="9"/><path d="M67 83h122v58H67z" fill="#29343a" stroke="#111417" stroke-width="7"/><path d="M79 91h42v41H79zm54 0h44v41h-44z" fill="#7897a1"/><rect x="58" y="150" width="140" height="26" rx="6" fill="#fff1c6" stroke="#111417" stroke-width="6"/><rect x="52" y="181" width="42" height="14" rx="7" fill="#111417"/><rect x="162" y="181" width="42" height="14" rx="7" fill="#111417"/><rect x="93" y="157" width="25" height="12" rx="3" fill="#d75b40"/><rect x="125" y="157" width="25" height="12" rx="3" fill="#2d8b7f"/><path d="M61 61h134" stroke="#fff3c2" stroke-width="8" opacity=".8"/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220">
+<defs>
+  <linearGradient id="yellow" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe15a"/><stop offset=".42" stop-color="#e5b51c"/><stop offset="1" stop-color="#b47a0f"/></linearGradient>
+  <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#8fd9e5"/><stop offset="1" stop-color="#2e5962"/></linearGradient>
+  <linearGradient id="roof" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#e8e6db"/><stop offset="1" stop-color="#bfc0bb"/></linearGradient>
+  <filter id="shadow"><feGaussianBlur stdDeviation="6"/></filter>
+</defs>
+<ellipse cx="160" cy="199" rx="125" ry="13" fill="#111417" opacity=".28" filter="url(#shadow)"/>
+<g stroke="#111417" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M40 67 L67 33 Q73 27 88 27 L231 27 Q246 27 253 35 L281 67 L290 164 Q291 174 280 179 L34 179 Q25 176 27 165 Z" fill="url(#yellow)" stroke-width="8"/>
+  <path d="M64 71 L75 46 Q78 40 88 40 L225 40 Q237 40 242 48 L254 71 Z" fill="url(#roof)" stroke-width="6"/>
+  <path d="M60 79 H262 V137 H60 Z" fill="#1e2529" stroke-width="6"/>
+  <path d="M72 88 H116 V129 H72 Z M128 88 H190 V129 H128 Z M202 88 H250 V129 H202 Z" fill="url(#glass)" stroke-width="5"/>
+  <path d="M123 86 V132 M196 86 V132" stroke="#111417" stroke-width="5"/>
+  <path d="M38 144 H280 V166 H38 Z" fill="#1a2226" stroke-width="5"/>
+  <path d="M66 147 H252" stroke="#f6e1a0" stroke-width="5"/>
+  <path d="M81 153 H111 M119 153 H149 M157 153 H187 M195 153 H225" stroke="#d84f38" stroke-width="5"/>
+  <path d="M61 67 H255" stroke="#f9eaac" stroke-width="6" opacity=".8"/>
+  <path d="M247 78 L267 76 L279 91 L270 104 L249 104 Z" fill="#262c2f" stroke-width="5"/>
+  <circle cx="69" cy="178" r="25" fill="#080b0d" stroke-width="8"/>
+  <circle cx="69" cy="178" r="12" fill="#879093" stroke-width="5"/>
+  <circle cx="246" cy="178" r="25" fill="#080b0d" stroke-width="8"/>
+  <circle cx="246" cy="178" r="12" fill="#879093" stroke-width="5"/>
+  <rect x="21" y="117" width="13" height="35" rx="5" fill="#d9e8e5" stroke-width="4"/>
+  <rect x="279" y="120" width="14" height="27" rx="4" fill="#f6e9c0" stroke-width="4"/>
+  <path d="M155 31 V72" stroke="#8d8f8f" stroke-width="4"/>
+  <path d="M102 177 H215" stroke="#111417" stroke-width="4"/>
+</g>
+<g fill="#f4e7af" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="900">
+  <text x="103" y="160">LAGOS</text>
+</g>
+</svg>

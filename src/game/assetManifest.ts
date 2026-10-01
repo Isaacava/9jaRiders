@@ -41,12 +41,6 @@ export const ASSET_MANIFEST: AssetDefinition[] = [
   { id: "AR-13", category: "riders", path: "/assets/riders/cpu-05.svg", status: "ready" },
   { id: "AR-14", category: "riders", path: "/assets/riders/cpu-06.svg", status: "ready" },
   { id: "AR-15", category: "riders", path: "/assets/riders/cpu-07.svg", status: "ready" },
-  { id: "AR-10", category: "riders", path: "/assets/riders/cpu-02.webp", status: "planned" },
-  { id: "AR-11", category: "riders", path: "/assets/riders/cpu-03.webp", status: "planned" },
-  { id: "AR-12", category: "riders", path: "/assets/riders/cpu-04.webp", status: "planned" },
-  { id: "AR-13", category: "riders", path: "/assets/riders/cpu-05.webp", status: "planned" },
-  { id: "AR-14", category: "riders", path: "/assets/riders/cpu-06.webp", status: "planned" },
-  { id: "AR-15", category: "riders", path: "/assets/riders/cpu-07.webp", status: "planned" },
 
   { id: "AR-21-DANFO", category: "traffic", path: "/assets/traffic/danfo.svg", status: "ready" },
   { id: "AR-22-MINIBUS", category: "traffic", path: "/assets/traffic/minibus.svg", status: "ready" },

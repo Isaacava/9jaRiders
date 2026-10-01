@@ -1,1 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="640" viewBox="0 0 1080 640"><defs><linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#78b8df"/><stop offset="1" stop-color="#d9e7dd"/></linearGradient><linearGradient id="ground" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ad906c"/><stop offset="1" stop-color="#8e7258"/></linearGradient></defs><rect width="1080" height="640" fill="url(#sky)"/><ellipse cx="210" cy="118" rx="120" ry="38" fill="#fff" opacity=".32"/><ellipse cx="820" cy="92" rx="170" ry="45" fill="#fff" opacity=".28"/><rect y="290" width="1080" height="350" fill="url(#ground)"/><g opacity=".5" fill="#4f6e55"><rect x="50" y="235" width="74" height="55"/><rect x="155" y="212" width="105" height="78"/><rect x="830" y="222" width="96" height="68"/><rect x="952" y="240" width="60" height="50"/></g></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="640" viewBox="0 0 1080 640">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#38bfd7"/><stop offset=".43" stop-color="#7fd5dd"/><stop offset=".74" stop-color="#e9d09f"/><stop offset="1" stop-color="#c18b61"/></linearGradient>
+  <radialGradient id="sun" cx=".5" cy=".5" r=".5"><stop stop-color="#fff6b0" stop-opacity=".95"/><stop offset="1" stop-color="#fff0a0" stop-opacity="0"/></radialGradient>
+  <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#9b7b5c"/><stop offset="1" stop-color="#664e3d"/></linearGradient>
+</defs>
+<rect width="1080" height="640" fill="url(#sky)"/>
+<circle cx="812" cy="116" r="74" fill="url(#sun)"/>
+<g fill="#f4f4ed" opacity=".62">
+  <ellipse cx="184" cy="126" rx="95" ry="23"/><ellipse cx="252" cy="137" rx="74" ry="19"/>
+  <ellipse cx="780" cy="177" rx="116" ry="25"/><ellipse cx="864" cy="171" rx="82" ry="20"/>
+</g>
+<g opacity=".75" fill="#52666b">
+  <path d="M0 335 V268 H55 V335 H92 V229 H135 V335 H168 V276 H205 V335 H243 V199 H284 V335 H313 V246 H356 V335 H392 V214 H445 V335 H480 V260 H526 V335 H552 V184 H603 V335 H634 V236 H687 V335 H721 V209 H768 V335 H805 V270 H851 V335 H889 V219 H936 V335 H969 V246 H1009 V335 H1042 V205 H1080 V640 H0 Z"/>
+</g>
+<g opacity=".45" fill="#31474e">
+  <rect x="816" y="174" width="16" height="116"/><rect x="840" y="144" width="26" height="146"/><rect x="873" y="188" width="18" height="102"/>
+</g>
+<rect y="335" width="1080" height="305" fill="url(#ground)"/>
+<g opacity=".7" fill="#45684e">
+  <rect x="34" y="290" width="75" height="45"/><rect x="128" y="275" width="108" height="60"/>
+  <rect x="915" y="282" width="92" height="53"/><rect x="1018" y="296" width="52" height="39"/>
+</g>
+<g stroke="#3a332d" stroke-width="4" opacity=".55">
+  <path d="M30 372 H1050"/><path d="M20 402 H1040"/><path d="M10 438 H1070"/>
+</g>
+</svg>

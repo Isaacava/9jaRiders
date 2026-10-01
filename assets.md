@@ -188,3 +188,15 @@ First visit downloads the minimum core pack. Later races reuse cached assets. A 
 Characters and Aboki Riders-specific identity art use original generated 2D assets.
 
 The exact final download size will be measured after the first production art pass; the size hints in `src/game/assetPacks.ts` are planning estimates only.
+
+
+## First route visual-source ledger
+
+For the first Lagos route, the source layer is intentionally separated from the Nigerian identity layer.
+
+- **Motorcycles:** 3DAssets.dev CC0 motorcycle models can serve as render sources. The Road sportbike entry is individually downloadable and the pack contains 69 CC0 motorcycle/racing models. citeturn555274search1turn555274search0
+- **Road foundations:** Kenney City Kit (Roads) is CC0 and contains modular 3D city-road pieces. citeturn239895view1
+- **Building foundations:** Kenney City Kit (Suburban) and City Kit (Industrial) are CC0 sources for reusable buildings and industrial structures. citeturn906414search1turn906414search7
+- **Sky/lighting reference:** Poly Haven assets are CC0; its sky assets can be used commercially. citeturn930999search0turn930999search1
+
+The game should keep a copy of the source URL and license in the repository even when the final runtime art is rendered/modified.

@@ -58,7 +58,7 @@ class AbokiRaceScene extends Phaser.Scene {
   private multiplier = 1;
   private multiplierRate = 0.012;
   private bestMultiplier = 1;
-  private time = 0;
+  private elapsed = 0;
   private raceStarted = false;
   private finished = false;
   private countdown = 3;
@@ -107,7 +107,7 @@ class AbokiRaceScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     const dt = delta / 1000;
-    this.time += delta;
+    this.elapsed += delta;
 
     if (!this.raceStarted || this.finished) {
       this.animateRider();
@@ -363,8 +363,6 @@ class AbokiRaceScene extends Phaser.Scene {
     this.hudMessage.setVisible(false);
 
     const result = this.add.container(this.scale.width / 2, this.scale.height / 2);
-    this.resultGroup = this.add.group(result);
-
     const panel = this.add.rectangle(0, 0, Math.min(this.scale.width - 36, 520), 250, COLORS.ink, 0.95);
     panel.setStrokeStyle(3, 0xf5eddd);
 
@@ -430,7 +428,7 @@ class AbokiRaceScene extends Phaser.Scene {
     const wheelA = this.add.ellipse(-10, 25, 8, 18, COLORS.ink);
     const wheelB = this.add.ellipse(10, 25, 8, 18, COLORS.ink);
 
-    this.riderGlow = this.add.circle(0, 0, 0, COLORS.shield.color);
+    this.riderGlow = this.add.circle(0, 0, 0, COLORS.shield);
     this.riderGlow.setVisible(false);
 
     this.rider = this.add.container(0, 0, [
@@ -694,11 +692,11 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 
   private animateRider() {
-    const bob = Math.sin(this.time / 110) * 1.2;
+    const bob = Math.sin(this.elapsed / 110) * 1.2;
     this.rider.y = this.scale.height * 0.82 + bob;
 
     if (this.riderGlow.visible) {
-      this.riderGlow.scale = 1 + Math.sin(this.time / 100) * 0.08;
+      this.riderGlow.scale = 1 + Math.sin(this.elapsed / 100) * 0.08;
     }
   }
 

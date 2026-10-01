@@ -63,3 +63,44 @@ The environment upgrade does not change race rules or network state. The existin
 ## Visual milestone — racer motion
 
 The Phaser race scene now has a procedural player animation state system for idle, lean, brake, nitro, pickup, crash, airborne and finish states. CPU racers receive lightweight motion and lane-change lean. This keeps the current core pack small while leaving a clean path to sprite atlases later.
+
+## 2026-10-02 — Runtime asset pipeline
+
+### Completed
+- Made the runtime asset manifest the authoritative source for shipped asset paths.
+- Added ready/planned asset validation helpers so packs cannot silently point at non-ready runtime files.
+- Rebuilt the shipped asset packs around files that currently exist in `public/assets`.
+- Split the current runtime into a small `core` pack and a Lagos Route 01 pack.
+- Added versioned Cache Storage namespaces per pack.
+- Added a service worker for serving cached `/assets/*` requests on subsequent visits.
+- Added pack preparation before Phaser boots on the race page.
+- Added a small race loading state that explains the first-use cache behavior.
+- Added route selection through `/play?route=...` with Lagos Route 01 as the default.
+- Updated Phaser preload calls to resolve asset paths through the manifest rather than duplicating file paths.
+- Removed stale planned pack URLs from the active pack registry.
+
+### Current pack contract
+
+`core`
+- 5 bikes
+- 4 riders
+- 6 traffic vehicles
+- 4 power-ups
+
+`route-lagos-01`
+- Lagos sky and skyline
+- asphalt texture
+- shop, market stall, palm, utility pole and barrier props
+- route sign
+
+Future routes/cosmetic packs can be added to the same versioned contract without changing the multiplayer state model.
+
+### Caching behavior
+
+First race:
+`prepare core + route → cache assets → start Phaser`
+
+Later races:
+`service worker → cached asset → Phaser`
+
+The realtime server continues to send race state only; artwork remains client-side.

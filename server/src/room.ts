@@ -11,6 +11,8 @@ export type PlayerInput = {
 export type RoomPlayer = {
   id: string;
   name: string;
+  bikeId: string;
+  riderId: string;
   socket: WebSocket;
   ready: boolean;
   lane: number;
@@ -39,6 +41,8 @@ export type RoomSnapshot = {
     multiplier: number;
     item: string | null;
     finishPosition: number | null;
+    bikeId: string;
+    riderId: string;
   }>;
 };
 
@@ -58,13 +62,19 @@ const BASE_SPEED = 5.4;
 export class RoomManager {
   private rooms = new Map<string, RaceRoom>();
 
-  createRoom(socket: WebSocket, playerName: string) {
+  createRoom(
+    socket: WebSocket,
+    playerName: string,
+    loadout?: { bikeId?: string; riderId?: string }
+  ) {
     const id = this.makeRoomId();
     const playerId = this.makePlayerId();
 
     const player: RoomPlayer = {
       id: playerId,
       name: this.cleanName(playerName),
+      bikeId: this.cleanBike(loadout?.bikeId),
+      riderId: this.cleanRider(loadout?.riderId),
       socket,
       ready: true,
       lane: 0.5,
@@ -90,7 +100,12 @@ export class RoomManager {
     return { roomId: id, playerId };
   }
 
-  joinRoom(roomId: string, socket: WebSocket, playerName: string) {
+  joinRoom(
+    roomId: string,
+    socket: WebSocket,
+    playerName: string,
+    loadout?: { bikeId?: string; riderId?: string }
+  ) {
     const room = this.rooms.get(roomId.toUpperCase());
 
     if (!room) throw new Error("ROOM_NOT_FOUND");
@@ -101,6 +116,8 @@ export class RoomManager {
     room.players.set(playerId, {
       id: playerId,
       name: this.cleanName(playerName),
+      bikeId: this.cleanBike(loadout?.bikeId),
+      riderId: this.cleanRider(loadout?.riderId),
       socket,
       ready: false,
       lane: this.spawnLane(room.players.size),
@@ -225,7 +242,9 @@ export class RoomManager {
         distance: Number(player.distance.toFixed(2)),
         multiplier: Number(player.multiplier.toFixed(3)),
         item: player.item,
-        finishPosition: player.finishPosition
+        finishPosition: player.finishPosition,
+        bikeId: player.bikeId,
+        riderId: player.riderId
       }))
     };
   }
@@ -306,5 +325,27 @@ export class RoomManager {
 
   private cleanName(name: string) {
     return String(name || "Rider").trim().slice(0, 18) || "Rider";
+  }
+
+  private cleanBike(id: string | undefined) {
+    const allowed = new Set(["starter", "speed", "heavy", "elite", "legendary"]);
+    return allowed.has(String(id)) ? String(id) : "starter";
+  }
+
+  private cleanRider(id: string | undefined) {
+    const allowed = new Set([
+      "main",
+      "ada",
+      "kobby",
+      "tobi",
+      "cpu-01",
+      "cpu-02",
+      "cpu-03",
+      "cpu-04",
+      "cpu-05",
+      "cpu-06",
+      "cpu-07"
+    ]);
+    return allowed.has(String(id)) ? String(id) : "main";
   }
 }

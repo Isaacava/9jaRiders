@@ -284,3 +284,276 @@ a {
     text-align: left;
   }
 }
+
+.secondary-link {
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: #fffaf0;
+  box-shadow: 4px 4px 0 var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.secondary-link:active {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.multiplayer-page {
+  min-height: 100svh;
+  padding: clamp(18px, 4vw, 48px);
+  background:
+    radial-gradient(circle at top right, rgba(242, 140, 40, 0.2), transparent 32%),
+    linear-gradient(180deg, #f7efdf 0%, #e6dac4 100%);
+  color: var(--ink);
+}
+
+.back-link {
+  display: inline-flex;
+  margin-bottom: 18px;
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  background: #fffaf0;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.multiplayer-panel {
+  width: min(100%, 860px);
+  margin: 0 auto;
+}
+
+.multiplayer-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.multiplayer-top h1 {
+  margin: 3px 0 8px;
+  font-size: clamp(30px, 6vw, 64px);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+}
+
+.multiplayer-top p {
+  margin: 0;
+  max-width: 560px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.72;
+}
+
+.server-status {
+  flex: 0 0 auto;
+  border: 2px solid var(--ink);
+  background: #fffaf0;
+  padding: 8px 10px;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.server-status--online,
+.server-status--in {
+  background: #c8f0d4;
+}
+
+.server-status--offline,
+.server-status--error {
+  background: #ffd8cf;
+}
+
+.multiplayer-card {
+  border: 3px solid var(--ink);
+  background: rgba(255, 250, 240, 0.86);
+  box-shadow: 8px 8px 0 var(--ink);
+  padding: clamp(16px, 3vw, 28px);
+}
+
+.multiplayer-card label {
+  display: grid;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.multiplayer-card input {
+  width: 100%;
+  min-height: 50px;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0 12px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 800;
+  outline: none;
+}
+
+.multiplayer-card input:focus {
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.multiplayer-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.lobby-primary,
+.lobby-ready,
+.room-join button {
+  min-height: 50px;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  background: var(--orange);
+  box-shadow: 4px 4px 0 var(--ink);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.room-join {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.room-join button {
+  min-width: 92px;
+  background: var(--teal);
+  color: #fffaf0;
+}
+
+.room-state {
+  margin-top: 20px;
+  border-top: 2px solid var(--line);
+  padding-top: 18px;
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.room-header div {
+  display: grid;
+  gap: 3px;
+}
+
+.room-header span {
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  opacity: 0.62;
+}
+
+.room-header strong {
+  font-size: 28px;
+  letter-spacing: -0.04em;
+}
+
+.rider-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.rider-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  border: 2px solid var(--ink);
+  background: #fffdf8;
+}
+
+.rider-row span:not(.rider-dot),
+.rider-row b {
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  opacity: 0.62;
+}
+
+.rider-row strong {
+  font-size: 13px;
+}
+
+.rider-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--orange);
+  border: 2px solid var(--ink);
+}
+
+.lobby-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.lobby-footer > * {
+  flex: 1;
+}
+
+.lobby-ready {
+  background: #fffaf0;
+}
+
+.lobby-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lobby-notice,
+.lobby-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 2px solid var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.lobby-notice {
+  background: #e8f1ff;
+}
+
+.lobby-error {
+  background: #ffd8cf;
+}
+
+@media (max-width: 640px) {
+  .multiplayer-top {
+    display: grid;
+  }
+
+  .server-status {
+    justify-self: start;
+  }
+
+  .rider-row {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .rider-row b {
+    grid-column: 2 / -1;
+  }
+
+  .lobby-footer {
+    display: grid;
+  }
+}

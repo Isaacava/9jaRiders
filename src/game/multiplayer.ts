@@ -19,6 +19,8 @@ export type RealtimeState = {
 type Listener = (state: RealtimeState) => void;
 type MessageListener = (message: Record<string, unknown>) => void;
 
+let sharedClient: RealtimeClient | null = null;
+
 export class RealtimeClient {
   private socket: WebSocket | null = null;
   private stateListener?: Listener;
@@ -31,6 +33,10 @@ export class RealtimeClient {
   ) {}
 
   connect() {
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
+
     return new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(this.url);
       this.socket = socket;
@@ -109,4 +115,11 @@ export class RealtimeClient {
 
     this.socket.send(JSON.stringify(payload));
   }
+}
+
+export function getSharedRealtimeClient() {
+  if (!sharedClient) {
+    sharedClient = new RealtimeClient();
+  }
+  return sharedClient;
 }

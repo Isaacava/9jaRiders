@@ -281,7 +281,7 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
 
   const tail = new THREE.Mesh(
     new RoundedBoxGeometry(
-      bike.silhouette === "heavy" ? 0.96 : bike.silhouette === "superbike" ? 0.76 : 0.86,
+      bike.silhouette === "cruiser" ? 0.96 : bike.silhouette === "superbike" ? 0.76 : 0.86,
       bike.silhouette === "cruiser" ? 0.32 : 0.30,
       bike.silhouette === "superbike" ? 0.94 : 0.78,
       5,

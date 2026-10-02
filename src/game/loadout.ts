@@ -1,4 +1,4 @@
-export type BikeId = "starter" | "speed" | "heavy" | "elite" | "legendary";
+export type BikeId = "starter" | "speed" | "heavy" | "elite" | "legendary" | "cafe" | "flattrack" | "lightweight" | "dirt";
 export type RiderId = "main" | "ada" | "kobby" | "tobi";
 export type Difficulty = "easy" | "normal" | "hard";
 
@@ -20,58 +20,99 @@ export type RiderDefinition = {
   personality: string;
   color: number;
   accent: string;
+  gender: "male" | "female";
 };
 
 export const BIKES: BikeDefinition[] = [
   {
     id: "starter",
-    name: "Street One",
-    className: "STARTER",
-    description: "Balanced Nigerian street bike. Easy to control.",
-    topSpeed: 7.2,
-    acceleration: 7.2,
-    handling: 8.4,
+    name: "Supermoto Single",
+    className: "STREET",
+    description: "Tall, agile single-cylinder bike for fast lane changes.",
+    topSpeed: 150,
+    acceleration: 8.1,
+    handling: 9.0,
     color: 0x0c7b72
   },
   {
     id: "speed",
-    name: "Racer X",
-    className: "SPEED",
-    description: "Lightweight racer built for straight-line attacks.",
-    topSpeed: 9.1,
-    acceleration: 8.8,
-    handling: 6.8,
+    name: "Road Sportbike",
+    className: "SPORT",
+    description: "Low-slung sportbike for hard launches.",
+    topSpeed: 185,
+    acceleration: 9.0,
+    handling: 9.2,
     color: 0x267bd8
   },
   {
     id: "heavy",
-    name: "Iron Bull",
-    className: "HEAVY",
-    description: "Heavy bike with strong stability and impact recovery.",
-    topSpeed: 8.0,
-    acceleration: 6.6,
-    handling: 7.0,
+    name: "Sport Tourer",
+    className: "TOURER",
+    description: "Full-fairing bike with extra stability in traffic.",
+    topSpeed: 168,
+    acceleration: 7.4,
+    handling: 7.4,
     color: 0x8e4b3f
   },
   {
     id: "elite",
-    name: "Volt",
-    className: "ELITE",
-    description: "High-performance street machine with sharp handling.",
-    topSpeed: 9.4,
-    acceleration: 8.6,
-    handling: 8.8,
+    name: "Prototype GP",
+    className: "GP",
+    description: "Race-bred prototype with an aggressive riding position.",
+    topSpeed: 202,
+    acceleration: 9.4,
+    handling: 8.9,
     color: 0x7d4bd7
   },
   {
     id: "legendary",
-    name: "Golden Ghost",
-    className: "LEGENDARY",
-    description: "Prestige racer reserved for the fastest riders.",
-    topSpeed: 9.9,
-    acceleration: 9.4,
+    name: "Superbike",
+    className: "SUPERBIKE",
+    description: "Premium superbike with the highest ceiling in the garage.",
+    topSpeed: 220,
+    acceleration: 9.7,
     handling: 9.1,
-    color: 0xb58a2a
+    color: 0xd0a02b
+  },
+  {
+    id: "cafe",
+    name: "Cafe Racer",
+    className: "CLASSIC",
+    description: "Compact cafe racer with quick steering.",
+    topSpeed: 158,
+    acceleration: 8.5,
+    handling: 8.8,
+    color: 0x4c83b6
+  },
+  {
+    id: "flattrack",
+    name: "Flat-Track Twin",
+    className: "TRACK",
+    description: "Playful twin built for controlled slides and overtakes.",
+    topSpeed: 176,
+    acceleration: 8.7,
+    handling: 8.3,
+    color: 0xd1653c
+  },
+  {
+    id: "lightweight",
+    name: "Lightweight Racer",
+    className: "LIGHT",
+    description: "Small racer that changes direction quickly.",
+    topSpeed: 165,
+    acceleration: 9.1,
+    handling: 9.4,
+    color: 0x37a884
+  },
+  {
+    id: "dirt",
+    name: "Aboki Dirt 01",
+    className: "CUSTOM",
+    description: "Project-local 3D dirt bike.",
+    topSpeed: 162,
+    acceleration: 8.5,
+    handling: 8.6,
+    color: 0x9f5f31
   }
 ];
 
@@ -82,7 +123,8 @@ export const RIDERS: RiderDefinition[] = [
     style: "BLUE/GREEN",
     personality: "Confident street racer",
     color: 0x0c7b72,
-    accent: "#e8efe9"
+    accent: "#f2c94c",
+    gender: "male"
   },
   {
     id: "ada",
@@ -90,7 +132,8 @@ export const RIDERS: RiderDefinition[] = [
     style: "PURPLE/WHITE",
     personality: "Aggressive corner specialist",
     color: 0x8d69e8,
-    accent: "#f1eafa"
+    accent: "#f2d0a9",
+    gender: "female"
   },
   {
     id: "kobby",
@@ -98,7 +141,8 @@ export const RIDERS: RiderDefinition[] = [
     style: "RED/BLACK",
     personality: "Risk-taking attacker",
     color: 0xe45b4f,
-    accent: "#ffe5df"
+    accent: "#eee4d8",
+    gender: "male"
   },
   {
     id: "tobi",
@@ -106,7 +150,8 @@ export const RIDERS: RiderDefinition[] = [
     style: "ORANGE/BLACK",
     personality: "Smooth opportunist",
     color: 0xf08a38,
-    accent: "#fff0db"
+    accent: "#172024",
+    gender: "male"
   }
 ];
 

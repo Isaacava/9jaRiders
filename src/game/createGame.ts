@@ -1124,8 +1124,8 @@ class AbokiRaceScene extends Phaser.Scene {
 
       if (this.textures.exists(textureKeys[index])) {
         const image = this.add.image(0, 0, textureKeys[index]);
-        const widths = [58, 52, 58, 58, 62, 60];
-        const heights = [74, 68, 68, 72, 70, 72];
+        const widths = [66, 58, 68, 70, 72, 68];
+        const heights = [51, 45, 53, 54, 56, 53];
         image.setDisplaySize(widths[index], heights[index]);
         vehicle.add(image);
       } else {
@@ -1399,8 +1399,9 @@ class AbokiRaceScene extends Phaser.Scene {
     });
 
     this.aiRiders.forEach((ai) => {
-      ai.container.x = this.roadLeft + this.roadWidth * ai.lane;
       ai.container.y = this.rider.y - (ai.distance - this.distance) * 1.9;
+      ai.container.x = this.getLaneX(ai.lane, ai.container.y);
+      ai.container.setScale(this.getPerspectiveScale(ai.container.y, 0.22, 0.82));
     });
 
     const itemPositions = [
@@ -1412,13 +1413,14 @@ class AbokiRaceScene extends Phaser.Scene {
 
     this.items.forEach((item, index) => {
       const setup = itemPositions[index];
-      item.x = this.roadLeft + this.roadWidth * setup.lane;
       item.y = height * setup.progress;
+      item.x = this.getLaneX(setup.lane, item.y);
+      item.setScale(this.getPerspectiveScale(item.y, 0.42, 0.95));
     });
 
-    this.hudItem.setPosition(width - 18, 18);
-    this.hudPosition.setPosition(width - 18, 52);
-    this.hudMessage.setPosition(width / 2, 92);
+    this.hudItem.setPosition(width - 150, 52);
+    this.hudPosition.setPosition(width - 150, 18);
+    this.hudMessage.setPosition(width / 2, 84);
     this.countdownText.setPosition(width / 2, height / 2);
     this.updateTouchControlLayout();
   }
@@ -1643,7 +1645,7 @@ class AbokiRaceScene extends Phaser.Scene {
     this.multiplier = local.multiplier;
     this.bestMultiplier = Math.max(this.bestMultiplier, this.multiplier);
 
-    const targetX = this.roadLeft + this.roadWidth * local.lane;
+    const targetX = this.getLaneX(local.lane, this.rider.y);
     this.rider.x = Phaser.Math.Linear(this.rider.x, targetX, Math.min(1, dt * 10));
   }
 
@@ -1702,10 +1704,11 @@ class AbokiRaceScene extends Phaser.Scene {
           this.remoteRiders.set(player.id, remote);
         }
 
-        remote.x = this.roadLeft + this.roadWidth * player.lane;
         remote.y = this.rider.y - (player.distance - local.distance) * 1.9;
+        remote.x = this.getLaneX(player.lane, remote.y);
+        remote.setScale(this.getPerspectiveScale(remote.y, 0.22, 0.82));
         remote.angle = Phaser.Math.Clamp((0.5 - player.lane) * 18, -10, 10);
-        remote.setVisible(remote.y > -180 && remote.y < this.scale.height + 180);
+        remote.setVisible(remote.y > this.horizonY - 80 && remote.y < this.scale.height + 180);
       });
   }
 

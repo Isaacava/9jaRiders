@@ -197,6 +197,7 @@ function createRiderFromFallback(riderId: string, player = false) {
   const riderRoot = fallback.userData.riderRoot as THREE.Group | undefined;
   if (!riderRoot) return fallback;
   const root = new THREE.Group();
+  root.scale.setScalar(player ? 1.12 : 0.86);
   root.add(riderRoot.clone(true));
 
   if (player) {
@@ -565,7 +566,7 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
     metalRider
   );
   jacketZip.position.set(0, 0.16, -0.34);
-  jacketRootSafe.add(jacketZip);
+  riderRoot.add(jacketZip);
 
   function addSafe(node: THREE.Object3D) {
     riderRoot.add(node);

@@ -102,30 +102,40 @@ const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
 
 async function loadRaceModelPack() {
   const loader = new GLTFLoader();
+  const trafficAssetCount = Object.keys(EXTERNAL_TRAFFIC_ASSETS).length;
+  const bikeAssetCount = Object.keys(EXTERNAL_BIKE_ASSETS).length;
   const [riders, ...results] = await Promise.all([
     loader.loadAsync("/assets/models/riders.glb"),
     ...Object.values(EXTERNAL_BIKE_ASSETS).map((url) => loader.loadAsync(url)),
-    ...Object.values(EXTERNAL_TRAFFIC_ASSETS).map((url) => loader.loadAsync(url))
+    ...Object.values(EXTERNAL_TRAFFIC_ASSETS).map((url) => loader.loadAsync(url)),
+    ...Object.values(EXTERNAL_ENVIRONMENT_ASSETS).map((url) => loader.loadAsync(url))
   ]);
 
   const bikeIds = Object.keys(EXTERNAL_BIKE_ASSETS);
   const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
+  const environmentIds = Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>;
   const bikes: Record<string, THREE.Group> = {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
+  const environments = {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 
   bikeIds.forEach((bikeId, index) => {
     bikes[bikeId] = results[index].scene;
   });
 
   trafficKinds.forEach((kind, index) => {
-    traffic[kind] = results[bikeIds.length + index].scene;
+    traffic[kind] = results[bikeAssetCount + index].scene;
+  });
+
+  environmentIds.forEach((id, index) => {
+    environments[id] = results[bikeAssetCount + trafficAssetCount + index].scene;
   });
 
   return {
     bikes,
     riders: riders.scene,
-    traffic
-  } satisfies RaceModelPack;
+    traffic,
+    environments
+  };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -1454,6 +1464,22 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       remoteRacers.set(id, remote);
       scene.add(next);
     }
+
+    const environmentPlacements = [
+      ["busStation", -1, -112, 0.72],
+      ["market", 1, -236, 0.94],
+      ["busStation", 1, -412, 0.68],
+      ["market", -1, -548, 0.92]
+    ] as const;
+
+    environmentPlacements.forEach(([kind, side, z, scale]) => {
+      const setPiece = pack.environments[kind].clone(true);
+      setPiece.scale.setScalar(scale);
+      setPiece.position.set(side * 19, 0, z);
+      setPiece.userData.externalEnvironment = kind;
+      scene.add(setPiece);
+      scenery.push(setPiece);
+    });
 
     return { player: realPlayer };
   }).catch((error) => {

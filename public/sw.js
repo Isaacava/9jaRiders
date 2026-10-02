@@ -8,6 +8,7 @@ const EXTERNAL_BIKE_URLS = new Set([
   "https://cdn.3dassets.dev/assets/15428/v1/model.glb",
   "https://cdn.3dassets.dev/assets/15416/v1/model.glb",
   "https://cdn.3dassets.dev/assets/15415/v1/model.glb",
+  "https://cdn.3dassets.dev/assets/32901/v1/model.glb",
   "https://cdn.3dassets.dev/assets/34194/v1/model.glb",
   "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
   "https://cdn.3dassets.dev/assets/32490/v1/model.glb",

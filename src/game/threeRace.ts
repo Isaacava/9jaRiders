@@ -18,11 +18,8 @@ type BikeSpec = {
   maxSpeed: number;
   accel: number;
   handling: number;
-  silhouette: "street" | "sport" | "cruiser" | "futuristic" | "superbike" | "scrambler" | "commuter" | "mini" | "dirt";
-  scale?: number;
+  silhouette: "street" | "sport" | "cruiser" | "futuristic" | "superbike";
 };
-
-type RiderGender = "male" | "female";
 
 type RiderSpec = {
   jacket: number;
@@ -30,7 +27,6 @@ type RiderSpec = {
   hair: number;
   skin: number;
   build: number;
-  gender: RiderGender;
   hairStyle: "short" | "braids" | "locs" | "bun" | "high";
 };
 
@@ -68,31 +64,26 @@ const BIKES: Record<string, BikeSpec> = {
   speed: { color: 0x2779dc, accent: 0xf39a4a, maxSpeed: 185, accel: 112, handling: 9.4, silhouette: "sport" },
   heavy: { color: 0xbd4a42, accent: 0xe2e0d5, maxSpeed: 168, accel: 76, handling: 6.8, silhouette: "cruiser" },
   elite: { color: 0x8159c6, accent: 0x69dcff, maxSpeed: 202, accel: 128, handling: 8.8, silhouette: "futuristic" },
-  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" },
-  cafe: { color: 0x7d4f38, accent: 0xe3c08f, maxSpeed: 164, accel: 96, handling: 8.6, silhouette: "street" },
-  scrambler: { color: 0x3f7f6b, accent: 0xd7c56a, maxSpeed: 158, accel: 92, handling: 8.0, silhouette: "scrambler" },
-  commuter: { color: 0x5f6d78, accent: 0xf0c94a, maxSpeed: 122, accel: 72, handling: 8.8, silhouette: "commuter" },
-  mini: { color: 0xe26a33, accent: 0x20252a, maxSpeed: 132, accel: 82, handling: 9.6, silhouette: "mini" },
-  dirt: { color: 0x1b6f5c, accent: 0xe7b83f, maxSpeed: 176, accel: 106, handling: 9.2, silhouette: "dirt", scale: 0.76 }
+  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" }
 };
 
 const RIDERS: Record<string, RiderSpec> = {
-  main: { jacket: 0x138e85, accent: 0xf2c94c, hair: 0x211715, skin: 0x956345, build: 1.0, gender: "male", hairStyle: "short" },
-  ada: { jacket: 0x8056bd, accent: 0xf2d0a9, hair: 0x27131f, skin: 0x8d5c45, build: 0.96, gender: "female", hairStyle: "braids" },
-  kobby: { jacket: 0xbe514a, accent: 0xeee4d8, hair: 0x121212, skin: 0x7e5039, build: 1.07, gender: "male", hairStyle: "locs" },
-  tobi: { jacket: 0xe0792b, accent: 0x172024, hair: 0x2b170e, skin: 0x956043, build: 1.01, gender: "male", hairStyle: "high" },
-  "cpu-01": { jacket: 0x246ba6, accent: 0xf2c94c, hair: 0x2a1a13, skin: 0x81543e, build: 0.98, gender: "male", hairStyle: "short" },
-  "cpu-02": { jacket: 0x2c8c5c, accent: 0xf5e5ca, hair: 0x151515, skin: 0x784a35, build: 1.03, gender: "male", hairStyle: "short" },
-  "cpu-03": { jacket: 0xb34b89, accent: 0x65d9f4, hair: 0x281623, skin: 0x8d5a42, build: 0.95, gender: "female", hairStyle: "bun" },
-  "cpu-04": { jacket: 0x6555bd, accent: 0xe7c06d, hair: 0x1b1512, skin: 0x7b503b, build: 1.01, gender: "female", hairStyle: "high" },
-  "cpu-05": { jacket: 0x9f4c38, accent: 0xf0e9dc, hair: 0x111111, skin: 0x754733, build: 1.06, gender: "male", hairStyle: "locs" },
-  "cpu-06": { jacket: 0xd26132, accent: 0x9ee8db, hair: 0x1a120e, skin: 0x925c43, build: 0.99, gender: "male", hairStyle: "short" },
-  "cpu-07": { jacket: 0xae8628, accent: 0xffefaa, hair: 0x23160f, skin: 0x80513b, build: 1.04, gender: "female", hairStyle: "short" }
+  main: { jacket: 0x138e85, accent: 0xf2c94c, hair: 0x211715, skin: 0x956345, build: 1.0, hairStyle: "short" },
+  ada: { jacket: 0x8056bd, accent: 0xf2d0a9, hair: 0x27131f, skin: 0x8d5c45, build: 0.96, hairStyle: "braids" },
+  kobby: { jacket: 0xbe514a, accent: 0xeee4d8, hair: 0x121212, skin: 0x7e5039, build: 1.07, hairStyle: "locs" },
+  tobi: { jacket: 0xe0792b, accent: 0x172024, hair: 0x2b170e, skin: 0x956043, build: 1.01, hairStyle: "high" },
+  "cpu-01": { jacket: 0x246ba6, accent: 0xf2c94c, hair: 0x2a1a13, skin: 0x81543e, build: 0.98, hairStyle: "short" },
+  "cpu-02": { jacket: 0x2c8c5c, accent: 0xf5e5ca, hair: 0x151515, skin: 0x784a35, build: 1.03, hairStyle: "short" },
+  "cpu-03": { jacket: 0xb34b89, accent: 0x65d9f4, hair: 0x281623, skin: 0x8d5a42, build: 0.95, hairStyle: "bun" },
+  "cpu-04": { jacket: 0x6555bd, accent: 0xe7c06d, hair: 0x1b1512, skin: 0x7b503b, build: 1.01, hairStyle: "high" },
+  "cpu-05": { jacket: 0x9f4c38, accent: 0xf0e9dc, hair: 0x111111, skin: 0x754733, build: 1.06, hairStyle: "locs" },
+  "cpu-06": { jacket: 0xd26132, accent: 0x9ee8db, hair: 0x1a120e, skin: 0x925c43, build: 0.99, hairStyle: "short" },
+  "cpu-07": { jacket: 0xae8628, accent: 0xffefaa, hair: 0x23160f, skin: 0x80513b, build: 1.04, hairStyle: "short" }
 };
 
 type RaceModelPack = {
   bikes: Record<string, THREE.Group>;
-  riders: Partial<Record<RiderGender, THREE.Group>>;
+  riders: { base: THREE.Group };
   traffic: Record<Traffic["kind"], THREE.Group>;
   environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 };
@@ -103,10 +94,6 @@ const EXTERNAL_BIKE_ASSETS: Record<string, string> = {
   heavy: "https://cdn.3dassets.dev/assets/15428/v1/model.glb",
   elite: "https://cdn.3dassets.dev/assets/15416/v1/model.glb",
   legendary: "https://cdn.3dassets.dev/assets/15415/v1/model.glb",
-  cafe: "https://cdn.3dassets.dev/assets/15429/v1/model.glb",
-  scrambler: "https://cdn.3dassets.dev/assets/15430/v1/model.glb",
-  commuter: "https://cdn.3dassets.dev/assets/15431/v1/model.glb",
-  mini: "https://cdn.3dassets.dev/assets/15432/v1/model.glb",
   dirt: "/assets/dirt-bike.glb"
 };
 
@@ -121,10 +108,7 @@ const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
   van: "https://cdn.3dassets.dev/assets/18680/v1/model.glb"
 };
 
-const EXTERNAL_RIDER_ASSETS: Record<RiderGender, string> = {
-  male: "/assets/aboki_male_rider_stylized_v2.glb",
-  female: "/assets/aboki_female_rider_stylized_v2.glb"
-};
+const EXTERNAL_RIDER_ASSET = "/assets/aboki_male_rider_stylized_v2.glb";
 
 const EXTERNAL_ENVIRONMENT_ASSETS = {
   busStation: "https://cdn.3dassets.dev/assets/34221/v1/model.glb",
@@ -143,7 +127,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
 }
 
 async function resolve3DAssetUrl(slugOrUrl: string) {
-  if (slugOrUrl.startsWith("http") || slugOrUrl.startsWith("/")) return slugOrUrl;
+  if (slugOrUrl.startsWith("http")) return slugOrUrl;
 
   const response = await fetch(
     `/api/3dassets?slug=${encodeURIComponent(slugOrUrl)}`,
@@ -170,27 +154,23 @@ async function loadOptionalAsset(loader: GLTFLoader, slugOrUrl: string): Promise
 async function loadRaceModelPack() {
   const loader = new GLTFLoader();
   const bikeIds = Object.keys(EXTERNAL_BIKE_ASSETS);
-  const riderGenders = Object.keys(EXTERNAL_RIDER_ASSETS) as RiderGender[];
   const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
   const environmentIds = Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>;
 
-  const [bikeResults, riderResults, trafficResults, environmentResults] = await Promise.all([
+  const [bikeResults, riderResult, trafficResults, environmentResults] = await Promise.all([
     Promise.all(bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))),
-    Promise.all(riderGenders.map((gender) => loadOptionalAsset(loader, EXTERNAL_RIDER_ASSETS[gender]))),
+    loadOptionalAsset(loader, EXTERNAL_RIDER_ASSET),
     Promise.all(trafficKinds.map((kind) => loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]))),
     Promise.all(environmentIds.map((id) => loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id])))
   ]);
 
   const bikes: Record<string, THREE.Group> = {};
-  const riders: Partial<Record<RiderGender, THREE.Group>> = {};
+  const riders = riderResult ? { base: riderResult as THREE.Group } : {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
   const environments = {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 
   bikeIds.forEach((bikeId, index) => {
     if (bikeResults[index]) bikes[bikeId] = bikeResults[index] as THREE.Group;
-  });
-  riderGenders.forEach((gender, index) => {
-    if (riderResults[index]) riders[gender] = riderResults[index] as THREE.Group;
   });
   trafficKinds.forEach((kind, index) => {
     if (trafficResults[index]) traffic[kind] = trafficResults[index] as THREE.Group;
@@ -199,7 +179,7 @@ async function loadRaceModelPack() {
     if (environmentResults[index]) environments[id] = environmentResults[index] as THREE.Group;
   });
 
-  return { bikes, riders, traffic, environments };
+  return { bikes, riders: riders as { base: THREE.Group }, traffic, environments };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -310,11 +290,86 @@ function fitBikeModel(model: THREE.Object3D, targetLength: number) {
   model.scale.multiplyScalar(scale);
 }
 
-function prepareExternalRider(source: THREE.Object3D, riderId: string, player = false) {
-  const model = cloneLoadedModel(source, "rider-" + riderId);
+function createOperatorLoadout(riderId: string) {
   const rider = RIDERS[riderId] ?? RIDERS.main;
+  const root = new THREE.Group();
+
+  const vestMat = material(
+    new THREE.Color(rider.jacket).offsetHSL(0, -0.08, -0.08).getHex(),
+    0.64,
+    0.28
+  );
+  const accentMat = material(rider.accent, 0.34, 0.22);
+  const darkMat = material(0x14191c, 0.82, 0.12);
+  const metalMat = material(0x6b7478, 0.52, 0.62);
+
+  // Original mobile-racing tactical silhouette: compact chest rig, harness,
+  // forearm guards and knee armor. No helmet, backpack or weapon.
+  const chestRig = new THREE.Mesh(
+    new RoundedBoxGeometry(0.58, 0.34, 0.24, 5, 0.05),
+    vestMat
+  );
+  chestRig.position.set(0, 1.03, -0.16);
+  root.add(chestRig);
+
+  const chestPlate = new THREE.Mesh(
+    new RoundedBoxGeometry(0.34, 0.18, 0.06, 4, 0.02),
+    accentMat
+  );
+  chestPlate.position.set(0, 1.08, -0.31);
+  root.add(chestPlate);
+
+  for (const sx of [-1, 1]) {
+    const harness = new THREE.Mesh(
+      new RoundedBoxGeometry(0.045, 0.54, 0.045, 3, 0.01),
+      metalMat
+    );
+    harness.position.set(sx * 0.23, 0.99, -0.18);
+    harness.rotation.z = sx * -0.12;
+    root.add(harness);
+
+    const forearmGuard = new THREE.Mesh(
+      new RoundedBoxGeometry(0.15, 0.24, 0.18, 4, 0.03),
+      darkMat
+    );
+    forearmGuard.position.set(sx * 0.49, 0.78, -0.55);
+    forearmGuard.rotation.z = sx * -0.08;
+    root.add(forearmGuard);
+
+    const kneeGuard = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.095, 0.12, 5, 10),
+      accentMat
+    );
+    kneeGuard.position.set(sx * 0.27, 0.55, 0.60);
+    kneeGuard.rotation.z = sx * 0.12;
+    root.add(kneeGuard);
+  }
+
+  const waistRig = new THREE.Mesh(
+    new RoundedBoxGeometry(0.63, 0.12, 0.26, 4, 0.025),
+    darkMat
+  );
+  waistRig.position.set(0, 0.83, 0.08);
+  root.add(waistRig);
+
+  const buckle = new THREE.Mesh(
+    new RoundedBoxGeometry(0.11, 0.09, 0.035, 3, 0.01),
+    metalMat
+  );
+  buckle.position.set(0, 0.83, -0.07);
+  root.add(buckle);
+
+  root.userData.operatorVariant = riderId;
+  return root;
+}
+
+function prepareExternalRider(source: THREE.Object3D, riderId: string, player = false) {
+  const model = cloneLoadedModel(source, "rider-human");
+  const rider = RIDERS[riderId] ?? RIDERS.main;
+  const bones = new Map<string, THREE.Object3D>();
 
   model.traverse((node) => {
+    if (node.type === "Bone") bones.set(node.name.toLowerCase(), node);
     if (/helmet|headgear|hardhat|cap|backpack|ruck|rifle|carbine|weapon|gun|pouch|holster/i.test(node.name)) {
       node.visible = false;
     }
@@ -325,35 +380,88 @@ function prepareExternalRider(source: THREE.Object3D, riderId: string, player = 
 
     for (const materialInstance of materials) {
       if (!(materialInstance instanceof THREE.MeshStandardMaterial)) continue;
-      const role = (node.name + " " + materialInstance.name).toLowerCase();
+      const role = `${node.name} ${materialInstance.name}`.toLowerCase();
 
       if (/skin|body|face|head|ear|neck|hand|arm_skin|leg_skin/i.test(role)) {
-        materialInstance.color.lerp(new THREE.Color(rider.skin), 0.22);
+        materialInstance.color.lerp(new THREE.Color(rider.skin), 0.28);
+        materialInstance.needsUpdate = true;
       } else if (/hair/i.test(role)) {
-        materialInstance.color.lerp(new THREE.Color(rider.hair), 0.28);
+        materialInstance.color.lerp(new THREE.Color(rider.hair), 0.34);
+        materialInstance.needsUpdate = true;
       } else if (/shirt|jacket|top|vest|hood|sleeve|outfit|clothes|pant|trouser|jean|boot|shoe|suit/i.test(role)) {
-        materialInstance.color.lerp(new THREE.Color(rider.jacket), 0.30);
+        materialInstance.color.lerp(new THREE.Color(rider.jacket), 0.34);
+        materialInstance.needsUpdate = true;
       }
-      materialInstance.needsUpdate = true;
     }
   });
+
+  fitModel(model, 1.72);
+  const bounds = new THREE.Box3().setFromObject(model);
+  const center = bounds.getCenter(new THREE.Vector3());
+  model.position.x -= center.x;
+  model.position.z -= center.z;
+  model.position.y -= bounds.min.y;
+  model.rotation.y = Math.PI;
+
+  const loadout = createOperatorLoadout(riderId);
+  loadout.position.set(0, 0.08, 0.02);
+  loadout.scale.setScalar(0.96);
+  model.add(loadout);
+
+  const buildScale = THREE.MathUtils.clamp(rider.build, 0.94, 1.06);
+  model.scale.x *= buildScale;
+  model.scale.z *= buildScale;
+
+  // MakeHuman game_engine rig bone names are stable in this source.
+  // Seat the human independently from the bike so the rider never becomes a fused asset.
+  const thighL = bones.get("thigh_l");
+  const thighR = bones.get("thigh_r");
+  const calfL = bones.get("calf_l");
+  const calfR = bones.get("calf_r");
+  const footL = bones.get("foot_l");
+  const footR = bones.get("foot_r");
+  const armL = bones.get("upperarm_l");
+  const armR = bones.get("upperarm_r");
+  const forearmL = bones.get("lowerarm_l");
+  const forearmR = bones.get("lowerarm_r");
+  const spine = bones.get("spine_02") ?? bones.get("spine_01");
+  const head = bones.get("head");
+
+  [thighL, thighR, calfL, calfR, footL, footR, armL, armR, forearmL, forearmR, spine, head]
+    .forEach((bone) => {
+      if (bone) bone.rotation.order = "XYZ";
+    });
+
+  // Seated, forward-leaning riding pose.
+  if (thighL && thighR) {
+    thighL.rotation.x = -1.10;
+    thighR.rotation.x = -1.10;
+  }
+  if (calfL && calfR) {
+    calfL.rotation.x = 1.22;
+    calfR.rotation.x = 1.22;
+  }
+  if (footL && footR) {
+    footL.rotation.x = -0.30;
+    footR.rotation.x = -0.30;
+  }
+  if (armL && armR) {
+    armL.rotation.x = -0.78;
+    armR.rotation.x = -0.78;
+  }
+  if (forearmL && forearmR) {
+    forearmL.rotation.x = -0.58;
+    forearmR.rotation.x = -0.58;
+  }
+  if (spine) spine.rotation.x = 0.30;
+  if (head) head.rotation.x = -0.08;
 
   const root = new THREE.Group();
   root.add(model);
 
-  const animations = model.userData.animations as THREE.AnimationClip[] | undefined;
-  const ridingClip = animations?.find((clip) => /ride|idle|run/i.test(clip.name));
-  if (ridingClip) {
-    const mixer = new THREE.AnimationMixer(model);
-    mixer.clipAction(ridingClip).play();
-    root.userData.riderMixer = mixer;
-  }
-
   root.userData.riderRoot = model;
-  root.userData.riderModel = model;
   root.userData.realHuman = true;
   root.userData.riderId = riderId;
-  root.userData.riderGender = rider.gender;
   root.userData.playerRider = player;
   return root;
 }
@@ -397,55 +505,45 @@ function prepareLoadedRiderBike(
   riderId: string,
   player = false
 ) {
-  const rider = RIDERS[riderId] ?? RIDERS.main;
-  const riderSource =
-    pack.riders[rider.gender] ??
-    pack.riders.male ??
-    pack.riders.female;
-
-  const riderRoot = riderSource
-    ? prepareExternalRider(riderSource, riderId, player)
+  const riderRoot = pack.riders.base
+    ? prepareExternalRider(pack.riders.base, riderId, player)
     : createRiderFromFallback(riderId, player);
-
   const bikeSource = pack.bikes[bikeId] ?? pack.bikes.starter;
-  if (!bikeSource) return riderRoot;
-
   const bike = cloneLoadedModel(bikeSource, "bike-" + bikeId);
-  // 3DAssets.dev bikes are authored nose +Z; the race travels toward -Z.
   bike.rotation.y = Math.PI;
-
-  const bikeSpec = BIKES[bikeId] ?? BIKES.starter;
-  if (bikeSpec.scale && bikeSpec.scale !== 1) {
-    bike.scale.multiplyScalar(bikeSpec.scale);
-  }
-
-  tintBikeLivery(bike, bikeSpec);
+  fitBikeModel(bike, player ? 2.55 : 2.15);
+  tintBikeLivery(bike, BIKES[bikeId] ?? BIKES.starter);
 
   const root = riderRoot;
   root.userData.modelBacked = true;
   root.userData.bikeModel = bike;
-  root.add(bike);
-
-  const character = root.userData.riderRoot as THREE.Object3D | undefined;
-  if (character) {
-    try {
-      const fit = fitRiderToBike(root, character, bike, {
-        buildScale: rider.build
-      });
-      root.userData.bikeMounts = fit.mounts;
-      root.userData.riderFitScale = fit.scale;
-    } catch (error) {
-      console.warn("Rider/bike auto-fit failed; keeping normalized rider pose.", error);
-    }
-  }
-
-  const bikeMixer = createLoopingWheelMixer(bike);
-  if (bikeMixer) root.userData.bikeMixer = bikeMixer;
 
   const wheels: THREE.Object3D[] = [];
   bike.traverse((object) => {
     if (/wheel/i.test(object.name)) wheels.push(object);
   });
+
+  root.add(bike);
+
+  // Seat the rider from the fitted bike's real bounds instead of assuming every
+  // external motorcycle has the same proportions.
+  const bikeBox = new THREE.Box3().setFromObject(bike);
+  const bikeCenter = bikeBox.getCenter(new THREE.Vector3());
+  const bikeSize = bikeBox.getSize(new THREE.Vector3());
+  const character = root.userData.riderRoot as THREE.Group | undefined;
+  if (character) {
+    character.position.set(
+      0,
+      THREE.MathUtils.clamp(bikeBox.max.y * 0.70, 0.88, 1.34),
+      THREE.MathUtils.clamp(bikeCenter.z + bikeSize.z * 0.10, -0.14, 0.30)
+    );
+    const sportPosture = bikeId === "speed" || bikeId === "elite" || bikeId === "legendary";
+    character.rotation.x = sportPosture ? -0.28 : bikeId === "heavy" ? -0.08 : -0.20;
+    character.rotation.z = 0;
+  }
+
+  const bikeMixer = createLoopingWheelMixer(bike);
+  if (bikeMixer) root.userData.bikeMixer = bikeMixer;
   root.userData.wheels = wheels;
   return root;
 }

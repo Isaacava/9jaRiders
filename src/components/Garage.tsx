@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BIKES, RIDERS, DIFFICULTIES, type BikeId, type RiderId, type Difficulty } from "@/game/loadout";
 import BikePreview3D from "./BikePreview3D";
+import RiderPreview3D from "./RiderPreview3D";
 
 const BIKE_KEY = "aboki:bike";
 const RIDER_KEY = "aboki:rider";
@@ -37,9 +37,9 @@ export default function Garage() {
       <section className="garage-shell">
         <header className="garage-header">
           <div>
-            <span className="brand-kicker">YOUR RIDER HQ</span>
+            <span className="brand-kicker">3D RIDER HQ</span>
             <h1>GARAGE</h1>
-            <p>Choose your bike, rider and solo difficulty. Your choices stay on this device.</p>
+            <p>Pick your actual 3D bike and rider. Your choices stay on this device.</p>
           </div>
           <Link className="primary-action garage-ride" href="/play?mode=solo">OYÁ, RIDE!</Link>
         </header>
@@ -48,6 +48,10 @@ export default function Garage() {
           <div className="garage-bike-art">
             <div className="garage-bike-shadow" />
             <BikePreview3D bikeId={activeBike.id} className="garage-bike-preview" />
+          </div>
+          <div className="garage-bike-art">
+            <div className="garage-bike-shadow" />
+            <RiderPreview3D riderId={activeRider.id} className="garage-rider-preview" />
           </div>
           <div className="loadout-copy">
             <span className="loadout-class">{activeBike.className}</span>
@@ -67,14 +71,15 @@ export default function Garage() {
         </section>
 
         <section className="garage-section">
-          <div className="section-heading"><div><span className="brand-kicker">BIKE BAY</span><h2>CHOOSE YOUR RIDE</h2></div><span>{BIKES.length} BIKES</span></div>
+          <div className="section-heading"><div><span className="brand-kicker">BIKE BAY</span><h2>CHOOSE YOUR RIDE</h2></div><span>{BIKES.length} 3D MODELS</span></div>
           <div className="garage-grid">
             {BIKES.map((item) => (
               <button key={item.id} type="button" className={item.id === bike ? "garage-card garage-card--selected" : "garage-card"} onClick={() => selectBike(item.id)}>
-                <div className="mini-bike">
-                  <Image className="mini-bike-image" src={`/assets/bikes/${item.id}.svg`} alt="" width={220} height={320} />
+                <div className="mini-bike mini-bike--model">
+                  <strong>3D</strong>
+                  <span>{item.className}</span>
                 </div>
-                <span>{item.className}</span><strong>{item.name}</strong>
+                <span>{item.className}</span><strong>{item.name}</strong><small>{item.description}</small>
               </button>
             ))}
           </div>
@@ -85,8 +90,8 @@ export default function Garage() {
           <div className="rider-grid">
             {RIDERS.map((item) => (
               <button key={item.id} type="button" className={item.id === rider ? "rider-card rider-card--selected" : "rider-card"} onClick={() => selectRider(item.id)}>
-                <div className="rider-avatar">
-                  <Image className="rider-avatar-image" src={`/assets/riders/${item.id}.svg`} alt={item.name} width={180} height={250} />
+                <div className="rider-avatar rider-avatar--model">
+                  <span>3D</span><strong>{item.gender.toUpperCase()}</strong>
                 </div>
                 <div><span>{item.style}</span><strong>{item.name}</strong><small>{item.personality}</small></div>
               </button>

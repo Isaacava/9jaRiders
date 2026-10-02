@@ -833,7 +833,6 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
   root.add(headlamp);
 
   const riderRoot = new THREE.Group();
-  const rider = RIDERS[riderId] ?? RIDERS.main;
   const ridingPosture =
     bike.silhouette === "sport" || bike.silhouette === "superbike"
       ? -0.38

@@ -95,14 +95,14 @@ const EXTERNAL_BIKE_ASSETS: Record<string, string> = {
 };
 
 const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
-  // Exact assets requested from 3DAssets.dev.
+  // Verified 3DAssets.dev traffic models.
   danfo: "https://cdn.3dassets.dev/assets/34194/v1/model.glb",
-  // Existing free catalogue models kept for Lagos-specific traffic placeholders.
   keke: "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
-  minibus: "https://cdn.3dassets.dev/assets/32486/v1/model.glb",
-  sedan: "air-land-sea-vehicles-city-hatchback-da84bd12",
-  suv: "car-park-and-road-vehicle-fleet-executive-saloon-4895d629",
-  van: "car-park-and-road-vehicle-fleet-double-cab-pickup-cano-aa92dedb"
+  // The transit starter scene contains the verified Community Minibus. We extract that submodel at load time.
+  minibus: "https://cdn.3dassets.dev/assets/34231/v1/model.glb",
+  sedan: "https://cdn.3dassets.dev/assets/32490/v1/model.glb",
+  suv: "https://cdn.3dassets.dev/assets/32500/v1/model.glb",
+  van: "https://cdn.3dassets.dev/assets/18680/v1/model.glb"
 };
 
 const EXTERNAL_ENVIRONMENT_ASSETS = {
@@ -177,7 +177,89 @@ async function loadRaceModelPack() {
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
   if (!source) throw new Error("Missing race model: " + label);
-  return source.clone(true) as THREE.Group;
+  const clone = source.clone(true) as THREE.Group;
+
+  // GLTF clones share material instances by default. Make each race instance independent
+  // so a bike/traffic livery change never recolours another racer.
+  clone.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+    mesh.material = Array.isArray(mesh.material)
+      ? mesh.material.map((materialInstance) => materialInstance.clone())
+      : mesh.material.clone();
+  });
+
+  return clone;
+}
+
+function findNamedSubmodel(root: THREE.Object3D, pattern: RegExp) {
+  let match: THREE.Object3D | null = null;
+  root.traverse((node) => {
+    if (match || node === root) return;
+    if (pattern.test(node.name)) match = node;
+  });
+  return match;
+}
+
+function createLoopingWheelMixer(model: THREE.Object3D) {
+  const animations = model.userData.animations as THREE.AnimationClip[] | undefined;
+  if (!animations?.length) return null;
+
+  const rollClip =
+    animations.find((clip) => /roll|wheel/i.test(clip.name)) ??
+    animations.find((clip) => /drive|run|idle/i.test(clip.name)) ??
+    animations[animations.length - 1];
+
+  if (!rollClip) return null;
+  const mixer = new THREE.AnimationMixer(model);
+  mixer.clipAction(rollClip).play();
+  return mixer;
+}
+
+function tintBikeLivery(model: THREE.Object3D, spec: BikeSpec) {
+  const tint = new THREE.Color(spec.color);
+  model.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const materialInstance of materials) {
+      if (!(materialInstance instanceof THREE.MeshStandardMaterial)) continue;
+      const role = `${node.name} ${materialInstance.name}`.toLowerCase();
+      if (/tire|tyre|rubber|glass|windshield|screen|chrome|metal|disc|caliper|chain|brake/.test(role)) continue;
+
+      materialInstance.color.lerp(tint, 0.36);
+      materialInstance.needsUpdate = true;
+    }
+  });
+}
+
+function normalizeExtractedSubmodel(source: THREE.Object3D, pattern: RegExp) {
+  const target = findNamedSubmodel(source, pattern);
+  if (!target) return null;
+
+  target.updateWorldMatrix(true, true);
+  const worldPosition = new THREE.Vector3();
+  const worldQuaternion = new THREE.Quaternion();
+  const worldScale = new THREE.Vector3();
+  target.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
+
+  const wrapper = new THREE.Group();
+  const pivot = new THREE.Group();
+  pivot.position.copy(worldPosition);
+  pivot.quaternion.copy(worldQuaternion);
+  pivot.scale.copy(worldScale);
+
+  const clone = target.clone(true) as THREE.Object3D;
+  // The pivot now owns the complete world transform of the source node.
+  clone.position.set(0, 0, 0);
+  clone.quaternion.identity();
+  clone.scale.setScalar(1);
+
+  pivot.add(clone);
+  wrapper.add(pivot);
+  wrapper.userData.animations = source.userData.animations;
+  return wrapper;
 }
 
 function fitModel(model: THREE.Object3D, targetHeight: number) {
@@ -197,7 +279,10 @@ function fitBikeModel(model: THREE.Object3D, targetLength: number) {
 }
 
 function createRiderFromFallback(riderId: string, player = false) {
-  const fallback = createBikeAndRider("starter", riderId, player ? 1.12 : 0.86);
+  // Build the character once at neutral scale, then apply exactly one game-world scale.
+  // The previous implementation scaled both the source fallback and its wrapper, which
+  // made loaded-bike characters visibly too large/small and badly seated.
+  const fallback = createBikeAndRider("starter", riderId, 1);
   const riderRoot = fallback.userData.riderRoot as THREE.Group | undefined;
   if (!riderRoot) return fallback;
   const root = new THREE.Group();
@@ -233,9 +318,11 @@ function prepareLoadedRiderBike(
   player = false
 ) {
   const riderRoot = createRiderFromFallback(riderId, player);
-  const bike = cloneLoadedModel(pack.bikes[bikeId] ?? pack.bikes.starter, "bike-" + bikeId);
+  const bikeSource = pack.bikes[bikeId] ?? pack.bikes.starter;
+  const bike = cloneLoadedModel(bikeSource, "bike-" + bikeId);
   bike.rotation.y = Math.PI;
   fitBikeModel(bike, player ? 2.55 : 2.15);
+  tintBikeLivery(bike, BIKES[bikeId] ?? BIKES.starter);
 
   const root = riderRoot;
   root.userData.modelBacked = true;
@@ -247,6 +334,25 @@ function prepareLoadedRiderBike(
   });
 
   root.add(bike);
+
+  // Seat the rider from the fitted bike's real bounds instead of assuming every
+  // external motorcycle has the same proportions.
+  const bikeBox = new THREE.Box3().setFromObject(bike);
+  const bikeCenter = bikeBox.getCenter(new THREE.Vector3());
+  const bikeSize = bikeBox.getSize(new THREE.Vector3());
+  const character = root.userData.riderRoot as THREE.Group | undefined;
+  if (character) {
+    character.position.set(
+      0,
+      THREE.MathUtils.clamp(bikeBox.max.y * 0.78, 0.98, 1.46),
+      THREE.MathUtils.clamp(bikeCenter.z + bikeSize.z * 0.08, -0.08, 0.34)
+    );
+    const sportPosture = bikeId === "speed" || bikeId === "elite" || bikeId === "legendary";
+    character.rotation.x = sportPosture ? -0.36 : bikeId === "heavy" ? -0.12 : -0.24;
+  }
+
+  const bikeMixer = createLoopingWheelMixer(bike);
+  if (bikeMixer) root.userData.bikeMixer = bikeMixer;
   root.userData.wheels = wheels;
   return root;
 }
@@ -255,27 +361,29 @@ function prepareLoadedTraffic(pack: RaceModelPack, kind: Traffic["kind"]) {
   const source = pack.traffic[kind];
   if (!source) return null;
 
-  const model = cloneLoadedModel(source, "traffic-" + kind);
+  let model = cloneLoadedModel(source, "traffic-" + kind);
+
+  if (kind === "minibus") {
+    const extracted = normalizeExtractedSubmodel(model, /community\s*minibus|minibus/i);
+    if (!extracted) {
+      console.warn("Community minibus could not be extracted from the transit starter scene.");
+      return null;
+    }
+    model = extracted;
+  }
   const targetHeights: Record<Traffic["kind"], number> = {
     danfo: 2.9,
     keke: 2.15,
-    minibus: 1.75,
-    sedan: 1.55,
+    minibus: 2.20,
+    sedan: 1.52,
     suv: 1.82,
-    van: 1.86
+    van: 2.40
   };
   fitModel(model, targetHeights[kind]);
   model.rotation.y = Math.PI;
 
-  const animations = model.userData.animations as THREE.AnimationClip[] | undefined;
-  if (animations?.length) {
-    const mixer = new THREE.AnimationMixer(model);
-    const rollClip =
-      animations.find((clip) => /roll|wheel/i.test(clip.name)) ??
-      animations[animations.length - 1];
-    mixer.clipAction(rollClip).play();
-    model.userData.mixer = mixer;
-  }
+  const mixer = createLoopingWheelMixer(model);
+  if (mixer) model.userData.mixer = mixer;
 
   model.userData.modelBacked = true;
   const wheels: THREE.Object3D[] = [];
@@ -2112,10 +2220,15 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
           0.10
         );
 
-        const aiWheels = ai.group.userData.wheels as THREE.Object3D[] | undefined;
-        aiWheels?.forEach((wheelObject) => {
-          wheelObject.rotation.x -= (ai.speed / 3.6) * dt / 0.5;
-        });
+        const aiBikeMixer = ai.group.userData.bikeMixer as THREE.AnimationMixer | undefined;
+        if (aiBikeMixer) {
+          aiBikeMixer.update(dt);
+        } else {
+          const aiWheels = ai.group.userData.wheels as THREE.Object3D[] | undefined;
+          aiWheels?.forEach((wheelObject) => {
+            wheelObject.rotation.x -= (ai.speed / 3.6) * dt / 0.5;
+          });
+        }
 
         const aiRiderRoot = ai.group.userData.riderRoot as THREE.Group | undefined;
         if (aiRiderRoot) {
@@ -2241,11 +2354,16 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       );
     }
 
-    const playerWheels = activePlayer.userData.wheels as THREE.Object3D[] | undefined;
-    playerWheels?.forEach((wheelObject, index) => {
-      wheelObject.rotation.x -=
-        (playerSpeed / 3.6) * dt / (index === 0 ? 0.57 : 0.48);
-    });
+    const playerBikeMixer = activePlayer.userData.bikeMixer as THREE.AnimationMixer | undefined;
+    if (playerBikeMixer) {
+      playerBikeMixer.update(dt);
+    } else {
+      const playerWheels = activePlayer.userData.wheels as THREE.Object3D[] | undefined;
+      playerWheels?.forEach((wheelObject, index) => {
+        wheelObject.rotation.x -=
+          (playerSpeed / 3.6) * dt / (index === 0 ? 0.57 : 0.48);
+      });
+    }
 
     camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerX * 0.55, 0.12);
     camera.position.y = THREE.MathUtils.lerp(camera.position.y, 2.62 + normalized * 0.15, 0.08);

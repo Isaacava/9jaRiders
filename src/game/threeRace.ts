@@ -111,6 +111,15 @@ const EXTERNAL_ENVIRONMENT_ASSETS = {
 
 type LoadedAsset = THREE.Group | null;
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(label + " timed out")), timeoutMs);
+    })
+  ]);
+}
+
 async function resolve3DAssetUrl(slugOrUrl: string) {
   if (slugOrUrl.startsWith("http")) return slugOrUrl;
 
@@ -126,48 +135,65 @@ async function resolve3DAssetUrl(slugOrUrl: string) {
 
 async function loadOptionalAsset(loader: GLTFLoader, slugOrUrl: string): Promise<LoadedAsset> {
   try {
-    return (await loader.loadAsync(await resolve3DAssetUrl(slugOrUrl))).scene;
+    const url = await withTimeout(resolve3DAssetUrl(slugOrUrl), 6500, "3D asset lookup");
+    return (await withTimeout(loader.loadAsync(url), 8500, "3D asset load")).scene;
   } catch (error) {
     console.warn("3DAssets.dev asset unavailable:", slugOrUrl, error);
     return null;
   }
 }
 
-async function loadRaceModelPack() {
+async function loadPlayerRaceModels(playerBikeId: string) {
   const loader = new GLTFLoader();
-  const bikeIds = Object.keys(EXTERNAL_BIKE_ASSETS);
-  const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
-  const environmentIds = Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>;
 
-  const [riderResult, bikeResults, trafficResults, environmentResults] = await Promise.all([
-    loader.loadAsync("/assets/models/riders.glb"),
-    Promise.all(bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))),
-    Promise.all(trafficKinds.map((kind) => loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]))),
-    Promise.all(environmentIds.map((id) => loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id])))
-  ]);
+  let rider: THREE.Group | null = null;
+  try {
+    rider = (await withTimeout(loader.loadAsync("/assets/models/riders.glb"), 6500, "rider pack")).scene;
+  } catch (error) {
+    console.warn("Local rider pack unavailable:", error);
+  }
 
+  const bike = await loadOptionalAsset(
+    loader,
+    EXTERNAL_BIKE_ASSETS[playerBikeId] ?? EXTERNAL_BIKE_ASSETS.starter
+  );
+
+  return { rider, bike };
+}
+
+async function loadRaceSupportModels(
+  playerBikeId: string,
+  rider: THREE.Group | null,
+  playerBike: THREE.Group | null
+) {
+  const loader = new GLTFLoader();
   const bikes: Record<string, THREE.Group> = {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
   const environments = {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 
-  bikeIds.forEach((bikeId, index) => {
-    if (bikeResults[index]) bikes[bikeId] = bikeResults[index] as THREE.Group;
-  });
+  if (playerBike) bikes[playerBikeId] = playerBike;
 
-  trafficKinds.forEach((kind, index) => {
-    if (trafficResults[index]) traffic[kind] = trafficResults[index] as THREE.Group;
-  });
+  for (const [bikeId, sourceUrl] of Object.entries(EXTERNAL_BIKE_ASSETS)) {
+    if (bikeId === playerBikeId) continue;
+    const source = await loadOptionalAsset(loader, sourceUrl);
+    if (source) bikes[bikeId] = source;
+  }
 
-  environmentIds.forEach((id, index) => {
-    if (environmentResults[index]) environments[id] = environmentResults[index] as THREE.Group;
-  });
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 40));
 
-  return {
-    bikes,
-    riders: riderResult.scene,
-    traffic,
-    environments
-  };
+  for (const kind of Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][]) {
+    const source = await loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]);
+    if (source) traffic[kind] = source;
+  }
+
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 40));
+
+  for (const id of Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>) {
+    const source = await loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id]);
+    if (source) environments[id] = source;
+  }
+
+  return { bikes, riders: rider, traffic, environments };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -1468,38 +1494,76 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
   const hud = makeHud(parent);
 
-  const raceModelsPromise = loadRaceModelPack().then((pack) => {
-    const realPlayer = prepareLoadedRiderBike(pack, playerBikeId, playerRiderId, true);
-    const playerIndex = scene.children.indexOf(player);
-    if (playerIndex >= 0) scene.remove(player);
-    realPlayer.position.copy(player.position);
-    scene.add(realPlayer);
+  let activePlayer = player;
+  let raceArmed = false;
 
-    for (const ai of aiRacers) {
-      const next = prepareLoadedRiderBike(pack, ai.bikeId, ai.riderId, false);
-      next.position.copy(ai.group.position);
-      scene.remove(ai.group);
-      ai.group = next;
-      scene.add(next);
+  const applySupportModels = (pack: {
+    bikes: Record<string, THREE.Group>;
+    riders: THREE.Group | null;
+    traffic: Record<Traffic["kind"], THREE.Group>;
+    environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
+  }) => {
+    if (pack.riders) {
+      for (const ai of aiRacers) {
+        const bikeSource = pack.bikes[ai.bikeId];
+        if (!bikeSource) continue;
+        const next = prepareLoadedRiderBike(
+          {
+            bikes: pack.bikes,
+            riders: pack.riders,
+            traffic: pack.traffic,
+            environments: pack.environments
+          },
+          ai.bikeId,
+          ai.riderId,
+          false
+        );
+        next.position.copy(ai.group.position);
+        scene.remove(ai.group);
+        ai.group = next;
+        scene.add(next);
+      }
+
+      for (const [id, remote] of remoteRacers) {
+        const bikeSource = pack.bikes[remote.bikeId];
+        if (!bikeSource) continue;
+        const next = prepareLoadedRiderBike(
+          {
+            bikes: pack.bikes,
+            riders: pack.riders,
+            traffic: pack.traffic,
+            environments: pack.environments
+          },
+          remote.bikeId,
+          remote.riderId,
+          false
+        );
+        next.position.copy(remote.group.position);
+        next.rotation.copy(remote.group.rotation);
+        scene.remove(remote.group);
+        remote.group = next;
+        remoteRacers.set(id, remote);
+        scene.add(next);
+      }
     }
 
     for (const vehicle of traffic) {
-      const next = prepareLoadedTraffic(pack, vehicle.kind);
+      const source = pack.traffic[vehicle.kind];
+      if (!source) continue;
+      const next = prepareLoadedTraffic(
+        {
+          bikes: pack.bikes,
+          riders: pack.riders ?? new THREE.Group(),
+          traffic: pack.traffic,
+          environments: pack.environments
+        },
+        vehicle.kind
+      );
       if (!next) continue;
       next.position.copy(vehicle.group.position);
       scene.remove(vehicle.group);
       vehicle.group = next;
       scene.add(vehicle.group);
-    }
-
-    for (const [id, remote] of remoteRacers) {
-      const next = prepareLoadedRiderBike(pack, remote.bikeId, remote.riderId, false);
-      next.position.copy(remote.group.position);
-      next.rotation.copy(remote.group.rotation);
-      scene.remove(remote.group);
-      remote.group = next;
-      remoteRacers.set(id, remote);
-      scene.add(next);
     }
 
     const environmentPlacements = [
@@ -1519,11 +1583,48 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       scene.add(setPiece);
       scenery.push(setPiece);
     });
+  };
 
-    return { player: realPlayer };
-  }).catch((error) => {
-    console.error("3D model pack load failed; keeping deterministic fallback.", error);
-    return { player };
+  const raceModelsPromise = (async () => {
+    const initial = await loadPlayerRaceModels(playerBikeId);
+
+    if (initial.rider && initial.bike) {
+      const realPlayer = prepareLoadedRiderBike(
+        {
+          bikes: { [playerBikeId]: initial.bike },
+          riders: initial.rider,
+          traffic: {} as Record<Traffic["kind"], THREE.Group>,
+          environments: {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>
+        },
+        playerBikeId,
+        playerRiderId,
+        true
+      );
+      const playerIndex = scene.children.indexOf(player);
+      if (playerIndex >= 0) scene.remove(player);
+      realPlayer.position.copy(player.position);
+      scene.add(realPlayer);
+      activePlayer = realPlayer;
+    }
+
+    // Arm the race as soon as the player-facing assets are ready.
+    raceArmed = true;
+
+    // Load AI, traffic and environment progressively so they never block the countdown/render loop.
+    window.setTimeout(async () => {
+      try {
+        const support = await loadRaceSupportModels(playerBikeId, initial.rider, initial.bike);
+        applySupportModels(support);
+      } catch (error) {
+        console.warn("Streaming race support assets failed; keeping loaded fallback models.", error);
+      }
+    }, 450);
+
+    return undefined;
+  })().catch((error) => {
+    console.warn("Player 3D model load failed; using deterministic fallback.", error);
+    raceArmed = true;
+    return undefined;
   });
 
   let activePlayer = player;
@@ -1703,7 +1804,8 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
   function start() {
     raceStartedAt = performance.now();
-    countdown = mode === "multiplayer" ? 3 : 3;
+    countdown = 3;
+    raceArmed = true;
   }
 
   function recycleRoadSegments(scroll: number) {
@@ -1744,7 +1846,10 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   function update(dt: number) {
     if (finished) return;
 
-    if (countdown > 0) {
+    if (!raceArmed) {
+      playerSpeed = THREE.MathUtils.lerp(playerSpeed, 0, 0.18);
+      countdown = 3;
+    } else if (countdown > 0) {
       if (mode === "multiplayer" && networkState?.status === "countdown") {
         playerSpeed = THREE.MathUtils.lerp(playerSpeed, 0, 0.12);
       } else {
@@ -2002,7 +2107,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     requestAnimationFrame(frame);
   }
 
-  start();
+  void raceModelsPromise.then(() => {
+    start();
+  });
   requestAnimationFrame(frame);
 
   return {

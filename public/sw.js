@@ -10,7 +10,6 @@ const EXTERNAL_BIKE_URLS = new Set([
   "https://cdn.3dassets.dev/assets/15415/v1/model.glb",
   "https://cdn.3dassets.dev/assets/34194/v1/model.glb",
   "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/32486/v1/model.glb",
   "https://cdn.3dassets.dev/assets/32490/v1/model.glb",
   "https://cdn.3dassets.dev/assets/32500/v1/model.glb",
   "https://cdn.3dassets.dev/assets/18680/v1/model.glb",
@@ -18,6 +17,7 @@ const EXTERNAL_BIKE_URLS = new Set([
   "https://cdn.3dassets.dev/assets/32529/v1/model.glb",
   "https://cdn.3dassets.dev/assets/32487/v1/model.glb",
   "https://cdn.3dassets.dev/assets/34231/v1/model.glb",
+  "https://cdn.3dassets.dev/assets/34221/v1/model.glb",
   "https://cdn.3dassets.dev/assets/34323/v1/model.glb"
 ]);
 

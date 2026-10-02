@@ -1,1 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="520" height="430" viewBox="0 0 520 430"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#49d9ce"/><stop offset=".55" stop-color="#11827b"/><stop offset="1" stop-color="#063b3d"/></linearGradient><linearGradient id="m" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eef3ef"/><stop offset=".45" stop-color="#7b8689"/><stop offset="1" stop-color="#22282c"/></linearGradient><filter id="s"><feGaussianBlur stdDeviation="8"/></filter></defs><ellipse cx="260" cy="392" rx="180" ry="20" fill="#090d0f" opacity=".3" filter="url(#s)"/><g stroke="#0b1013" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="260" cy="318" rx="74" ry="106" fill="#080b0d" stroke-width="12"/><ellipse cx="260" cy="318" rx="49" ry="84" fill="url(#m)" stroke-width="7"/><path d="M260 236v164M218 274h84M224 250l72 136M296 250l-72 136" stroke="#525d61" stroke-width="4"/><path d="M170 229 Q210 180 260 171 Q310 180 350 229 L336 282 L184 282 Z" fill="url(#b)" stroke-width="12"/><path d="M188 218 Q260 184 332 218 L314 251 L206 251 Z" fill="#141a1d" stroke-width="8"/><path d="M204 199 Q260 171 316 199" fill="none" stroke="#f2c84f" stroke-width="7"/><path d="M185 274 Q260 294 335 274 L361 308 L329 340 L191 340 L159 308 Z" fill="#14191c" stroke-width="10"/><path d="M160 299L198 315M360 299L322 315" stroke="#757f83" stroke-width="10"/><path d="M182 337L145 359M338 337L375 359" stroke="#1a2124" stroke-width="15"/><path d="M145 359L130 386M375 359L390 386" stroke="#596468" stroke-width="10"/><path d="M128 386L107 399M392 386L413 399" stroke="#171d20" stroke-width="11"/><rect x="112" y="216" width="29" height="15" rx="5" fill="#f2c84f" stroke-width="5"/><rect x="379" y="216" width="29" height="15" rx="5" fill="#f2c84f" stroke-width="5"/><circle cx="260" cy="220" r="14" fill="#fff1a6" stroke-width="6"/></g></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="520" viewBox="0 0 420 520">
+<defs>
+ <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#18b8aa"/><stop offset=".58" stop-color="#18b8aa"/><stop offset="1" stop-color="#08766f"/></linearGradient>
+ <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eef2ee"/><stop offset=".35" stop-color="#9da7a9"/><stop offset=".72" stop-color="#515b5e"/><stop offset="1" stop-color="#23292c"/></linearGradient>
+ <radialGradient id="tire"><stop offset=".55" stop-color="#161a1d"/><stop offset=".86" stop-color="#07090a"/><stop offset="1" stop-color="#252a2c"/></radialGradient>
+ <radialGradient id="lamp"><stop stop-color="#fffbe0"/><stop offset=".38" stop-color="#f2c84b"/><stop offset="1" stop-color="#a76b0e"/></radialGradient>
+ <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#a8d8dd"/><stop offset="1" stop-color="#29444b"/></linearGradient>
+ <filter id="shadow"><feGaussianBlur stdDeviation="8"/></filter>
+</defs>
+<ellipse cx="211" cy="474" rx="142" ry="18" fill="#081012" opacity=".27" filter="url(#shadow)"/>
+<g stroke="#0a0f12" stroke-linecap="round" stroke-linejoin="round">
+ <!-- rear tyre + rim -->
+ <ellipse cx="210" cy="382" rx="59" ry="105" fill="url(#tire)" stroke-width="12"/>
+ <ellipse cx="210" cy="382" rx="37" ry="80" fill="url(#metal)" stroke-width="8"/>
+ <ellipse cx="210" cy="382" rx="28" ry="64" fill="#1d2427" stroke="#677276" stroke-width="3"/>
+ <path d="M210 320V444M175 348H245M181 337L239 427M239 337L181 427" stroke="#8b9598" stroke-width="3"/>
+ <circle cx="210" cy="382" r="9" fill="#151a1d" stroke-width="4"/>
+ <!-- swingarm / hub -->
+ <path d="M153 330L112 410L168 424L203 391L154 350Z" fill="#333b3e" stroke-width="8"/>
+ <path d="M267 330L310 408L253 425L217 392L266 350Z" fill="#2d3438" stroke-width="8"/>
+ <path d="M118 409L151 419M302 409L269 419" stroke="#9ba4a6" stroke-width="6"/>
+ <!-- muffler, right side -->
+ <path d="M292 298L336 326L361 379L337 391L311 346L274 325Z" fill="url(#metal)" stroke-width="9"/>
+ <path d="M337 379L366 383L373 398L340 402Z" fill="#181e20" stroke-width="6"/>
+ <path d="M308 341L346 366" stroke="#d4d8d6" stroke-width="4" opacity=".75"/>
+ <!-- rear body -->
+ <path d="M123 198Q151 163 210 154Q269 163 297 198L321 279L295 320Q252 337 210 337Q168 337 125 320L99 279Z" fill="url(#body)" stroke-width="11"/>
+ <path d="M129 216Q210 178 291 216L306 255Q256 245 210 245Q164 245 114 255Z" fill="#0e1618" stroke-width="8"/>
+ <path d="M145 197Q210 166 275 197" fill="none" stroke="#f2c84b" stroke-width="8"/>
+ <!-- tail light -->
+ <path d="M164 186Q210 167 256 186L252 211Q210 224 168 211Z" fill="#e84b49" stroke-width="6"/>
+ <path d="M180 187Q210 179 240 187" stroke="#ff9e8f" stroke-width="4" opacity=".8"/>
+ <!-- seat -->
+ <path d="M133 250Q210 229 287 250L274 304Q210 324 146 304Z" fill="#163437" stroke-width="9"/>
+ <path d="M156 264Q210 250 264 264" stroke="#737b7e" stroke-width="4" opacity=".6"/>
+ <!-- lower frame / engine -->
+ <path d="M145 299L172 332L210 350L248 332L275 299L263 368L210 393L157 368Z" fill="#151b1d" stroke-width="9"/>
+ <path d="M161 323L210 351L259 323" fill="none" stroke="#7e888b" stroke-width="6"/>
+ <path d="M176 343H244L255 368L210 384L165 368Z" fill="#2a3135" stroke-width="6"/>
+ <path d="M181 347H239" stroke="#c6ccca" stroke-width="3" opacity=".55"/>
+ <!-- shocks -->
+ <path d="M145 323L128 380M275 323L292 380" stroke="#9ca6a8" stroke-width="9"/>
+ <path d="M145 323L137 350M275 323L283 350" stroke="#4e575b" stroke-width="5"/>
+ <!-- tail/plate -->
+ <path d="M178 206L163 147M242 206L257 147" stroke="#4e5a5d" stroke-width="9"/>
+ <path d="M163 149L144 132M257 149L276 132" stroke="#151b1d" stroke-width="10"/>
+ <rect x="177" y="145" width="66" height="26" rx="5" fill="#18b8aa" stroke-width="6"/>
+ <rect x="188" y="149" width="44" height="14" rx="3" fill="#f2c84b" stroke-width="3"/>
+ <!-- indicators -->
+ <path d="M112 228L86 211L76 220L105 245M308 228L334 211L344 220L315 245" fill="#f2c84b" stroke-width="5"/>
+ <circle cx="78" cy="221" r="6" fill="#ffce55"/><circle cx="342" cy="221" r="6" fill="#ffce55"/>
+ <!-- rear foot pegs -->
+ <path d="M142 304L113 319L127 329L154 317M278 304L307 319L293 329L266 317" fill="#747e81" stroke-width="5"/>
+ <circle cx="110" cy="320" r="7" fill="#d1d5d1"/><circle cx="310" cy="320" r="7" fill="#d1d5d1"/>
+ <!-- small body highlights -->
+ <path d="M121 253Q151 238 177 235" fill="none" stroke="#ffffff" stroke-width="5" opacity=".3"/>
+ <path d="M299 253Q269 238 243 235" fill="none" stroke="#ffffff" stroke-width="5" opacity=".25"/>
+ <circle cx="210" cy="188" r="12" fill="url(#lamp)" stroke-width="6"/>
+</g>
+</svg>

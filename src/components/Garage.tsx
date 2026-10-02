@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BIKES, RIDERS, DIFFICULTIES, type BikeId, type RiderId, type Difficulty } from "@/game/loadout";
+import BikePreview3D from "./BikePreview3D";
 
 const BIKE_KEY = "aboki:bike";
 const RIDER_KEY = "aboki:rider";
@@ -46,14 +47,7 @@ export default function Garage() {
         <section className="loadout-hero">
           <div className="garage-bike-art">
             <div className="garage-bike-shadow" />
-            <Image
-              className="garage-bike-image"
-              src={`/assets/bikes/${activeBike.id}.svg`}
-              alt=""
-              width={220}
-              height={320}
-              priority
-            />
+            <BikePreview3D bikeId={activeBike.id} className="garage-bike-preview" />
             <Image
               className="garage-bike-rider-image"
               src={`/assets/riders/${activeRider.id}.svg`}

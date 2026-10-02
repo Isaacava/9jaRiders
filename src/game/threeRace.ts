@@ -1669,9 +1669,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let lastNetworkInput = 0;
   const remoteRacers = new Map<string, { group: THREE.Group; bikeId: string; riderId: string }>();
 
-  raceModelsPromise.then(({ player: modelPlayer }) => {
-    activePlayer = modelPlayer;
-  });
+  // Player model activation is handled inside the streaming loader.
 
   function resize() {
     width = Math.max(parent.clientWidth, 1);

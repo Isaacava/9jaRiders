@@ -351,12 +351,10 @@ export function fitRiderToBike(
   if (rig.hip) {
     const hipWorld = worldPosition(rig.hip);
     const seatWorld = bikeLocalToWorld(bike, mounts.seat);
-    const delta = seatWorld.sub(hipWorld);
     const parent = riderModel.parent ?? riderRoot;
-    const localDelta = parent.worldToLocal(
-      new THREE.Vector3(delta.x, delta.y, delta.z).add(parent.getWorldPosition(new THREE.Vector3()))
-    ).sub(parent.worldToLocal(parent.getWorldPosition(new THREE.Vector3())));
-    riderModel.position.add(localDelta);
+    const currentHipLocal = parent.worldToLocal(hipWorld.clone());
+    const targetHipLocal = parent.worldToLocal(seatWorld.clone());
+    riderModel.position.add(targetHipLocal.sub(currentHipLocal));
     riderModel.updateMatrixWorld(true);
   }
 

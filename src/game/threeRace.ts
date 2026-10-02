@@ -53,6 +53,7 @@ type Traffic = {
   z: number;
   speedFactor: number;
   lastCollisionAt: number;
+  blockedUntil: number;
 };
 
 const BIKES: Record<string, BikeSpec> = {
@@ -196,7 +197,7 @@ function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: st
   const rider = cloneLoadedModel(pack.riders, "rider-" + riderId);
 
   // 3DAssets.dev bikes face +Z; Aboki Riders drives toward -Z.
-  root.rotation.y = Math.PI;
+  bike.rotation.y = Math.PI;
 
   fitBikeModel(bike, player ? 2.55 : 2.15);
   rider.scale.setScalar(player ? 0.92 : 0.72);
@@ -1451,7 +1452,8 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       group,
       z: group.position.z,
       speedFactor: 0.62 + index * 0.055,
-      lastCollisionAt: 0
+      lastCollisionAt: 0,
+      blockedUntil: 0
     });
   });
 
@@ -1800,19 +1802,38 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       });
 
       traffic.forEach((vehicle, index) => {
-        vehicle.z += worldSpeed * dt * vehicle.speedFactor;
+        const now = performance.now();
+        if (vehicle.blockedUntil <= now) {
+          vehicle.z += worldSpeed * dt * vehicle.speedFactor;
+        }
         vehicle.group.position.z = vehicle.z;
-        vehicle.group.rotation.y = Math.sin(performance.now() * 0.0008 + index) * 0.004;
+        vehicle.group.rotation.y = Math.sin(now * 0.0008 + index) * 0.004;
         const trafficWheels = vehicle.group.userData.wheels as THREE.Object3D[] | undefined;
         trafficWheels?.forEach((wheelObject) => {
           wheelObject.rotation.x -= (worldSpeed * vehicle.speedFactor * dt) / 0.43;
         });
         if (vehicle.z > 28) {
           const lanePool = [-0.82, -0.28, 0.28, 0.78];
-          vehicle.lane = lanePool[(index + Math.floor(performance.now() / 1800)) % lanePool.length];
+          vehicle.lane = lanePool[(index + Math.floor(now / 1800)) % lanePool.length];
           vehicle.z = -150 - index * 24;
+          vehicle.blockedUntil = 0;
         }
       });
+
+      // Keep AI riders and traffic from occupying the same road space.
+      for (const ai of aiRacers) {
+        for (const vehicle of traffic) {
+          const dz = Math.abs(ai.group.position.z - vehicle.group.position.z);
+          const dx = Math.abs(ai.group.position.x - vehicle.group.position.x);
+          if (dz < 2.2 && dx < 1.25) {
+            const aiAhead = ai.group.position.z < vehicle.group.position.z;
+            const separation = aiAhead ? -2.2 : 2.2;
+            ai.group.position.z = vehicle.group.position.z + separation;
+            ai.distance = playerDistance + (5 - ai.group.position.z) / 0.04;
+            ai.speed *= 0.72;
+          }
+        }
+      }
 
       pickups.forEach((pickup, index) => {
         pickup.rotation.y += dt * 2.2;
@@ -1832,15 +1853,21 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       traffic.forEach((vehicle) => {
         const dz = Math.abs(vehicle.group.position.z - 5.2);
         const dx = Math.abs(vehicle.group.position.x - playerX);
-        if (dz < 1.55 && dx < 1.05 && performance.now() - vehicle.lastCollisionAt > 1200) {
-          vehicle.lastCollisionAt = performance.now();
+        const now = performance.now();
+        if (dz < 1.55 && dx < 1.05 && now - vehicle.lastCollisionAt > 700) {
+          vehicle.lastCollisionAt = now;
           playerSpeed *= 0.46;
           nitro = Math.max(0, nitro - 0.18);
           cameraShake = Math.max(cameraShake, 0.18);
           showMessage("CRASH!", 850);
           beep(false);
-        } else if (dz < 1.1 && dx > 1.05 && dx < 2.0 && performance.now() - vehicle.lastCollisionAt > 1400) {
-          vehicle.lastCollisionAt = performance.now();
+
+          // Separate the car from the bike instead of allowing visual penetration.
+          vehicle.z = 5.2 - 1.7;
+          vehicle.group.position.z = vehicle.z;
+          vehicle.blockedUntil = now + 850;
+        } else if (dz < 1.1 && dx > 1.05 && dx < 2.0 && now - vehicle.lastCollisionAt > 900) {
+          vehicle.lastCollisionAt = now;
           nitro = Math.min(1, nitro + 0.12);
           cameraShake = Math.max(cameraShake, 0.055);
           showMessage("NEAR MISS +", 620);

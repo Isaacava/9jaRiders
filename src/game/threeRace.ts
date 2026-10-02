@@ -232,12 +232,12 @@ function tintBikeLivery(model: THREE.Object3D, spec: BikeSpec) {
 }
 
 function normalizeExtractedSubmodel(source: THREE.Object3D, pattern: RegExp) {
-  let target: THREE.Object3D | null = null;
+  const matches: THREE.Object3D[] = [];
   source.traverse((node) => {
-    if (target || node === source) return;
-    if (pattern.test(node.name)) target = node;
+    if (node !== source && pattern.test(node.name)) matches.push(node);
   });
 
+  const target = matches[0];
   if (!target) return null;
 
   target.updateWorldMatrix(true, true);
@@ -248,8 +248,6 @@ function normalizeExtractedSubmodel(source: THREE.Object3D, pattern: RegExp) {
 
   const wrapper = new THREE.Group();
   const pivot = new THREE.Group();
-  // Preserve orientation/scale from the assembled starter scene, but discard its
-  // world translation so the traffic asset can be placed at the race lane origin.
   pivot.position.set(0, 0, 0);
   pivot.quaternion.copy(worldQuaternion);
   pivot.scale.copy(worldScale);
@@ -309,14 +307,14 @@ function createOperatorLoadout(riderId: string) {
     new RoundedBoxGeometry(0.58, 0.34, 0.24, 5, 0.05),
     vestMat
   );
-  chestRig.position.set(0, 0.72, -0.16);
+  chestRig.position.set(0, 1.03, -0.16);
   root.add(chestRig);
 
   const chestPlate = new THREE.Mesh(
     new RoundedBoxGeometry(0.34, 0.18, 0.06, 4, 0.02),
     accentMat
   );
-  chestPlate.position.set(0, 0.76, -0.31);
+  chestPlate.position.set(0, 1.08, -0.31);
   root.add(chestPlate);
 
   for (const sx of [-1, 1]) {
@@ -324,7 +322,7 @@ function createOperatorLoadout(riderId: string) {
       new RoundedBoxGeometry(0.045, 0.54, 0.045, 3, 0.01),
       metalMat
     );
-    harness.position.set(sx * 0.23, 0.69, -0.18);
+    harness.position.set(sx * 0.23, 0.99, -0.18);
     harness.rotation.z = sx * -0.12;
     root.add(harness);
 
@@ -332,7 +330,7 @@ function createOperatorLoadout(riderId: string) {
       new RoundedBoxGeometry(0.15, 0.24, 0.18, 4, 0.03),
       darkMat
     );
-    forearmGuard.position.set(sx * 0.49, 0.17, -0.55);
+    forearmGuard.position.set(sx * 0.49, 0.78, -0.55);
     forearmGuard.rotation.z = sx * -0.08;
     root.add(forearmGuard);
 
@@ -340,7 +338,7 @@ function createOperatorLoadout(riderId: string) {
       new THREE.CapsuleGeometry(0.095, 0.12, 5, 10),
       accentMat
     );
-    kneeGuard.position.set(sx * 0.27, -0.66, 0.60);
+    kneeGuard.position.set(sx * 0.27, 0.55, 0.60);
     kneeGuard.rotation.z = sx * 0.12;
     root.add(kneeGuard);
   }
@@ -349,14 +347,14 @@ function createOperatorLoadout(riderId: string) {
     new RoundedBoxGeometry(0.63, 0.12, 0.26, 4, 0.025),
     darkMat
   );
-  waistRig.position.set(0, 0.36, 0.08);
+  waistRig.position.set(0, 0.83, 0.08);
   root.add(waistRig);
 
   const buckle = new THREE.Mesh(
     new RoundedBoxGeometry(0.11, 0.09, 0.035, 3, 0.01),
     metalMat
   );
-  buckle.position.set(0, 0.36, -0.07);
+  buckle.position.set(0, 0.83, -0.07);
   root.add(buckle);
 
   root.userData.operatorVariant = riderId;

@@ -75,13 +75,13 @@ const RIDERS: Record<string, RiderSpec> = {
   ada: { jacket: 0x8056bd, accent: 0xf2d0a9, hair: 0x27131f, skin: 0x8d5c45, build: 0.96, gender: "female", hairStyle: "braids" },
   kobby: { jacket: 0xbe514a, accent: 0xeee4d8, hair: 0x121212, skin: 0x7e5039, build: 1.07, gender: "male", hairStyle: "locs" },
   tobi: { jacket: 0xe0792b, accent: 0x172024, hair: 0x2b170e, skin: 0x956043, build: 1.01, gender: "male", hairStyle: "high" },
-  "cpu-01": { jacket: 0x246ba6, accent: 0xf2c94c, hair: 0x2a1a13, skin: 0x81543e, build: 0.98, hairStyle: "short" },
-  "cpu-02": { jacket: 0x2c8c5c, accent: 0xf5e5ca, hair: 0x151515, skin: 0x784a35, build: 1.03, hairStyle: "short" },
-  "cpu-03": { jacket: 0xb34b89, accent: 0x65d9f4, hair: 0x281623, skin: 0x8d5a42, build: 0.95, hairStyle: "bun" },
-  "cpu-04": { jacket: 0x6555bd, accent: 0xe7c06d, hair: 0x1b1512, skin: 0x7b503b, build: 1.01, hairStyle: "high" },
-  "cpu-05": { jacket: 0x9f4c38, accent: 0xf0e9dc, hair: 0x111111, skin: 0x754733, build: 1.06, hairStyle: "locs" },
-  "cpu-06": { jacket: 0xd26132, accent: 0x9ee8db, hair: 0x1a120e, skin: 0x925c43, build: 0.99, hairStyle: "short" },
-  "cpu-07": { jacket: 0xae8628, accent: 0xffefaa, hair: 0x23160f, skin: 0x80513b, build: 1.04, hairStyle: "short" }
+  "cpu-01": { jacket: 0x246ba6, accent: 0xf2c94c, hair: 0x2a1a13, skin: 0x81543e, build: 0.98, gender: "male", hairStyle: "short" },
+  "cpu-02": { jacket: 0x2c8c5c, accent: 0xf5e5ca, hair: 0x151515, skin: 0x784a35, build: 1.03, gender: "male", hairStyle: "short" },
+  "cpu-03": { jacket: 0xb34b89, accent: 0x65d9f4, hair: 0x281623, skin: 0x8d5a42, build: 0.95, gender: "female", hairStyle: "bun" },
+  "cpu-04": { jacket: 0x6555bd, accent: 0xe7c06d, hair: 0x1b1512, skin: 0x7b503b, build: 1.01, gender: "female", hairStyle: "high" },
+  "cpu-05": { jacket: 0x9f4c38, accent: 0xf0e9dc, hair: 0x111111, skin: 0x754733, build: 1.06, gender: "male", hairStyle: "locs" },
+  "cpu-06": { jacket: 0xd26132, accent: 0x9ee8db, hair: 0x1a120e, skin: 0x925c43, build: 0.99, gender: "male", hairStyle: "short" },
+  "cpu-07": { jacket: 0xae8628, accent: 0xffefaa, hair: 0x23160f, skin: 0x80513b, build: 1.04, gender: "female", hairStyle: "short" }
 };
 
 type RaceModelPack = {

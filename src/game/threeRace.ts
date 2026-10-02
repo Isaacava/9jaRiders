@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { getSharedRealtimeClient } from "./multiplayer";
 
 function PhaserLikeClamp(value: number) { return Math.min(1, Math.max(-1, value)); }
@@ -75,6 +76,75 @@ const RIDERS: Record<string, RiderSpec> = {
   "cpu-06": { jacket: 0xd26132, accent: 0x9ee8db, hair: 0x1a120e, skin: 0x925c43, build: 0.99, hairStyle: "short" },
   "cpu-07": { jacket: 0xae8628, accent: 0xffefaa, hair: 0x23160f, skin: 0x80513b, build: 1.04, hairStyle: "short" }
 };
+
+type RaceModelPack = {
+  bikes: THREE.Group;
+  riders: THREE.Group;
+  traffic: THREE.Group;
+};
+
+async function loadRaceModelPack() {
+  const loader = new GLTFLoader();
+  const [bikes, riders, traffic] = await Promise.all([
+    loader.loadAsync("/assets/models/bikes.glb"),
+    loader.loadAsync("/assets/models/riders.glb"),
+    loader.loadAsync("/assets/models/traffic.glb")
+  ]);
+
+  return {
+    bikes: bikes.scene,
+    riders: riders.scene,
+    traffic: traffic.scene
+  } satisfies RaceModelPack;
+}
+
+function cloneNamedModel(packRoot: THREE.Group, name: string) {
+  const source = packRoot.getObjectByName(name);
+  if (!source) throw new Error("Missing race model: " + name);
+  return source.clone(true) as THREE.Group;
+}
+
+function fitModel(model: THREE.Object3D, targetHeight: number) {
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  if (size.y <= 0.001) return;
+  const scale = targetHeight / size.y;
+  model.scale.multiplyScalar(scale);
+}
+
+function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: string, player = false) {
+  const root = new THREE.Group();
+  const bike = cloneNamedModel(pack.bikes, "bike-" + bikeId);
+  const rider = cloneNamedModel(pack.riders, "rider-" + riderId);
+
+  bike.scale.setScalar(player ? 1.05 : 0.80);
+  fitModel(bike, player ? 2.25 : 1.82);
+
+  rider.scale.setScalar(player ? 0.92 : 0.72);
+  fitModel(rider, player ? 2.45 : 1.98);
+  rider.position.y = player ? 0.48 : 0.38;
+
+  root.add(bike, rider);
+  root.userData.modelBacked = true;
+  root.userData.bikeModel = bike;
+  root.userData.riderModel = rider;
+  return root;
+}
+
+function prepareLoadedTraffic(pack: RaceModelPack, kind: Traffic["kind"]) {
+  const model = cloneNamedModel(pack.traffic, "traffic-" + kind);
+  const sizes: Record<Traffic["kind"], number> = {
+    danfo: 2.75,
+    keke: 2.25,
+    minibus: 2.60,
+    sedan: 2.22,
+    suv: 2.65,
+    van: 2.58
+  };
+  fitModel(model, sizes[kind]);
+  model.userData.modelBacked = true;
+  return model;
+}
 
 const TRAFFIC_COLORS: Record<Traffic["kind"], number> = {
   danfo: 0xeac126,
@@ -818,19 +888,36 @@ function createBillboard() {
 
 function createNitroPickup() {
   const group = new THREE.Group();
-  const core = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.22, 0.22, 0.72, 12),
-    emissiveMaterial(0x46d8ff, 2.5)
+
+  const aura = new THREE.Mesh(
+    new THREE.SphereGeometry(0.58, 20, 12),
+    new THREE.MeshBasicMaterial({ color: 0x37c8ff, transparent: true, opacity: 0.12 })
   );
-  core.rotation.x = Math.PI / 2;
+  group.add(aura);
+
+  const core = new THREE.Mesh(
+    new RoundedBoxGeometry(0.42, 0.80, 0.42, 5, 0.08),
+    emissiveMaterial(0x46d8ff, 3.6)
+  );
   group.add(core);
 
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.33, 0.04, 8, 22),
-    material(0x8cecff, 0.38, 0.2)
+  const ringTop = new THREE.Mesh(
+    new THREE.TorusGeometry(0.44, 0.055, 10, 28),
+    emissiveMaterial(0xc5f7ff, 2.4)
   );
-  ring.rotation.x = Math.PI / 2;
-  group.add(ring);
+  ringTop.rotation.x = Math.PI / 2;
+  ringTop.position.y = 0.05;
+  group.add(ringTop);
+
+  const ringMid = ringTop.clone();
+  ringMid.rotation.z = Math.PI / 2;
+  ringMid.position.y = 0.05;
+  group.add(ringMid);
+
+  const light = new THREE.PointLight(0x46d8ff, 4.2, 7);
+  light.position.y = 0.12;
+  group.add(light);
+
   return group;
 }
 
@@ -1201,7 +1288,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     : "main";
 
   const player = createBikeAndRider(playerBikeId, playerRiderId, 1.12);
-  player.position.set(0, 0, 3.85);
+  activePlayer.position.set(0, 0, 3.85);
   scene.add(player);
 
   const speedStreaks: THREE.Mesh[] = [];
@@ -1267,14 +1354,56 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   });
 
   const pickups: THREE.Group[] = [];
-  [-0.55, 0.08, 0.62, -0.2].forEach((lane, index) => {
+  [-0.55, 0.08, 0.62, -0.2, 0.48].forEach((lane, index) => {
     const pickup = createNitroPickup();
-    pickup.position.set(lane * 5.5, 1.05, -45 - index * 75);
+    pickup.scale.setScalar(1.55);
+    pickup.position.set(lane * 5.15, 1.45, -22 - index * 48);
     scene.add(pickup);
     pickups.push(pickup);
   });
 
   const hud = makeHud(parent);
+
+  const raceModelsPromise = loadRaceModelPack().then((pack) => {
+    const replaceRoot = (oldRoot: THREE.Group, nextRoot: THREE.Group) => {
+      nextRoot.position.copy(oldRoot.position);
+      nextRoot.rotation.copy(oldRoot.rotation);
+      nextRoot.scale.copy(oldRoot.scale);
+      oldRoot.parent?.remove(oldRoot);
+      scene.add(nextRoot);
+      return nextRoot;
+    };
+
+    const realPlayer = prepareLoadedRiderBike(pack, playerBikeId, playerRiderId, true);
+    activePlayer.position.set(0, 0, 3.85);
+    const playerIndex = scene.children.indexOf(player);
+    if (playerIndex >= 0) scene.remove(player);
+    realPlayer.position.copy(player.position);
+    scene.add(realPlayer);
+
+    for (const ai of aiRacers) {
+      const next = prepareLoadedRiderBike(pack, ai.bikeId, ai.riderId, false);
+      next.position.copy(ai.group.position);
+      scene.remove(ai.group);
+      ai.group = next;
+      scene.add(next);
+    }
+
+    for (const vehicle of traffic) {
+      const next = prepareLoadedTraffic(pack, vehicle.kind);
+      next.position.copy(vehicle.group.position);
+      scene.remove(vehicle.group);
+      vehicle.group = next as THREE.Group;
+      scene.add(vehicle.group);
+    }
+
+    return { player: realPlayer };
+  }).catch((error) => {
+    console.error("3D model pack load failed; keeping deterministic fallback.", error);
+    return { player };
+  });
+
+  let activePlayer = player;
 
   let width = Math.max(parent.clientWidth, 1);
   let height = Math.max(parent.clientHeight, 1);
@@ -1300,6 +1429,10 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let networkLocal: any = null;
   let lastNetworkInput = 0;
   const remoteRacers = new Map<string, { group: THREE.Group; bikeId: string; riderId: string }>();
+
+  raceModelsPromise.then(({ player: modelPlayer }) => {
+    activePlayer = modelPlayer;
+  });
 
   function resize() {
     width = Math.max(parent.clientWidth, 1);
@@ -1377,8 +1510,8 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     beep(true);
     showMessage("NITRO!", 650);
     cameraShake = Math.max(cameraShake, 0.09);
-    const flame = player.userData.flame as THREE.Mesh;
-    const light = player.userData.nitroLight as THREE.PointLight;
+    const flame = activePlayer.userData.flame as THREE.Mesh;
+    const light = activePlayer.userData.nitroLight as THREE.PointLight;
     flame.visible = true;
     light.intensity = 9;
     window.setTimeout(() => {
@@ -1511,7 +1644,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       if (!boosting && playerSpeed > spec.maxSpeed) playerSpeed = Math.max(spec.maxSpeed, playerSpeed - 20 * dt);
       const lateral = steering * (spec.handling * 0.36) * dt;
       playerX += lateral * (0.7 + playerSpeed / Math.max(spec.maxSpeed, 1));
-      playerX = THREE.MathUtils.clamp(playerX, -6.1, 6.1);
+      playerX = THREE.MathUtils.clamp(playerX, -5.0, 5.0);
         playerDistance += (playerSpeed / 3.6) * dt;
       }
 
@@ -1601,22 +1734,22 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.09);
     camera.updateProjectionMatrix();
 
-    player.position.x = THREE.MathUtils.lerp(player.position.x, playerX, 0.12);
-    player.rotation.z = THREE.MathUtils.lerp(
-      player.rotation.z,
+    activePlayer.position.x = THREE.MathUtils.lerp(activePlayer.position.x, playerX, 0.12);
+    activePlayer.rotation.z = THREE.MathUtils.lerp(
+      activePlayer.rotation.z,
       -steering * (boosting ? 0.14 : 0.11),
       0.14
     );
-    player.rotation.x = THREE.MathUtils.lerp(
-      player.rotation.x,
+    activePlayer.rotation.x = THREE.MathUtils.lerp(
+      activePlayer.rotation.x,
       boosting ? -0.055 : playerSpeed > 130 ? -0.018 : 0,
       0.10
     );
 
     const bob = Math.sin(performance.now() * 0.012 + playerSpeed * 0.02) * (0.012 + normalized * 0.035);
-    player.position.y = bob;
+    activePlayer.position.y = bob;
 
-    const riderRoot = player.userData.riderRoot as THREE.Group | undefined;
+    const riderRoot = activePlayer.userData.riderRoot as THREE.Group | undefined;
     if (riderRoot) {
       riderRoot.rotation.z = THREE.MathUtils.lerp(
         riderRoot.rotation.z,
@@ -1625,13 +1758,13 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       );
     }
 
-    const playerWheels = player.userData.wheels as THREE.Object3D[] | undefined;
+    const playerWheels = activePlayer.userData.wheels as THREE.Object3D[] | undefined;
     playerWheels?.forEach((wheelObject, index) => {
       wheelObject.rotation.x -=
         (playerSpeed / 3.6) * dt / (index === 0 ? 0.57 : 0.48);
     });
 
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerX * 0.32, 0.09);
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerX * 0.55, 0.12);
     camera.position.y = THREE.MathUtils.lerp(camera.position.y, 2.62 + normalized * 0.15, 0.08);
     camera.position.z = THREE.MathUtils.lerp(camera.position.z, boosting ? 6.95 : 6.25, 0.08);
 
@@ -1639,10 +1772,10 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     camera.position.x += (Math.random() - 0.5) * cameraShake;
     camera.position.y += (Math.random() - 0.5) * cameraShake;
 
-    camera.lookAt(playerX * 0.16, 1.12, -26);
+    camera.lookAt(playerX * 0.42, 1.18, -26);
 
-    const flame = player.userData.flame as THREE.Mesh;
-    const light = player.userData.nitroLight as THREE.PointLight;
+    const flame = activePlayer.userData.flame as THREE.Mesh;
+    const light = activePlayer.userData.nitroLight as THREE.PointLight;
     flame.scale.y = 0.82 + Math.sin(performance.now() * 0.035) * 0.18;
     if (!boosting) {
       flame.visible = false;
@@ -1725,6 +1858,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   requestAnimationFrame(frame);
 
   return {
+    ready: raceModelsPromise,
     destroy() {
       if (disposed) return;
       disposed = true;

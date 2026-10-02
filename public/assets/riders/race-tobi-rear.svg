@@ -1,1 +1,59 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="520" viewBox="0 0 460 520"><defs><linearGradient id="j" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3a247"/><stop offset=".6" stop-color="#e57b2b"/><stop offset="1" stop-color="#11181b"/></linearGradient></defs><g stroke="#0b1013" stroke-linecap="round" stroke-linejoin="round"><path d="M173 150Q171 73 228 56Q284 73 288 150L278 207L254 221L230 207L207 222L184 208Z" fill="#2a1710" stroke-width="7"/><path d="M185 102Q230 67 276 102" fill="none" stroke="#573124" stroke-width="10"/><path d="M170 230Q229 207 290 230L334 315L318 453H142L126 315Z" fill="url(#j)" stroke-width="11"/><path d="M145 286L103 335L112 349L166 319M315 286L357 335L348 349L294 319" fill="#e57b2b" stroke-width="10"/><path d="M104 337L87 355L99 372L118 356M356 337L373 355L361 372L342 356" fill="#11181b" stroke-width="7"/><path d="M191 248Q230 267 270 248" fill="none" stroke="#11181b" stroke-width="8"/><path d="M164 391H296" stroke="#fff0db" stroke-width="5" opacity=".65"/><path d="M193 446L184 486M268 446L276 486" stroke="#151a1d" stroke-width="17"/><path d="M179 484L193 491M267 491L283 484" stroke="#11181b" stroke-width="7"/><path d="M205 213L210 238M255 212L250 238" stroke="#915c3f" stroke-width="11"/><ellipse cx="209" cy="204" rx="12" ry="14" fill="#915c3f" stroke-width="6"/><ellipse cx="253" cy="204" rx="12" ry="14" fill="#915c3f" stroke-width="6"/></g></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="520" viewBox="0 0 420 520">
+<defs>
+ <linearGradient id="j" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dc7228"/><stop offset=".56" stop-color="#dc7228"/><stop offset="1" stop-color="#101619"/></linearGradient>
+ <linearGradient id="pants" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#222a2e"/><stop offset=".5" stop-color="#465158"/><stop offset="1" stop-color="#171d20"/></linearGradient>
+ <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9b6245"/><stop offset=".65" stop-color="#9b6245"/><stop offset="1" stop-color="#5e392b"/></linearGradient>
+</defs>
+<g stroke="#0a0f12" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M150 145Q146 55 210 37Q274 55 270 145L261 192L238 216L211 200L184 216L159 193Z" fill="#2a170f" stroke-width="8"/><path d="M161 83Q210 46 259 83" fill="none" stroke="#5b3426" stroke-width="10"/>
+ <!-- neck + ears -->
+ <path d="M191 153L193 195Q210 209 227 195L229 153Z" fill="url(#skin)" stroke-width="7"/>
+ <ellipse cx="184" cy="150" rx="11" ry="18" fill="url(#skin)" stroke-width="6"/>
+ <ellipse cx="236" cy="150" rx="11" ry="18" fill="url(#skin)" stroke-width="6"/>
+
+ <!-- shoulders / jacket -->
+ <path d="M173 183Q210 166 247 183L284 209L306 285L278 323L142 323L114 285L136 209Z" fill="url(#j)" stroke-width="10"/>
+ <!-- shoulder panels -->
+ <path d="M138 207L171 187L181 234L147 251Z" fill="#ffffff" opacity=".08" stroke-width="5"/>
+ <path d="M282 207L249 187L239 234L273 251Z" fill="#ffffff" opacity=".06" stroke-width="5"/>
+ <!-- collar -->
+ <path d="M190 181L210 199L230 181L242 203L210 225L178 203Z" fill="#151b1d" stroke-width="7"/>
+ <path d="M185 214Q210 227 235 214" fill="none" stroke="#11181b" stroke-width="5"/>
+
+ <!-- arms toward handlebars -->
+ <path d="M137 210L92 263L105 280L164 247" fill="url(#j)" stroke-width="10"/>
+ <path d="M283 210L328 263L315 280L256 247" fill="url(#j)" stroke-width="10"/>
+ <path d="M95 265L74 287L87 303L111 282Z" fill="url(#skin)" stroke-width="7"/>
+ <path d="M325 265L346 287L333 303L309 282Z" fill="url(#skin)" stroke-width="7"/>
+ <!-- gloves -->
+ <path d="M74 287L63 294L69 313L91 306L87 303Z" fill="#11181b" stroke-width="6"/>
+ <path d="M346 287L357 294L351 313L329 306L333 303Z" fill="#11181b" stroke-width="6"/>
+
+ <!-- back seam and panel -->
+ <path d="M210 220V307" stroke="#11191c" stroke-width="8"/>
+ <path d="M151 267Q210 286 269 267" fill="none" stroke="#0c3433" stroke-width="9" opacity=".75"/>
+ <path d="M161 286Q210 301 259 286" fill="none" stroke="#11181b" stroke-width="5"/>
+ <path d="M179 242Q210 251 241 242" fill="none" stroke="#f2ede1" stroke-width="4" opacity=".55"/>
+ <!-- compact back marking -->
+ <rect x="194" y="258" width="32" height="23" rx="3" fill="#101619" stroke-width="3"/>
+ <path d="M200 264H220M202 271H218" stroke="#11181b" stroke-width="3"/>
+
+ <!-- hips / pants -->
+ <path d="M145 305Q210 327 275 305L293 354L258 407L210 389L162 407L127 354Z" fill="url(#pants)" stroke-width="10"/>
+ <!-- thighs -->
+ <path d="M160 336L131 388L152 432L183 420L200 372Z" fill="#313a40" stroke-width="8"/>
+ <path d="M260 336L289 388L268 432L237 420L220 372Z" fill="#313a40" stroke-width="8"/>
+ <!-- knee panels -->
+ <path d="M143 389L160 375L179 385L167 419L151 426Z" fill="#8a9498" stroke-width="5"/>
+ <path d="M277 389L260 375L241 385L253 419L269 426Z" fill="#8a9498" stroke-width="5"/>
+ <!-- boots -->
+ <path d="M151 423L168 418L181 440L166 473L127 473L117 457L135 443Z" fill="#171d20" stroke-width="9"/>
+ <path d="M269 423L252 418L239 440L254 473L293 473L303 457L285 443Z" fill="#171d20" stroke-width="9"/>
+ <path d="M129 458H168M252 458H291" stroke="#11181b" stroke-width="6"/>
+
+ <!-- subtle highlights -->
+ <path d="M141 226Q124 250 121 275" fill="none" stroke="#ffffff" stroke-width="4" opacity=".2"/>
+ <path d="M279 226Q296 250 299 275" fill="none" stroke="#ffffff" stroke-width="4" opacity=".16"/>
+</g>
+</svg>

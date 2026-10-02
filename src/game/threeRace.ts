@@ -473,6 +473,20 @@ function prepareExternalRider(source: THREE.Object3D, riderId: string, player = 
   root.userData.realHuman = true;
   root.userData.riderId = riderId;
   root.userData.playerRider = player;
+  root.userData.riderBoneRefs = [
+    thighL,
+    thighR,
+    calfL,
+    calfR,
+    footL,
+    footR,
+    armL,
+    armR,
+    forearmL,
+    forearmR,
+    spine,
+    head
+  ];
   return root;
 }
 
@@ -541,22 +555,67 @@ function prepareLoadedRiderBike(
 
   root.add(bike);
 
-  // Seat the rider from the fitted bike's real bounds instead of assuming every
-  // external motorcycle has the same proportions.
+  // Universal rider fit: derive a simple riding profile from the fitted bike's
+  // actual proportions, then seat and lean the already-rigged human around that profile.
+  // This stays intentionally lightweight: no new module, no per-bike hand-authored offsets.
   const bikeBox = new THREE.Box3().setFromObject(bike);
   const bikeCenter = bikeBox.getCenter(new THREE.Vector3());
   const bikeSize = bikeBox.getSize(new THREE.Vector3());
+  const length = Math.max(bikeSize.z, 0.001);
+  const heightRatio = bikeSize.y / length;
+  const sportiness = THREE.MathUtils.clamp((0.56 - heightRatio) / 0.22, 0, 1);
+  const seatHeight = THREE.MathUtils.clamp(
+    bikeBox.min.y + bikeSize.y * (0.57 + sportiness * 0.04),
+    0.76,
+    1.28
+  );
+  const seatZ = THREE.MathUtils.clamp(
+    bikeCenter.z + bikeSize.z * (0.02 + sportiness * 0.03),
+    -0.16,
+    0.26
+  );
+  const lean = THREE.MathUtils.lerp(0.12, 0.29, sportiness);
+
   const character = root.userData.riderRoot as THREE.Group | undefined;
   if (character) {
-    character.position.set(
-      0,
-      THREE.MathUtils.clamp(bikeBox.max.y * 0.70, 0.88, 1.34),
-      THREE.MathUtils.clamp(bikeCenter.z + bikeSize.z * 0.10, -0.14, 0.30)
-    );
-    const sportPosture = bikeId === "speed" || bikeId === "elite" || bikeId === "legendary";
-    character.rotation.x = sportPosture ? -0.28 : bikeId === "heavy" ? -0.08 : -0.20;
+    character.position.set(0, seatHeight, seatZ);
+    character.rotation.x = -lean;
     character.rotation.z = 0;
   }
+
+  const riderBoneRefs = root.userData.riderBoneRefs as Array<THREE.Object3D | undefined> | undefined;
+  if (riderBoneRefs) {
+    const [thighL, thighR, calfL, calfR, footL, footR, armL, armR, forearmL, forearmR, spine, head] = riderBoneRefs;
+    if (thighL && thighR) {
+      thighL.rotation.x = -THREE.MathUtils.lerp(1.03, 1.16, sportiness);
+      thighR.rotation.x = -THREE.MathUtils.lerp(1.03, 1.16, sportiness);
+    }
+    if (calfL && calfR) {
+      calfL.rotation.x = THREE.MathUtils.lerp(1.14, 1.30, sportiness);
+      calfR.rotation.x = THREE.MathUtils.lerp(1.14, 1.30, sportiness);
+    }
+    if (footL && footR) {
+      footL.rotation.x = -THREE.MathUtils.lerp(0.23, 0.32, sportiness);
+      footR.rotation.x = -THREE.MathUtils.lerp(0.23, 0.32, sportiness);
+    }
+    if (armL && armR) {
+      armL.rotation.x = -THREE.MathUtils.lerp(0.70, 0.84, sportiness);
+      armR.rotation.x = -THREE.MathUtils.lerp(0.70, 0.84, sportiness);
+    }
+    if (forearmL && forearmR) {
+      forearmL.rotation.x = -THREE.MathUtils.lerp(0.48, 0.64, sportiness);
+      forearmR.rotation.x = -THREE.MathUtils.lerp(0.48, 0.64, sportiness);
+    }
+    if (spine) spine.rotation.x = THREE.MathUtils.lerp(0.23, 0.34, sportiness);
+    if (head) head.rotation.x = -THREE.MathUtils.lerp(0.05, 0.10, sportiness);
+  }
+
+  root.userData.riderFitProfile = {
+    seatHeight,
+    seatZ,
+    sportiness,
+    lean
+  };
 
   const bikeMixer = createLoopingWheelMixer(bike);
   if (bikeMixer) root.userData.bikeMixer = bikeMixer;

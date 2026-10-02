@@ -56,6 +56,7 @@ export default function BikePreview3D({ bikeId, className }: Props) {
 
     const loader = new GLTFLoader();
     let model: THREE.Group | null = null;
+    let mixer: THREE.AnimationMixer | null = null;
     let raf = 0;
     let disposed = false;
     const clock = new THREE.Clock();
@@ -72,10 +73,21 @@ export default function BikePreview3D({ bikeId, className }: Props) {
 
         model.position.sub(center);
         model.position.y += size.y * 0.48;
+        model.rotation.y = Math.PI * 0.72;
 
         const longest = Math.max(size.x, size.y, size.z);
         const fit = 3.05 / Math.max(longest, 0.001);
         model.scale.multiplyScalar(fit);
+
+        if (gltf.animations.length) {
+          const clip =
+            gltf.animations.find((item) => /roll|wheel/i.test(item.name)) ??
+            gltf.animations.find((item) => /steer|idle|drive/i.test(item.name)) ??
+            gltf.animations[0];
+          mixer = new THREE.AnimationMixer(model);
+          mixer.clipAction(clip).play();
+        }
+
         scene.add(model);
       },
       undefined,
@@ -93,7 +105,8 @@ export default function BikePreview3D({ bikeId, className }: Props) {
     const frame = () => {
       if (disposed) return;
       const dt = Math.min(0.05, clock.getDelta());
-      if (model) model.rotation.y += dt * 0.42;
+      if (mixer) mixer.update(dt);
+      if (model) model.rotation.y += dt * 0.24;
       renderer.render(scene, camera);
       raf = window.requestAnimationFrame(frame);
     };
@@ -106,6 +119,7 @@ export default function BikePreview3D({ bikeId, className }: Props) {
       disposed = true;
       window.removeEventListener("resize", resize);
       window.cancelAnimationFrame(raf);
+      mixer?.stopAllAction();
       renderer.dispose();
       floor.geometry.dispose();
       floor.material.dispose();

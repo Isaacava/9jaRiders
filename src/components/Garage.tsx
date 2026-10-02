@@ -48,13 +48,6 @@ export default function Garage() {
           <div className="garage-bike-art">
             <div className="garage-bike-shadow" />
             <BikePreview3D bikeId={activeBike.id} className="garage-bike-preview" />
-            <Image
-              className="garage-bike-rider-image"
-              src={`/assets/riders/${activeRider.id}.svg`}
-              alt={activeRider.name}
-              width={180}
-              height={250}
-            />
           </div>
           <div className="loadout-copy">
             <span className="loadout-class">{activeBike.className}</span>

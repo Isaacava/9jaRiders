@@ -80,36 +80,51 @@ const RIDERS: Record<string, RiderSpec> = {
 type RaceModelPack = {
   bikes: Record<string, THREE.Group>;
   riders: THREE.Group;
-  traffic: THREE.Group;
+  traffic: Record<Traffic["kind"], THREE.Group>;
 };
 
 const EXTERNAL_BIKE_ASSETS: Record<string, string> = {
-  // 3DAssets.dev — Motorcycle Racing and Street Bikes (CC0 1.0).
-  // Pack geometry uses +Y up, nose +Z, wheel axles X.
-  starter: "https://cdn.3dassets.dev/assets/15423/v1/model.glb",   // Supermoto single
-  speed: "https://cdn.3dassets.dev/assets/15424/v1/model.glb",     // Road sportbike
-  heavy: "https://cdn.3dassets.dev/assets/15428/v1/model.glb",    // Full-fairing sport tourer
-  elite: "https://cdn.3dassets.dev/assets/15416/v1/model.glb",    // Prototype grand prix bike
-  legendary: "https://cdn.3dassets.dev/assets/15415/v1/model.glb" // Superbike
+  starter: "https://cdn.3dassets.dev/assets/15423/v1/model.glb",
+  speed: "https://cdn.3dassets.dev/assets/15424/v1/model.glb",
+  heavy: "https://cdn.3dassets.dev/assets/15428/v1/model.glb",
+  elite: "https://cdn.3dassets.dev/assets/15416/v1/model.glb",
+  legendary: "https://cdn.3dassets.dev/assets/15415/v1/model.glb"
+};
+
+const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
+  danfo: "https://cdn.3dassets.dev/assets/34194/v1/model.glb",
+  keke: "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
+  minibus: "https://cdn.3dassets.dev/assets/32486/v1/model.glb",
+  sedan: "https://cdn.3dassets.dev/assets/32490/v1/model.glb",
+  suv: "https://cdn.3dassets.dev/assets/32529/v1/model.glb",
+  van: "https://cdn.3dassets.dev/assets/32487/v1/model.glb"
 };
 
 async function loadRaceModelPack() {
   const loader = new GLTFLoader();
-  const [riders, traffic, ...bikeResults] = await Promise.all([
+  const [riders, ...results] = await Promise.all([
     loader.loadAsync("/assets/models/riders.glb"),
-    loader.loadAsync("/assets/models/traffic.glb"),
-    ...Object.entries(EXTERNAL_BIKE_ASSETS).map(([, url]) => loader.loadAsync(url))
+    ...Object.values(EXTERNAL_BIKE_ASSETS).map((url) => loader.loadAsync(url)),
+    ...Object.values(EXTERNAL_TRAFFIC_ASSETS).map((url) => loader.loadAsync(url))
   ]);
 
+  const bikeIds = Object.keys(EXTERNAL_BIKE_ASSETS);
+  const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
   const bikes: Record<string, THREE.Group> = {};
-  Object.keys(EXTERNAL_BIKE_ASSETS).forEach((bikeId, index) => {
-    bikes[bikeId] = bikeResults[index].scene;
+  const traffic = {} as Record<Traffic["kind"], THREE.Group>;
+
+  bikeIds.forEach((bikeId, index) => {
+    bikes[bikeId] = results[index].scene;
+  });
+
+  trafficKinds.forEach((kind, index) => {
+    traffic[kind] = results[bikeIds.length + index].scene;
   });
 
   return {
     bikes,
     riders: riders.scene,
-    traffic: traffic.scene
+    traffic
   } satisfies RaceModelPack;
 }
 
@@ -161,17 +176,23 @@ function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: st
 }
 
 function prepareLoadedTraffic(pack: RaceModelPack, kind: Traffic["kind"]) {
-  const model = cloneLoadedModel(pack.traffic.getObjectByName("traffic-" + kind) ?? pack.traffic, "traffic-" + kind);
-  const sizes: Record<Traffic["kind"], number> = {
-    danfo: 2.75,
-    keke: 2.25,
-    minibus: 2.60,
-    sedan: 2.22,
-    suv: 2.65,
-    van: 2.58
+  const model = cloneLoadedModel(pack.traffic[kind], "traffic-" + kind);
+  const targetHeights: Record<Traffic["kind"], number> = {
+    danfo: 2.9,
+    keke: 2.15,
+    minibus: 1.55,
+    sedan: 1.55,
+    suv: 1.82,
+    van: 1.55
   };
-  fitModel(model, sizes[kind]);
+  fitModel(model, targetHeights[kind]);
+  model.rotation.y = Math.PI;
   model.userData.modelBacked = true;
+  const wheels: THREE.Object3D[] = [];
+  model.traverse((object) => {
+    if (/wheel/i.test(object.name)) wheels.push(object);
+  });
+  model.userData.wheels = wheels;
   return model;
 }
 

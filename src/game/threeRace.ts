@@ -2377,7 +2377,6 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let playerSpeed = 0;
   let playerDistance = 0;
   let raceStartedAt = performance.now();
-  let raceReady = false;
   let countdown = 0;
   let finished = false;
   let finishShown = false;
@@ -2992,7 +2991,6 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
   raceModelsPromise.finally(() => {
     if (disposed) return;
-    raceReady = true;
     loadingBar.style.width = "100%";
     loadingStatus.textContent = "Race ready!";
     window.setTimeout(() => {

@@ -1,3 +1,5 @@
+
+function PhaserLikeClamp(value: number) { return Math.min(1, Math.max(-1, value)); }
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
@@ -453,6 +455,9 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
   bootR.position.x *= -1;
   riderRoot.add(boot, bootR);
 
+  root.userData.riderRoot = riderRoot;
+  root.userData.wheels = [rearWheel, frontWheel];
+
   root.traverse((node) => {
     const mesh = node as THREE.Mesh;
     if (mesh.isMesh) {
@@ -615,14 +620,17 @@ function createTraffic(kind: Traffic["kind"]) {
     }
   }
 
+  const vehicleWheels: THREE.Object3D[] = [];
   group.traverse((node) => {
     const mesh = node as THREE.Mesh;
+    if (mesh.geometry && mesh.geometry.type === "CylinderGeometry") vehicleWheels.push(mesh);
     if (mesh.isMesh) {
       mesh.castShadow = true;
       mesh.receiveShadow = true;
     }
   });
 
+  group.userData.wheels = vehicleWheels;
   return group;
 }
 
@@ -1487,6 +1495,17 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         ai.x = THREE.MathUtils.lerp(ai.x, desiredX, 0.012);
         ai.group.position.x = THREE.MathUtils.lerp(ai.group.position.x, ai.x, 0.12);
         ai.group.position.z = 5 - (ai.distance - playerDistance) * 0.04;
+        ai.group.rotation.z = THREE.MathUtils.lerp(
+          ai.group.rotation.z,
+          PhaserLikeClamp(ai.x - ai.group.position.x) * -0.05,
+          0.08
+        );
+        const aiWheels = ai.group.userData.wheels as THREE.Object3D[] | undefined;
+        aiWheels?.forEach((wheelObject) => {
+          wheelObject.rotation.x -= (ai.speed / 3.6) * dt / 0.5;
+        });
+        const aiRiderRoot = ai.group.userData.riderRoot as THREE.Group | undefined;
+        if (aiRiderRoot) aiRiderRoot.rotation.z = THREE.MathUtils.lerp(aiRiderRoot.rotation.z, 0, 0.08);
 
         if (ai.group.position.z > 20) {
           ai.group.position.z = -120 - index * 12;
@@ -1496,6 +1515,11 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       traffic.forEach((vehicle, index) => {
         vehicle.z += worldSpeed * dt * vehicle.speedFactor;
         vehicle.group.position.z = vehicle.z;
+        vehicle.group.rotation.y = Math.sin(performance.now() * 0.0008 + index) * 0.004;
+        const trafficWheels = vehicle.group.userData.wheels as THREE.Object3D[] | undefined;
+        trafficWheels?.forEach((wheelObject) => {
+          wheelObject.rotation.x -= (worldSpeed * vehicle.speedFactor * dt) / 0.43;
+        });
         if (vehicle.z > 28) {
           const lanePool = [-0.82, -0.28, 0.28, 0.78];
           vehicle.lane = lanePool[(index + Math.floor(performance.now() / 1800)) % lanePool.length];
@@ -1545,10 +1569,34 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     camera.updateProjectionMatrix();
 
     player.position.x = THREE.MathUtils.lerp(player.position.x, playerX, 0.12);
-    player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, -steering * 0.1, 0.12);
-    player.rotation.x = THREE.MathUtils.lerp(player.rotation.x, boosting ? -0.04 : 0, 0.08);
-    const bob = Math.sin(performance.now() * 0.012 + playerSpeed * 0.02) * 0.018;
+    player.rotation.z = THREE.MathUtils.lerp(
+      player.rotation.z,
+      -steering * (boosting ? 0.14 : 0.11),
+      0.14
+    );
+    player.rotation.x = THREE.MathUtils.lerp(
+      player.rotation.x,
+      boosting ? -0.055 : playerSpeed > 130 ? -0.018 : 0,
+      0.10
+    );
+
+    const bob = Math.sin(performance.now() * 0.012 + playerSpeed * 0.02) * (0.012 + normalized * 0.035);
     player.position.y = bob;
+
+    const riderRoot = player.userData.riderRoot as THREE.Group | undefined;
+    if (riderRoot) {
+      riderRoot.rotation.z = THREE.MathUtils.lerp(
+        riderRoot.rotation.z,
+        -steering * 0.055,
+        0.18
+      );
+    }
+
+    const playerWheels = player.userData.wheels as THREE.Object3D[] | undefined;
+    playerWheels?.forEach((wheelObject, index) => {
+      wheelObject.rotation.x -=
+        (playerSpeed / 3.6) * dt / (index === 0 ? 0.57 : 0.48);
+    });
 
     camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerX * 0.32, 0.09);
     camera.position.y = THREE.MathUtils.lerp(camera.position.y, 2.62 + normalized * 0.15, 0.08);

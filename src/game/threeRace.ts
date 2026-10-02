@@ -78,29 +78,43 @@ const RIDERS: Record<string, RiderSpec> = {
 };
 
 type RaceModelPack = {
-  bikes: THREE.Group;
+  bikes: Record<string, THREE.Group>;
   riders: THREE.Group;
   traffic: THREE.Group;
 };
 
+const EXTERNAL_BIKE_ASSETS: Record<string, string> = {
+  // 3DAssets.dev — Motorcycle Racing and Street Bikes (CC0 1.0).
+  // Pack geometry uses +Y up, nose +Z, wheel axles X.
+  starter: "https://cdn.3dassets.dev/assets/15423/v1/model.glb",   // Supermoto single
+  speed: "https://cdn.3dassets.dev/assets/15424/v1/model.glb",     // Road sportbike
+  heavy: "https://cdn.3dassets.dev/assets/15428/v1/model.glb",    // Full-fairing sport tourer
+  elite: "https://cdn.3dassets.dev/assets/15416/v1/model.glb",    // Prototype grand prix bike
+  legendary: "https://cdn.3dassets.dev/assets/15415/v1/model.glb" // Superbike
+};
+
 async function loadRaceModelPack() {
   const loader = new GLTFLoader();
-  const [bikes, riders, traffic] = await Promise.all([
-    loader.loadAsync("/assets/models/bikes.glb"),
+  const [riders, traffic, ...bikeResults] = await Promise.all([
     loader.loadAsync("/assets/models/riders.glb"),
-    loader.loadAsync("/assets/models/traffic.glb")
+    loader.loadAsync("/assets/models/traffic.glb"),
+    ...Object.entries(EXTERNAL_BIKE_ASSETS).map(([, url]) => loader.loadAsync(url))
   ]);
 
+  const bikes: Record<string, THREE.Group> = {};
+  Object.keys(EXTERNAL_BIKE_ASSETS).forEach((bikeId, index) => {
+    bikes[bikeId] = bikeResults[index].scene;
+  });
+
   return {
-    bikes: bikes.scene,
+    bikes,
     riders: riders.scene,
     traffic: traffic.scene
   } satisfies RaceModelPack;
 }
 
-function cloneNamedModel(packRoot: THREE.Group, name: string) {
-  const source = packRoot.getObjectByName(name);
-  if (!source) throw new Error("Missing race model: " + name);
+function cloneLoadedModel(source: THREE.Object3D, label: string) {
+  if (!source) throw new Error("Missing race model: " + label);
   return source.clone(true) as THREE.Group;
 }
 
@@ -112,22 +126,37 @@ function fitModel(model: THREE.Object3D, targetHeight: number) {
   model.scale.multiplyScalar(scale);
 }
 
+function fitBikeModel(model: THREE.Object3D, targetLength: number) {
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  if (size.z <= 0.001) return;
+  const scale = targetLength / size.z;
+  model.scale.multiplyScalar(scale);
+}
+
 function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: string, player = false) {
   const root = new THREE.Group();
-  const bike = cloneNamedModel(pack.bikes, "bike-" + bikeId);
-  const rider = cloneNamedModel(pack.riders, "rider-" + riderId);
+  const bike = cloneLoadedModel(pack.bikes[bikeId] ?? pack.bikes.starter, "bike-" + bikeId);
+  const rider = cloneLoadedModel(pack.riders, "rider-" + riderId);
 
-  bike.scale.setScalar(player ? 1.05 : 0.80);
-  fitModel(bike, player ? 2.25 : 1.82);
+  // 3DAssets.dev bikes face +Z; Aboki Riders drives toward -Z.
+  root.rotation.y = Math.PI;
 
+  fitBikeModel(bike, player ? 2.55 : 2.15);
   rider.scale.setScalar(player ? 0.92 : 0.72);
   fitModel(rider, player ? 2.45 : 1.98);
   rider.position.y = player ? 0.48 : 0.38;
+
+  const wheels: THREE.Object3D[] = [];
+  bike.traverse((object) => {
+    if (/wheel/i.test(object.name)) wheels.push(object);
+  });
 
   root.add(bike, rider);
   root.userData.modelBacked = true;
   root.userData.bikeModel = bike;
   root.userData.riderModel = rider;
+  root.userData.wheels = wheels;
   return root;
 }
 

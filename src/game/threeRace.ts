@@ -80,7 +80,7 @@ const RIDERS: Record<string, RiderSpec> = {
 
 type RaceModelPack = {
   bikes: Record<string, THREE.Group>;
-  riders: Record<string, THREE.Group>;
+  riders: THREE.Group;
   traffic: Record<Traffic["kind"], THREE.Group>;
   environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 };
@@ -109,14 +109,6 @@ const EXTERNAL_ENVIRONMENT_ASSETS = {
   market: "https://cdn.3dassets.dev/assets/34323/v1/model.glb"
 } as const;
 
-const RIDER_MODEL_ASSETS = {
-  main: "/assets/models/riders/main.glb",
-  ada: "/assets/models/riders/ada.glb",
-  kobby: "/assets/models/riders/kobby.glb",
-  tobi: "/assets/models/riders/tobi.glb"
-} as const;
-
-type RiderModelId = keyof typeof RIDER_MODEL_ASSETS;
 type LoadedAsset = THREE.Group | null;
 
 function resolveRiderModelId(riderId: string): RiderModelId {
@@ -168,73 +160,55 @@ async function loadOptionalAsset(loader: GLTFLoader, slugOrUrl: string): Promise
   }
 }
 
-async function loadLocalRiderAsset(loader: GLTFLoader, riderId: string) {
-  const modelId = resolveRiderModelId(riderId);
+async function loadRaceModelPack() {
+  const loader = new GLTFLoader();
+  const bikeIds = Object.keys(EXTERNAL_BIKE_ASSETS);
+  const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
+  const environmentIds = Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>;
+
+  let riderResult: THREE.Group;
   try {
-    return (await withTimeout(
-      loader.loadAsync(RIDER_MODEL_ASSETS[modelId]),
+    riderResult = (await withTimeout(
+      loader.loadAsync("/assets/models/riders.glb"),
       6500,
-      "rider model"
+      "local rider pack"
     )).scene;
   } catch (error) {
-    console.warn("Local rider model unavailable:", modelId, error);
-    return null;
+    console.warn("Local rider pack unavailable:", error);
+    riderResult = createBikeAndRider("starter", "main", 1).userData.riderRoot?.parent ?? new THREE.Group();
   }
-}
 
-async function loadPlayerRaceModels(playerRiderId: string, playerBikeId: string) {
-  const loader = new GLTFLoader();
-  const riders: Record<string, THREE.Group> = {};
-  const rider = await loadLocalRiderAsset(loader, playerRiderId);
-  if (rider) riders[resolveRiderModelId(playerRiderId)] = rider;
-
-  const bike = await loadOptionalAsset(
-    loader,
-    EXTERNAL_BIKE_ASSETS[playerBikeId] ?? EXTERNAL_BIKE_ASSETS.starter
+  const bikeResults = await Promise.all(
+    bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))
   );
 
-  return { riders, bike };
-}
-
-async function loadRaceSupportModels(
-  riders: Record<string, THREE.Group>,
-  playerBikeId: string,
-  playerBike: THREE.Group | null
-) {
-  const loader = new GLTFLoader();
   const bikes: Record<string, THREE.Group> = {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
   const environments = {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 
-  for (const riderId of Object.keys(RIDER_MODEL_ASSETS) as RiderModelId[]) {
-    if (riders[riderId]) continue;
-    const source = await loadLocalRiderAsset(loader, riderId);
-    if (source) riders[riderId] = source;
-  }
+  bikeIds.forEach((bikeId, index) => {
+    if (bikeResults[index]) bikes[bikeId] = bikeResults[index] as THREE.Group;
+  });
 
-  if (playerBike) bikes[playerBikeId] = playerBike;
+  // The player is already playable with the local fallback while the remaining support models stream.
+  setTimeout(async () => {
+    for (const kind of trafficKinds) {
+      const source = await loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]);
+      if (source) traffic[kind] = source;
+    }
 
-  for (const [bikeId, sourceUrl] of Object.entries(EXTERNAL_BIKE_ASSETS)) {
-    if (bikeId === playerBikeId) continue;
-    const source = await loadOptionalAsset(loader, sourceUrl);
-    if (source) bikes[bikeId] = source;
-  }
+    for (const id of environmentIds) {
+      const source = await loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id]);
+      if (source) environments[id] = source;
+    }
+  }, 0);
 
-  await new Promise<void>((resolve) => window.setTimeout(resolve, 40));
-
-  for (const kind of Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][]) {
-    const source = await loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]);
-    if (source) traffic[kind] = source;
-  }
-
-  await new Promise<void>((resolve) => window.setTimeout(resolve, 40));
-
-  for (const id of Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>) {
-    const source = await loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id]);
-    if (source) environments[id] = source;
-  }
-
-  return { bikes, riders, traffic, environments };
+  return {
+    bikes,
+    riders: riderResult,
+    traffic,
+    environments
+  };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -261,19 +235,15 @@ function fitBikeModel(model: THREE.Object3D, targetLength: number) {
 function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: string, player = false) {
   const root = new THREE.Group();
   const bike = cloneLoadedModel(pack.bikes[bikeId] ?? pack.bikes.starter, "bike-" + bikeId);
-  const riderModelId = resolveRiderModelId(riderId);
-  const rider = cloneLoadedModel(
-    pack.riders[riderModelId] ?? pack.riders.main,
-    "rider-" + riderModelId
-  );
+  const rider = cloneLoadedModel(pack.riders, "riders-pack");
 
   // 3DAssets.dev bikes face +Z; Aboki Riders drives toward -Z.
   bike.rotation.y = Math.PI;
 
   fitBikeModel(bike, player ? 2.55 : 2.15);
   rider.scale.setScalar(player ? 0.92 : 0.72);
-  fitModel(rider, player ? 1.86 : 1.82);
-  rider.position.y = player ? 0.24 : 0.20;
+  fitModel(rider, player ? 2.45 : 1.98);
+  rider.position.y = player ? 0.48 : 0.38;
 
   const wheels: THREE.Object3D[] = [];
   bike.traverse((object) => {
@@ -1559,94 +1529,6 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
   let activePlayer = player;
   let raceArmed = true;
-
-  const applySupportModels = (pack: {
-    bikes: Record<string, THREE.Group>;
-    riders: THREE.Group | null;
-    traffic: Record<Traffic["kind"], THREE.Group>;
-    environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
-  }) => {
-    if (pack.riders) {
-      for (const ai of aiRacers) {
-        const bikeSource = pack.bikes[ai.bikeId];
-        if (!bikeSource) continue;
-        const next = prepareLoadedRiderBike(
-          {
-            bikes: pack.bikes,
-            riders: pack.riders,
-            traffic: pack.traffic,
-            environments: pack.environments
-          },
-          ai.bikeId,
-          ai.riderId,
-          false
-        );
-        next.position.copy(ai.group.position);
-        scene.remove(ai.group);
-        ai.group = next;
-        scene.add(next);
-      }
-
-      for (const [id, remote] of remoteRacers) {
-        const bikeSource = pack.bikes[remote.bikeId];
-        if (!bikeSource) continue;
-        const next = prepareLoadedRiderBike(
-          {
-            bikes: pack.bikes,
-            riders: pack.riders,
-            traffic: pack.traffic,
-            environments: pack.environments
-          },
-          remote.bikeId,
-          remote.riderId,
-          false
-        );
-        next.position.copy(remote.group.position);
-        next.rotation.copy(remote.group.rotation);
-        scene.remove(remote.group);
-        remote.group = next;
-        remoteRacers.set(id, remote);
-        scene.add(next);
-      }
-    }
-
-    for (const vehicle of traffic) {
-      const source = pack.traffic[vehicle.kind];
-      if (!source) continue;
-      const next = prepareLoadedTraffic(
-        {
-          bikes: pack.bikes,
-          riders: pack.riders,
-          traffic: pack.traffic,
-          environments: pack.environments
-        },
-        vehicle.kind
-      );
-      if (!next) continue;
-      next.position.copy(vehicle.group.position);
-      scene.remove(vehicle.group);
-      vehicle.group = next;
-      scene.add(vehicle.group);
-    }
-
-    const environmentPlacements = [
-      ["busStation", -1, -112, 0.72],
-      ["market", 1, -236, 0.94],
-      ["busStation", 1, -412, 0.68],
-      ["market", -1, -548, 0.92]
-    ] as const;
-
-    environmentPlacements.forEach(([kind, side, z, scale]) => {
-      const source = pack.environments[kind];
-      if (!source) return;
-      const setPiece = source.clone(true);
-      setPiece.scale.setScalar(scale);
-      setPiece.position.set(side * 19, 0, z);
-      setPiece.userData.externalEnvironment = kind;
-      scene.add(setPiece);
-      scenery.push(setPiece);
-    });
-  };
 
   const raceModelsPromise = (async () => {
     const initial = await loadPlayerRaceModels(playerRiderId, playerBikeId);

@@ -237,3 +237,18 @@ Player states:
 - **Finish:** celebratory sway/bounce.
 
 CPU racers reuse the same production bike/rider visuals with lightweight motion/bob and lane-change lean. This is intentionally a procedural first pass; dedicated animation atlases can replace the transforms later without changing gameplay code.
+
+
+## Standalone 3D rider base — runtime integration
+
+The race renderer now uses a separate CC0 human GLB as the base rider whenever the external model is available:
+
+- Source: Gorgehold Scout (3DAssets.dev)
+- CDN: https://cdn.3dassets.dev/assets/32901/v1/model.glb
+- 74-joint skeleton
+- Idle / walk / run / grasp clips
+- 98.5k triangles
+- 2.2 MB
+- CC0 1.0 Universal
+
+The bike and human remain separate scene objects. The runtime removes unrelated survival equipment from the base character, applies rider-specific clothing tint/build variation, and keeps the procedural human only as a network-failure fallback.

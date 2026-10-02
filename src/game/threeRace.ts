@@ -1,11 +1,12 @@
 
-function PhaserLikeClamp(value: number) { return Math.min(1, Math.max(-1, value)); }
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { getSharedRealtimeClient } from "./multiplayer";
+
+function PhaserLikeClamp(value: number) { return Math.min(1, Math.max(-1, value)); }
 
 type Mode = "solo" | "multiplayer";
 
@@ -869,23 +870,54 @@ function makeHud(parent: HTMLElement) {
   position.style.borderRadius = "10px";
   hud.appendChild(position);
 
+  const speedDial = document.createElement("div");
+  speedDial.style.position = "absolute";
+  speedDial.style.right = "16px";
+  speedDial.style.top = "14px";
+  speedDial.style.width = "82px";
+  speedDial.style.height = "82px";
+  speedDial.style.borderRadius = "50%";
+  speedDial.style.background = "radial-gradient(circle at 50% 55%, rgba(25,31,34,.98) 0 52%, rgba(12,16,18,.98) 53% 100%)";
+  speedDial.style.border = "3px solid rgba(255,255,255,.84)";
+  speedDial.style.boxShadow = "0 8px 24px rgba(0,0,0,.32), inset 0 0 18px rgba(92,224,255,.14)";
+  speedDial.style.pointerEvents = "none";
+  hud.appendChild(speedDial);
+
   const speed = document.createElement("div");
   speed.style.position = "absolute";
-  speed.style.right = "18px";
-  speed.style.top = "18px";
-  speed.style.fontSize = "29px";
-  speed.style.fontWeight = "900";
-  speed.style.letterSpacing = "1px";
-  hud.appendChild(speed);
+  speed.style.inset = "18px 0 auto";
+  speed.style.textAlign = "center";
+  speed.style.fontSize = "22px";
+  speed.style.fontWeight = "950";
+  speed.style.lineHeight = "1";
+  speed.style.letterSpacing = "-0.02em";
+  speedDial.appendChild(speed);
 
   const speedUnit = document.createElement("div");
   speedUnit.style.position = "absolute";
-  speedUnit.style.right = "20px";
-  speedUnit.style.top = "52px";
-  speedUnit.style.fontSize = "9px";
-  speedUnit.style.fontWeight = "800";
+  speedUnit.style.left = "0";
+  speedUnit.style.right = "0";
+  speedUnit.style.bottom = "18px";
+  speedUnit.style.textAlign = "center";
+  speedUnit.style.fontSize = "7px";
+  speedUnit.style.fontWeight = "900";
   speedUnit.style.opacity = "0.8";
-  hud.appendChild(speedUnit);
+  speedDial.appendChild(speedUnit);
+
+  const gear = document.createElement("div");
+  gear.style.position = "absolute";
+  gear.style.left = "50%";
+  gear.style.top = "-8px";
+  gear.style.transform = "translateX(-50%)";
+  gear.style.minWidth = "28px";
+  gear.style.padding = "3px 5px";
+  gear.style.borderRadius = "6px";
+  gear.style.background = "#f2c94c";
+  gear.style.color = "#111417";
+  gear.style.fontSize = "8px";
+  gear.style.fontWeight = "950";
+  gear.style.textAlign = "center";
+  speedDial.appendChild(gear);
 
   const nitroWrap = document.createElement("div");
   nitroWrap.style.position = "absolute";
@@ -994,6 +1026,7 @@ function makeHud(parent: HTMLElement) {
     position,
     speed,
     speedUnit,
+    gear,
     nitroFill,
     message,
     countdown,
@@ -1662,6 +1695,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     hud.timer.textContent = new Date(Math.max(performance.now() - raceStartedAt, 0)).toISOString().substring(14, 19);
     hud.speed.textContent = String(Math.round(playerSpeed)).padStart(3, "0");
     hud.speedUnit.textContent = "KM/H";
+    hud.gear.textContent = "G" + Math.min(6, Math.max(1, Math.floor(playerSpeed / 38) + 1));
     hud.nitroFill.style.width = Math.round(nitro * 100) + "%";
 
     if (realtime && networkRoomId && networkPlayerId && performance.now() - lastNetworkInput > 55) {

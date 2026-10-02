@@ -67,8 +67,7 @@ const BIKES: Record<string, BikeSpec> = {
   speed: { color: 0x2779dc, accent: 0xf39a4a, maxSpeed: 185, accel: 112, handling: 9.4, silhouette: "sport" },
   heavy: { color: 0xbd4a42, accent: 0xe2e0d5, maxSpeed: 168, accel: 76, handling: 6.8, silhouette: "cruiser" },
   elite: { color: 0x8159c6, accent: 0x69dcff, maxSpeed: 202, accel: 128, handling: 8.8, silhouette: "futuristic" },
-  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" },
-  dirt: { color: 0x1b6f5c, accent: 0xe7b83f, maxSpeed: 176, accel: 106, handling: 9.2, silhouette: "dirt" }
+  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" }
 };
 
 const RIDERS: Record<string, RiderSpec> = {
@@ -510,16 +509,6 @@ function createRiderFromFallback(riderId: string, player = false) {
   return root;
 }
 
-function findRiderBone(root: THREE.Object3D, pattern: RegExp) {
-  let result: THREE.Object3D | undefined;
-  root.traverse((node) => {
-    if (result || node.type !== "Bone") return;
-    const name = node.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (pattern.test(name)) result = node;
-  });
-  return result;
-}
-
 function prepareLoadedRiderBike(
   pack: RaceModelPack,
   bikeId: string,
@@ -552,36 +541,21 @@ function prepareLoadedRiderBike(
 
   root.add(bike);
 
-  // Generic geometry-derived rider fit. Different motorcycles get different
-  // seat height, fore/aft position and lean without a bike-specific branch.
+  // Seat the rider from the fitted bike's real bounds instead of assuming every
+  // external motorcycle has the same proportions.
   const bikeBox = new THREE.Box3().setFromObject(bike);
   const bikeCenter = bikeBox.getCenter(new THREE.Vector3());
   const bikeSize = bikeBox.getSize(new THREE.Vector3());
-  const character = root.userData.riderRoot as THREE.Object3D | undefined;
+  const character = root.userData.riderRoot as THREE.Group | undefined;
   if (character) {
-    const seatHeight = THREE.MathUtils.clamp(
-      bikeBox.min.y + bikeSize.y * 0.61,
-      0.82,
-      1.36
+    character.position.set(
+      0,
+      THREE.MathUtils.clamp(bikeBox.max.y * 0.70, 0.88, 1.34),
+      THREE.MathUtils.clamp(bikeCenter.z + bikeSize.z * 0.10, -0.14, 0.30)
     );
-    const seatZ = THREE.MathUtils.clamp(
-      bikeBox.min.z + bikeSize.z * 0.50,
-      bikeBox.min.z + 0.10,
-      bikeBox.max.z - 0.10
-    );
-
-    character.position.set(bikeCenter.x, seatHeight, seatZ);
-    character.rotation.x = THREE.MathUtils.clamp(
-      -Math.atan2(bikeSize.y * 0.18, Math.max(0.4, bikeSize.z * 0.34)),
-      -0.34,
-      0.08
-    );
+    const sportPosture = bikeId === "speed" || bikeId === "elite" || bikeId === "legendary";
+    character.rotation.x = sportPosture ? -0.28 : bikeId === "heavy" ? -0.08 : -0.20;
     character.rotation.z = 0;
-
-    const spine = findRiderBone(character, /spine02|spine01|spine|chest/);
-    const head = findRiderBone(character, /head|neck/);
-    if (spine) spine.rotation.x = character.rotation.x * 0.55;
-    if (head) head.rotation.x = -character.rotation.x * 0.45;
   }
 
   const bikeMixer = createLoopingWheelMixer(bike);

@@ -621,6 +621,20 @@ a {
     linear-gradient(180deg, #a6d3dc 0%, #d9d8c8 45%, #9d8060 46%, #80684f 100%);
 }
 
+.garage-bike-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.garage-bike-preview canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .garage-bike-shadow {
   position: absolute;
   left: 18%;

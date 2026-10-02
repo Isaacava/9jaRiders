@@ -241,14 +241,13 @@ CPU racers reuse the same production bike/rider visuals with lightweight motion/
 
 ## Standalone 3D rider base — runtime integration
 
-The race renderer now uses a separate CC0 human GLB as the base rider whenever the external model is available:
+The race renderer now uses a separate **CC0 MakeHuman-derived human GLB** as the rider body whenever the external model is available:
 
-- Source: Gorgehold Scout (3DAssets.dev)
-- CDN: https://cdn.3dassets.dev/assets/32901/v1/model.glb
-- 74-joint skeleton
-- Idle / walk / run / grasp clips
-- 98.5k triangles
-- 2.2 MB
-- CC0 1.0 Universal
+- Source: the bundled `human.glb` from the open-source VSIM project
+- Source family: MakeHuman / MPFB
+- Size: ~2.64 MB
+- Rig: 53-bone game-engine rig
+- Motion source: idle / walk library
+- Licence: CC0 for the generated human asset
 
-The bike and human remain separate scene objects. The runtime removes unrelated survival equipment from the base character, applies rider-specific clothing tint/build variation, and keeps the procedural human only as a network-failure fallback.
+The game keeps the rider and bike as separate scene objects. The runtime applies rider color/skin variation, a seated motorcycle pose, forward racing lean, and strips unrelated equipment. The procedural human is retained only as a hard network-failure fallback.

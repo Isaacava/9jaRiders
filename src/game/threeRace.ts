@@ -682,12 +682,20 @@ function createTraffic(kind: Traffic["kind"]) {
   for (const x of [-dims[0] * 0.42, dims[0] * 0.42]) {
     for (const z of [-dims[2] * 0.33, dims[2] * 0.33]) {
       const wheelMesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.18, 20),
+        new THREE.TorusGeometry(wheelRadius, kind === "keke" ? 0.065 : 0.085, 10, 22),
         darkMat
       );
-      wheelMesh.rotation.z = Math.PI / 2;
+      wheelMesh.rotation.y = Math.PI / 2;
       wheelMesh.position.set(x, wheelRadius + 0.03, z);
       group.add(wheelMesh);
+
+      const hub = new THREE.Mesh(
+        new THREE.CylinderGeometry(wheelRadius * 0.40, wheelRadius * 0.40, 0.20, 16),
+        metalMat
+      );
+      hub.rotation.z = Math.PI / 2;
+      hub.position.set(x, wheelRadius + 0.03, z);
+      group.add(hub);
     }
   }
 
@@ -1385,6 +1393,16 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       scene.remove(vehicle.group);
       vehicle.group = next as THREE.Group;
       scene.add(vehicle.group);
+    }
+
+    for (const [id, remote] of remoteRacers) {
+      const next = prepareLoadedRiderBike(pack, remote.bikeId, remote.riderId, false);
+      next.position.copy(remote.group.position);
+      next.rotation.copy(remote.group.rotation);
+      scene.remove(remote.group);
+      remote.group = next;
+      remoteRacers.set(id, remote);
+      scene.add(next);
     }
 
     return { player: realPlayer };

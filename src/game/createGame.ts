@@ -72,6 +72,10 @@ class AbokiRaceScene extends Phaser.Scene {
   private aiRiders: AIRider[] = [];
   private aiDifficulty: AIDifficulty = "normal";
   private hudPosition!: Phaser.GameObjects.Text;
+  private hudSpeed!: Phaser.GameObjects.Text;
+  private hudTimer!: Phaser.GameObjects.Text;
+  private hudGear!: Phaser.GameObjects.Text;
+  private speedometer?: Phaser.GameObjects.Container;
   private keyboard?: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys: Record<string, Phaser.Input.Keyboard.Key> = {};
   private touchLeft = false;
@@ -82,6 +86,9 @@ class AbokiRaceScene extends Phaser.Scene {
   private roadWidth = 340;
   private roadLeft = 0;
   private roadRight = 0;
+  private horizonY = 0;
+  private farRoadWidth = 0;
+  private nearRoadWidth = 0;
   private speed = 0;
   private baseSpeed = 5.4;
   private maxSpeed = 9;
@@ -349,32 +356,62 @@ class AbokiRaceScene extends Phaser.Scene {
     const height = this.scale.height;
 
     for (const marker of this.laneMarkers) {
-      marker.y += roadSpeed;
-
-      if (marker.y > height + 60) marker.y = -60;
+      marker.y += roadSpeed * (0.78 + this.getPerspectiveT(marker.y) * 1.05);
+      if (marker.y > height + 70) marker.y = this.horizonY - Phaser.Math.Between(70, 220);
+      const boundary = Number(marker.getData("boundary") ?? 0.5);
+      const perspective = this.getPerspectiveT(marker.y);
+      marker.x = this.getLaneX(boundary, marker.y);
+      marker.height = Phaser.Math.Linear(7, Math.max(34, height * 0.085), perspective);
+      marker.width = Phaser.Math.Linear(2, Math.max(7, width * 0.012), perspective);
+      marker.alpha = Phaser.Math.Linear(0.38, 0.92, perspective);
     }
 
     for (const prop of this.scenery) {
-      prop.y += roadSpeed * 0.84;
-
-      if (prop.y > height + 140) {
-        prop.y = -160 - Phaser.Math.Between(0, 260);
+      prop.y += roadSpeed * 0.74;
+      if (prop.y > height + 160) {
+        prop.y = this.horizonY - Phaser.Math.Between(80, 260);
         const side = (prop.getData("side") as number) || 1;
-        prop.x = side < 0
-          ? Phaser.Math.Between(12, Math.max(24, this.roadLeft - 24))
-          : Phaser.Math.Between(Math.min(width - 24, this.roadRight + 24), width - 12);
+        const edge = this.getRoadWidthAtY(prop.y) / 2 + Phaser.Math.Between(28, 120);
+        prop.x = width / 2 + side * edge;
       }
+      const baseScale = Number(prop.getData("baseScale") ?? 0.82);
+      prop.setScale(baseScale * this.getPerspectiveScale(prop.y, 0.28, 0.95));
     }
 
     for (const vehicle of this.traffic) {
       vehicle.y += roadSpeed * (vehicle.getData("trafficSpeed") as number);
-
-      if (vehicle.y > height + 90) {
+      if (vehicle.y > height + 100) {
         this.respawnTraffic(vehicle);
+        continue;
       }
+      const lane = Number(vehicle.getData("lane") ?? 0.5);
+      vehicle.x = this.getLaneX(lane, vehicle.y);
+      vehicle.setScale(this.getPerspectiveScale(vehicle.y, 0.28, 0.9));
+    }
+
+    for (const ai of this.aiRiders) {
+      ai.container.x = this.getLaneX(ai.lane, ai.container.y);
+      ai.container.setScale(this.getPerspectiveScale(ai.container.y, 0.22, 0.82));
     }
 
     this.distance += this.speed * dt * 9;
+  }
+
+  private getPerspectiveT(y: number) {
+    return Phaser.Math.Clamp((y - this.horizonY) / Math.max(1, this.scale.height - this.horizonY), 0, 1);
+  }
+
+  private getRoadWidthAtY(y: number) {
+    return Phaser.Math.Linear(this.farRoadWidth, this.nearRoadWidth, this.getPerspectiveT(y));
+  }
+
+  private getLaneX(lane: number, y: number) {
+    const roadWidth = this.getRoadWidthAtY(y);
+    return this.scale.width / 2 - roadWidth / 2 + roadWidth * lane;
+  }
+
+  private getPerspectiveScale(y: number, min: number, max: number) {
+    return Phaser.Math.Linear(min, max, this.getPerspectiveT(y));
   }
 
   private updateTraffic(_dt: number) {
@@ -803,7 +840,9 @@ class AbokiRaceScene extends Phaser.Scene {
       else object = createBarrier();
 
       object.setDepth(-8);
-      object.setScale(template.kind === "palm" ? 0.68 : 0.82);
+      const baseScale = template.kind === "palm" ? 0.68 : 0.82;
+      object.setScale(baseScale);
+      object.setData("baseScale", baseScale);
       object.setData("side", template.side);
       object.setData("kind", template.kind);
       object.x = template.side < 0
@@ -966,8 +1005,9 @@ class AbokiRaceScene extends Phaser.Scene {
         ai.container.alpha = 0.35;
       }
 
-      ai.container.x = this.roadLeft + this.roadWidth * ai.lane;
       ai.container.y = this.rider.y - (ai.distance - this.distance) * 1.9;
+      ai.container.x = this.getLaneX(ai.lane, ai.container.y);
+      ai.container.setScale(this.getPerspectiveScale(ai.container.y, 0.22, 0.82));
       ai.container.angle = Phaser.Math.Clamp(laneDelta * -22, -12, 12);
       ai.container.y += Math.sin((this.elapsed + ai.id * 130) / 90) * 0.35;
       ai.container.setVisible(
@@ -1134,59 +1174,34 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 
   private createHud() {
-    this.hudMultiplier = this.add.text(18, 16, "1.00×", {
-      color: "#ffd166",
+    this.hudTimer = this.add.text(18, 16, "00:00", {
+      color: "#ffffff",
+      backgroundColor: "#1a1d20",
+      padding: { x: 10, y: 7 },
       fontFamily: "Arial",
-      fontSize: "26px",
-      fontStyle: "bold",
-      stroke: "#111417",
-      strokeThickness: 5
-    });
-
-    this.hudDistance = this.add.text(18, 51, "0 / 5 KM", {
-      color: "#fffaf0",
-      fontFamily: "Arial",
-      fontSize: "11px",
+      fontSize: "18px",
       fontStyle: "bold",
       stroke: "#111417",
       strokeThickness: 3
     });
+    this.hudMultiplier = this.add.text(18, 57, "1.00×", { color: "#ffd166", fontFamily: "Arial", fontSize: "22px", fontStyle: "bold", stroke: "#111417", strokeThickness: 4 });
+    this.hudDistance = this.add.text(18, 88, "0 / 5 KM", { color: "#fffaf0", fontFamily: "Arial", fontSize: "10px", fontStyle: "bold", stroke: "#111417", strokeThickness: 3 });
 
-    this.hudPosition = this.add.text(this.scale.width - 18, 52, "1/8", {
-      color: "#fffaf0",
-      backgroundColor: "#111417",
-      padding: { x: 8, y: 6 },
-      fontFamily: "Arial",
-      fontSize: "11px",
-      fontStyle: "bold"
-    }).setOrigin(1, 0);
+    this.speedometer = this.add.container(this.scale.width - 82, 72);
+    const outer = this.add.circle(0, 0, 57, 0x111417, 0.92).setStrokeStyle(4, 0xf5eddd);
+    const inner = this.add.circle(0, 0, 44, 0x242a2e, 0.98).setStrokeStyle(2, 0x7b8588);
+    const t1 = this.add.rectangle(0, -48, 4, 10, 0xf5eddd);
+    const t2 = this.add.rectangle(-48, 0, 10, 4, 0xf5eddd);
+    const t3 = this.add.rectangle(48, 0, 10, 4, 0xf5eddd);
+    this.hudSpeed = this.add.text(0, -2, "000", { color: "#74e6d7", fontFamily: "Arial", fontSize: "24px", fontStyle: "bold" }).setOrigin(0.5);
+    const unit = this.add.text(0, 24, "KM/H", { color: "#d8dfdc", fontFamily: "Arial", fontSize: "8px", fontStyle: "bold" }).setOrigin(0.5);
+    this.hudGear = this.add.text(0, -27, "GEAR 1", { color: "#ffd166", fontFamily: "Arial", fontSize: "8px", fontStyle: "bold" }).setOrigin(0.5);
+    this.speedometer.add([outer, inner, t1, t2, t3, this.hudSpeed, unit, this.hudGear]);
 
-    this.hudItem = this.add.text(this.scale.width - 18, 18, "ITEM: —", {
-      color: "#fffaf0",
-      backgroundColor: "#111417",
-      padding: { x: 8, y: 7 },
-      fontFamily: "Arial",
-      fontSize: "10px",
-      fontStyle: "bold"
-    }).setOrigin(1, 0);
-
-    this.hudMessage = this.add.text(this.scale.width / 2, 92, "", {
-      color: "#fffaf0",
-      backgroundColor: "#111417",
-      padding: { x: 12, y: 8 },
-      fontFamily: "Arial",
-      fontSize: "12px",
-      fontStyle: "bold"
-    }).setOrigin(0.5).setVisible(false);
-
-    this.countdownText = this.add.text(this.scale.width / 2, this.scale.height / 2, "3", {
-      color: "#ffffff",
-      fontFamily: "Arial",
-      fontSize: "76px",
-      fontStyle: "bold",
-      stroke: "#111417",
-      strokeThickness: 10
-    }).setOrigin(0.5);
+    this.hudPosition = this.add.text(this.scale.width - 150, 18, "1/8", { color: "#fffaf0", backgroundColor: "#111417", padding: { x: 8, y: 6 }, fontFamily: "Arial", fontSize: "11px", fontStyle: "bold" }).setOrigin(1, 0);
+    this.hudItem = this.add.text(this.scale.width - 150, 52, "ITEM: —", { color: "#fffaf0", backgroundColor: "#111417", padding: { x: 8, y: 7 }, fontFamily: "Arial", fontSize: "10px", fontStyle: "bold" }).setOrigin(1, 0);
+    this.hudMessage = this.add.text(this.scale.width / 2, 84, "", { color: "#fffaf0", backgroundColor: "#111417", padding: { x: 12, y: 8 }, fontFamily: "Arial", fontSize: "12px", fontStyle: "bold" }).setOrigin(0.5).setVisible(false);
+    this.countdownText = this.add.text(this.scale.width / 2, this.scale.height / 2, "3", { color: "#ffffff", fontFamily: "Arial", fontSize: "76px", fontStyle: "bold", stroke: "#111417", strokeThickness: 10 }).setOrigin(0.5);
   }
 
   private createTouchControls() {
@@ -1279,9 +1294,12 @@ class AbokiRaceScene extends Phaser.Scene {
     this.lastWidth = width;
     this.lastHeight = height;
 
-    this.roadWidth = Math.min(width * 0.64, height * 0.72, 430);
-    this.roadLeft = (width - this.roadWidth) / 2;
-    this.roadRight = this.roadLeft + this.roadWidth;
+    this.horizonY = height * 0.28;
+    this.nearRoadWidth = Math.min(width * 0.9, 680);
+    this.farRoadWidth = Math.max(96, this.nearRoadWidth * 0.17);
+    this.roadWidth = this.nearRoadWidth;
+    this.roadLeft = (width - this.nearRoadWidth) / 2;
+    this.roadRight = this.roadLeft + this.nearRoadWidth;
 
     this.road.clear();
     if (this.routeBackdrop) {
@@ -1309,37 +1327,59 @@ class AbokiRaceScene extends Phaser.Scene {
       else if (index === 1) child.y = height * 0.67;
     });
 
-    this.road.fillStyle(COLORS.shoulder, 1);
+    this.road.fillStyle(0xa78b68, 1);
     this.road.fillRect(0, 0, width, height);
 
+    const farLeft = width / 2 - this.farRoadWidth / 2;
+    const farRight = width / 2 + this.farRoadWidth / 2;
+
     this.road.fillStyle(COLORS.road, 1);
-    this.road.fillRect(this.roadLeft, 0, this.roadWidth, height);
+    this.road.beginPath();
+    this.road.moveTo(farLeft, this.horizonY);
+    this.road.lineTo(farRight, this.horizonY);
+    this.road.lineTo(this.roadRight, height);
+    this.road.lineTo(this.roadLeft, height);
+    this.road.closePath();
+    this.road.fillPath();
 
-    this.road.fillStyle(COLORS.roadEdge, 1);
-    this.road.fillRect(this.roadLeft, 0, 8, height);
-    this.road.fillRect(this.roadRight - 8, 0, 8, height);
+    this.road.lineStyle(7, COLORS.roadEdge, 0.95);
+    this.road.beginPath();
+    this.road.moveTo(farLeft, this.horizonY);
+    this.road.lineTo(this.roadLeft, height);
+    this.road.closePath();
+    this.road.strokePath();
+    this.road.beginPath();
+    this.road.moveTo(farRight, this.horizonY);
+    this.road.lineTo(this.roadRight, height);
+    this.road.closePath();
+    this.road.strokePath();
 
-    const laneX = this.roadLeft + this.roadWidth / 2;
-    const markerHeight = Math.max(34, Math.min(70, height * 0.09));
-    const markerWidth = Math.max(7, Math.min(11, width * 0.012));
+    if (this.roadTexture) this.roadTexture.setVisible(false);
 
-    if (this.laneMarkers.length === 0) {
-      for (let y = -markerHeight; y < height + markerHeight; y += markerHeight * 1.75) {
-        const marker = this.add.rectangle(laneX, y, markerWidth, markerHeight, COLORS.lane);
-        marker.setAlpha(0.88);
+    this.laneMarkers.forEach((marker) => marker.destroy());
+    this.laneMarkers = [];
+    const markerSpacing = Math.max(68, height * 0.105);
+    for (let i = -2; i < 18; i += 1) {
+      for (const boundary of [1 / 3, 2 / 3]) {
+        const y = this.horizonY + i * markerSpacing;
+        const marker = this.add.rectangle(this.getLaneX(boundary, y), y, Math.max(2, width * 0.004), Math.max(8, height * 0.018), COLORS.lane);
+        marker.setData("boundary", boundary);
+        marker.setDepth(1);
         this.laneMarkers.push(marker);
       }
     }
 
-    for (const marker of this.laneMarkers) {
-      marker.x = laneX;
-      marker.width = markerWidth;
-      marker.height = markerHeight;
-    }
-
-    this.rider.x = laneX;
+    this.rider.x = this.getLaneX(0.5, height * 0.82);
     this.rider.y = height * 0.82;
-    this.rider.setScale(Math.max(0.78, Math.min(1.18, Math.min(width / 420, height / 760))));
+    this.hudTimer.setPosition(18, 16);
+    this.hudMultiplier.setPosition(18, 57);
+    this.hudDistance.setPosition(18, 88);
+    this.speedometer?.setPosition(width - 82, 72);
+    this.hudPosition.setPosition(width - 150, 18);
+    this.hudItem.setPosition(width - 150, 52);
+    this.hudMessage.setPosition(width / 2, 84);
+    this.countdownText.setPosition(width / 2, height / 2);
+    this.rider.setScale(Math.max(0.92, Math.min(1.25, Math.min(width / 480, height / 600))));
 
     const trafficPositions = [
       { lane: 0.18, progress: 0.18 },
@@ -1352,8 +1392,10 @@ class AbokiRaceScene extends Phaser.Scene {
 
     this.traffic.forEach((vehicle, index) => {
       const setup = trafficPositions[index % trafficPositions.length];
-      vehicle.x = this.roadLeft + this.roadWidth * setup.lane;
+      vehicle.setData("lane", setup.lane);
+      vehicle.x = this.getLaneX(setup.lane, height * setup.progress);
       vehicle.y = height * setup.progress;
+      vehicle.setScale(this.getPerspectiveScale(vehicle.y, 0.28, 0.9));
     });
 
     this.aiRiders.forEach((ai) => {
@@ -1491,6 +1533,10 @@ class AbokiRaceScene extends Phaser.Scene {
   private updateHud() {
     this.hudMultiplier.setText(`${this.multiplier.toFixed(2)}×`);
     this.hudDistance.setText(`${Math.min(5, this.distance / 1000).toFixed(2)} / 5 KM`);
+    const seconds = Math.floor(this.elapsed / 1000);
+    this.hudTimer.setText(`${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`);
+    this.hudSpeed.setText(String(Math.max(0, Math.round(this.speed * 17.5))).padStart(3, "0"));
+    this.hudGear.setText(`GEAR ${Phaser.Math.Clamp(Math.floor(this.speed / 1.8) + 1, 1, 6)}`);
     const totalRacers = this.mode === "multiplayer"
       ? (this.networkState?.players.length ?? 1)
       : this.aiRiders.length + 1;
@@ -1665,9 +1711,10 @@ class AbokiRaceScene extends Phaser.Scene {
 
   private respawnTraffic(vehicle: Phaser.GameObjects.Container) {
     vehicle.y = -100 - Phaser.Math.Between(0, 240);
-    const lanes = [0.25, 0.5, 0.72];
+    const lanes = [0.22, 0.5, 0.78];
     const lane = Phaser.Utils.Array.GetRandom(lanes);
-    vehicle.x = this.roadLeft + this.roadWidth * lane;
+    vehicle.setData("lane", lane);
+    vehicle.x = this.getLaneX(lane, vehicle.y);
     this.lastMissedTraffic.delete(vehicle);
   }
 }

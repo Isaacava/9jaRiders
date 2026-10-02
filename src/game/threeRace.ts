@@ -44,6 +44,8 @@ type Racer = {
   aggression: number;
   group: THREE.Group;
   lastNearMissAt: number;
+  laneTarget: number;
+  laneChangeAt: number;
 };
 
 type Traffic = {
@@ -94,7 +96,7 @@ const EXTERNAL_BIKE_ASSETS: Record<string, string> = {
 
 const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
   // Exact assets requested from 3DAssets.dev.
-  danfo: "air-land-sea-vehicles-city-bus-0c71b14a",
+  danfo: "https://cdn.3dassets.dev/assets/34194/v1/model.glb",
   // Existing free catalogue models kept for Lagos-specific traffic placeholders.
   keke: "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
   minibus: "https://cdn.3dassets.dev/assets/32486/v1/model.glb",
@@ -581,15 +583,6 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
   );
   collar.position.set(0, 0.50, -0.01);
   collar.rotation.x = -0.18;
-
-  const backPanel = addSafe(
-    new THREE.Mesh(
-      new RoundedBoxGeometry(0.54, 0.34, 0.12, 5, 0.04),
-      accentMatRider
-    )
-  );
-  backPanel.position.set(0, 0.20, 0.34);
-  backPanel.rotation.x = -0.06;
 
   const waist = addSafe(
     new THREE.Mesh(
@@ -1592,20 +1585,24 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   }
 
   const scenery: THREE.Object3D[] = [];
-  for (let i = 0; i < 56; i += 1) {
+  for (let i = 0; i < 104; i += 1) {
     const side = i % 2 === 0 ? -1 : 1;
-    const z = -20 - Math.floor(i / 2) * 13 - (i % 3) * 4;
+    const z = -18 - Math.floor(i / 2) * 9.5 - (i % 3) * 2.8;
     let obj: THREE.Object3D;
-    if (i % 17 === 0) obj = createStreetSign("LAGOS", 0x0f765e);
-    else if (i % 13 === 0) obj = createStreetSign("BUS STOP", 0xc49322);
-    else if (i % 11 === 0) obj = createBillboard();
-    else if (i % 7 === 0) obj = createUtilityPole();
-    else if (i % 6 === 0) obj = createRoadsideFence();
-    else if (i % 5 === 0) obj = createPalm();
-    else obj = createShop(i % 4 === 0 ? 0xc48b5a : i % 4 === 1 ? 0x9d7457 : i % 4 === 2 ? 0x7e9162 : 0x9b6a59);
 
-    obj.position.set(side * (11 + (i % 5) * 1.4), 0, z);
-    obj.scale.setScalar(0.82 + (i % 5) * 0.10);
+    if (i % 23 === 0) obj = createBillboard();
+    else if (i % 19 === 0) obj = createStreetSign("LAGOS", 0x0f765e);
+    else if (i % 17 === 0) obj = createStreetSign("BUS STOP", 0xc49322);
+    else if (i % 13 === 0) obj = createUtilityPole();
+    else if (i % 11 === 0) obj = createRoadsideFence();
+    else if (i % 9 === 0) obj = createPalm();
+    else if (i % 7 === 0) obj = createShop(0x9b6a59);
+    else if (i % 5 === 0) obj = createShop(0xc48b5a);
+    else if (i % 3 === 0) obj = createShop(0x7e9162);
+    else obj = createRoadsideFence();
+
+    obj.position.set(side * (11.8 + (i % 6) * 1.35), 0, z);
+    obj.scale.setScalar(0.78 + (i % 6) * 0.09);
     scene.add(obj);
     scenery.push(obj);
   }
@@ -1662,7 +1659,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       maxSpeed: BIKES[bikeId].maxSpeed,
       aggression: 0.45 + index * 0.055,
       group,
-      lastNearMissAt: 0
+      lastNearMissAt: 0,
+      laneTarget: laneBias,
+      laneChangeAt: 0
     });
   });
 
@@ -1671,7 +1670,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   trafficKinds.forEach((kind, index) => {
     const group = createTraffic(kind);
     const lane = [-0.82, 0.78, -0.22, 0.3, -0.56, 0.58][index];
-    group.position.set(lane * 5.5, 0, -24 - index * 31);
+    group.position.set(lane * 5.25, 0, -28 - index * 34);
     scene.add(group);
     traffic.push({
       kind,
@@ -1728,10 +1727,12 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       }
 
       const environmentPlacements = [
-        ["busStation", -1, -112, 0.72],
-        ["market", 1, -236, 0.94],
-        ["busStation", 1, -412, 0.68],
-        ["market", -1, -548, 0.92]
+        ["busStation", -1, -72, 0.84],
+        ["market", 1, -176, 0.92],
+        ["busStation", 1, -292, 0.82],
+        ["market", -1, -438, 0.92],
+        ["busStation", -1, -586, 0.80],
+        ["market", 1, -744, 0.92]
       ] as const;
 
       environmentPlacements.forEach(([kind, side, z, scale]) => {
@@ -1998,29 +1999,98 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       recycleRoadSegments(worldSpeed * dt);
       recycleScenery(worldSpeed * dt);
 
+      const lanePool = [-0.84, -0.28, 0.28, 0.84];
+
+      function laneIsClear(targetLane: number, ai: Racer) {
+        const targetX = targetLane * 5.25;
+
+        for (const other of aiRacers) {
+          if (other.id === ai.id) continue;
+          const dz = Math.abs(other.group.position.z - ai.group.position.z);
+          if (dz < 8 && Math.abs(other.group.position.x - targetX) < 1.45) return false;
+        }
+
+        for (const vehicle of traffic) {
+          const dz = Math.abs(vehicle.group.position.z - ai.group.position.z);
+          if (dz < 10 && Math.abs(vehicle.group.position.x - targetX) < 1.55) return false;
+        }
+
+        const playerDz = Math.abs(5.2 - ai.group.position.z);
+        if (playerDz < 7 && Math.abs(playerX - targetX) < 1.35) return false;
+        return true;
+      }
+
+      function chooseAiLane(ai: Racer, now: number) {
+        if (now < ai.laneChangeAt) return false;
+
+        const currentZ = ai.group.position.z;
+        const blocker = traffic.find((vehicle) => {
+          const ahead = vehicle.group.position.z < currentZ + 0.25;
+          const gap = currentZ - vehicle.group.position.z;
+          return ahead && gap > 0 && gap < 13 && Math.abs(vehicle.group.position.x - ai.group.position.x) < 1.55;
+        });
+
+        if (!blocker) {
+          ai.targetSpeed = ai.maxSpeed * (0.92 + ai.aggression * 0.06);
+          return false;
+        }
+
+        const candidates = lanePool
+          .filter((lane) => lane !== ai.laneTarget)
+          .filter((lane) => laneIsClear(lane, ai))
+          .sort((a, b) => Math.abs(a - ai.laneTarget) - Math.abs(b - ai.laneTarget));
+
+        if (candidates.length === 0) {
+          ai.targetSpeed = ai.maxSpeed * 0.62;
+          return true;
+        }
+
+        ai.laneTarget = candidates[0];
+        ai.laneChangeAt = now + 1800 + Math.random() * 1000;
+        ai.targetSpeed = Math.min(ai.maxSpeed * 1.08, ai.maxSpeed + 8);
+        return true;
+      }
+
       aiRacers.forEach((ai, index) => {
-        const target = ai.maxSpeed * (0.82 + index * 0.018);
-        ai.targetSpeed = target;
-        ai.speed = THREE.MathUtils.lerp(ai.speed, ai.targetSpeed, 0.02);
+        const now = performance.now();
+        const dodging = chooseAiLane(ai, now);
+        const baseTarget = ai.maxSpeed * (0.88 + index * 0.015);
+        if (!dodging && now >= ai.laneChangeAt) {
+          ai.targetSpeed = Math.max(ai.targetSpeed, baseTarget);
+        }
+
+        ai.speed = THREE.MathUtils.lerp(
+          ai.speed,
+          ai.targetSpeed,
+          dodging ? 0.085 : 0.025
+        );
         ai.distance += (ai.speed / 3.6) * dt;
-        const desiredX = Math.sin((performance.now() * 0.00035) + index) * 1.2 + ai.lane * 4.8;
-        ai.x = THREE.MathUtils.lerp(ai.x, desiredX, 0.012);
+
+        const laneX = ai.laneTarget * 5.25;
+        const sway = Math.sin((performance.now() * 0.00032) + index * 1.7) * 0.22;
+        ai.x = THREE.MathUtils.lerp(ai.x, laneX + sway, 0.055);
+
         ai.group.position.x = THREE.MathUtils.lerp(ai.group.position.x, ai.x, 0.12);
         ai.group.position.z = 5 - (ai.distance - playerDistance) * 0.04;
+
         ai.group.rotation.z = THREE.MathUtils.lerp(
           ai.group.rotation.z,
-          PhaserLikeClamp(ai.x - ai.group.position.x) * -0.05,
-          0.08
+          PhaserLikeClamp(ai.x - ai.group.position.x) * -0.10,
+          0.10
         );
+
         const aiWheels = ai.group.userData.wheels as THREE.Object3D[] | undefined;
         aiWheels?.forEach((wheelObject) => {
           wheelObject.rotation.x -= (ai.speed / 3.6) * dt / 0.5;
         });
-        const aiRiderRoot = ai.group.userData.riderRoot as THREE.Group | undefined;
-        if (aiRiderRoot) aiRiderRoot.rotation.z = THREE.MathUtils.lerp(aiRiderRoot.rotation.z, 0, 0.08);
 
-        if (ai.group.position.z > 20) {
-          ai.group.position.z = -120 - index * 12;
+        const aiRiderRoot = ai.group.userData.riderRoot as THREE.Group | undefined;
+        if (aiRiderRoot) {
+          aiRiderRoot.rotation.z = THREE.MathUtils.lerp(
+            aiRiderRoot.rotation.z,
+            PhaserLikeClamp(ai.x - ai.group.position.x) * -0.09,
+            0.12
+          );
         }
       });
 
@@ -2043,17 +2113,17 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         }
       });
 
-      // Keep AI riders and traffic from occupying the same road space.
+      // Final emergency separation: AI should normally avoid traffic by changing lanes,
+      // but never allow two meshes to occupy the exact same road space.
       for (const ai of aiRacers) {
         for (const vehicle of traffic) {
-          const dz = Math.abs(ai.group.position.z - vehicle.group.position.z);
+          const dz = ai.group.position.z - vehicle.group.position.z;
           const dx = Math.abs(ai.group.position.x - vehicle.group.position.x);
-          if (dz < 2.2 && dx < 1.25) {
-            const aiAhead = ai.group.position.z < vehicle.group.position.z;
-            const separation = aiAhead ? -2.2 : 2.2;
-            ai.group.position.z = vehicle.group.position.z + separation;
-            ai.distance = playerDistance + (5 - ai.group.position.z) / 0.04;
-            ai.speed *= 0.72;
+          if (Math.abs(dz) < 1.45 && dx < 1.15) {
+            ai.speed *= 0.84;
+            ai.targetSpeed = Math.min(ai.targetSpeed, ai.maxSpeed * 0.76);
+            ai.laneChangeAt = 0;
+            chooseAiLane(ai, performance.now());
           }
         }
       }
@@ -2074,10 +2144,14 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       });
 
       traffic.forEach((vehicle) => {
+        const collisionHalfLength =
+          vehicle.kind === "danfo" ? 5.25 :
+          vehicle.kind === "minibus" ? 2.5 :
+          vehicle.kind === "keke" ? 1.55 : 2.35;
         const dz = Math.abs(vehicle.group.position.z - 5.2);
         const dx = Math.abs(vehicle.group.position.x - playerX);
         const now = performance.now();
-        if (dz < 1.55 && dx < 1.05 && now - vehicle.lastCollisionAt > 700) {
+        if (dz < collisionHalfLength && dx < 1.12 && now - vehicle.lastCollisionAt > 700) {
           vehicle.lastCollisionAt = now;
           playerSpeed *= 0.46;
           nitro = Math.max(0, nitro - 0.18);

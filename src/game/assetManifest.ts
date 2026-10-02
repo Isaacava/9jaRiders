@@ -68,6 +68,9 @@ export const ASSET_MANIFEST: AssetDefinition[] = [
   { id: "AR-49-DRAINAGE", category: "props", path: "/assets/props/drainage.svg", status: "ready" },
   { id: "AR-50-WALL", category: "props", path: "/assets/props/concrete-wall.svg", status: "ready" },
 
+  { id: "AR-MODELS-BIKES", category: "bikes", path: "/assets/models/bikes.glb", status: "ready" },
+  { id: "AR-MODELS-RIDERS", category: "riders", path: "/assets/models/riders.glb", status: "ready" },
+  { id: "AR-MODELS-TRAFFIC", category: "traffic", path: "/assets/models/traffic.glb", status: "ready" },
   { id: "AR-RACE-BIKE-STARTER", category: "bikes", path: "/assets/bikes/race-starter-rear.svg", status: "ready" },
   { id: "AR-RACE-BIKE-SPEED", category: "bikes", path: "/assets/bikes/race-speed-rear.svg", status: "ready" },
   { id: "AR-RACE-BIKE-HEAVY", category: "bikes", path: "/assets/bikes/race-heavy-rear.svg", status: "ready" },

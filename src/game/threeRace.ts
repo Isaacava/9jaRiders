@@ -111,23 +111,6 @@ const EXTERNAL_ENVIRONMENT_ASSETS = {
 
 type LoadedAsset = THREE.Group | null;
 
-function resolveRiderModelId(riderId: string): RiderModelId {
-  if (riderId === "ada" || riderId === "kobby" || riderId === "tobi") return riderId;
-  if (riderId.startsWith("cpu-")) {
-    const cpuMap: Record<string, RiderModelId> = {
-      "cpu-01": "tobi",
-      "cpu-02": "kobby",
-      "cpu-03": "ada",
-      "cpu-04": "main",
-      "cpu-05": "kobby",
-      "cpu-06": "tobi",
-      "cpu-07": "main"
-    };
-    return cpuMap[riderId] ?? "main";
-  }
-  return "main";
-}
-
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
   return Promise.race([
     promise,
@@ -175,12 +158,15 @@ async function loadRaceModelPack() {
     )).scene;
   } catch (error) {
     console.warn("Local rider pack unavailable:", error);
-    riderResult = createBikeAndRider("starter", "main", 1).userData.riderRoot?.parent ?? new THREE.Group();
+    const fallback = createBikeAndRider("starter", "main", 1);
+    riderResult = (fallback.userData.riderRoot as THREE.Group | undefined)?.clone(true) ?? new THREE.Group();
   }
 
-  const bikeResults = await Promise.all(
-    bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))
-  );
+  const [bikeResults, trafficResults, environmentResults] = await Promise.all([
+    Promise.all(bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))),
+    Promise.all(trafficKinds.map((kind) => loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]))),
+    Promise.all(environmentIds.map((id) => loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id])))
+  ]);
 
   const bikes: Record<string, THREE.Group> = {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
@@ -189,26 +175,14 @@ async function loadRaceModelPack() {
   bikeIds.forEach((bikeId, index) => {
     if (bikeResults[index]) bikes[bikeId] = bikeResults[index] as THREE.Group;
   });
+  trafficKinds.forEach((kind, index) => {
+    if (trafficResults[index]) traffic[kind] = trafficResults[index] as THREE.Group;
+  });
+  environmentIds.forEach((id, index) => {
+    if (environmentResults[index]) environments[id] = environmentResults[index] as THREE.Group;
+  });
 
-  // The player is already playable with the local fallback while the remaining support models stream.
-  setTimeout(async () => {
-    for (const kind of trafficKinds) {
-      const source = await loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]);
-      if (source) traffic[kind] = source;
-    }
-
-    for (const id of environmentIds) {
-      const source = await loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id]);
-      if (source) environments[id] = source;
-    }
-  }, 0);
-
-  return {
-    bikes,
-    riders: riderResult,
-    traffic,
-    environments
-  };
+  return { bikes, riders: riderResult, traffic, environments };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -1530,46 +1504,56 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let activePlayer = player;
   let raceArmed = true;
 
-  const raceModelsPromise = (async () => {
-    const initial = await loadPlayerRaceModels(playerRiderId, playerBikeId);
-
-    if (initial.riders[resolveRiderModelId(playerRiderId)] && initial.bike) {
-      const realPlayer = prepareLoadedRiderBike(
-        {
-          bikes: { [playerBikeId]: initial.bike },
-          riders: initial.riders,
-          traffic: {} as Record<Traffic["kind"], THREE.Group>,
-          environments: {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>
-        },
-        playerBikeId,
-        playerRiderId,
-        true
-      );
-      const playerIndex = scene.children.indexOf(player);
-      if (playerIndex >= 0) scene.remove(player);
-      realPlayer.position.copy(player.position);
-      scene.add(realPlayer);
-      activePlayer = realPlayer;
-    }
-
-    // Keep the fallback race playable while remaining 3D assets stream in.
-
-    // Load AI, traffic and environment progressively so they never block the countdown/render loop.
-    window.setTimeout(async () => {
-      try {
-        const support = await loadRaceSupportModels(initial.riders, playerBikeId, initial.bike);
-        applySupportModels(support);
-      } catch (error) {
-        console.warn("Streaming race support assets failed; keeping loaded fallback models.", error);
+  const raceModelsPromise = loadRaceModelPack()
+    .then((pack) => {
+      if (pack.bikes[playerBikeId]) {
+        const realPlayer = prepareLoadedRiderBike(pack, playerBikeId, playerRiderId, true);
+        if (scene.children.includes(player)) scene.remove(player);
+        realPlayer.position.copy(player.position);
+        scene.add(realPlayer);
+        activePlayer = realPlayer;
       }
-    }, 450);
 
-    return undefined;
-  })().catch((error) => {
-    console.warn("Player 3D model load failed; using deterministic fallback.", error);
-    raceArmed = true;
-    return undefined;
-  });
+      for (const ai of aiRacers) {
+        if (!pack.bikes[ai.bikeId]) continue;
+        const next = prepareLoadedRiderBike(pack, ai.bikeId, ai.riderId, false);
+        next.position.copy(ai.group.position);
+        scene.remove(ai.group);
+        ai.group = next;
+        scene.add(next);
+      }
+
+      for (const vehicle of traffic) {
+        if (!pack.traffic[vehicle.kind]) continue;
+        const next = prepareLoadedTraffic(pack, vehicle.kind);
+        if (!next) continue;
+        next.position.copy(vehicle.group.position);
+        scene.remove(vehicle.group);
+        vehicle.group = next;
+        scene.add(next);
+      }
+
+      const environmentPlacements = [
+        ["busStation", -1, -112, 0.72],
+        ["market", 1, -236, 0.94],
+        ["busStation", 1, -412, 0.68],
+        ["market", -1, -548, 0.92]
+      ] as const;
+
+      environmentPlacements.forEach(([kind, side, z, scale]) => {
+        const source = pack.environments[kind];
+        if (!source) return;
+        const setPiece = source.clone(true);
+        setPiece.scale.setScalar(scale);
+        setPiece.position.set(side * 19, 0, z);
+        setPiece.userData.externalEnvironment = kind;
+        scene.add(setPiece);
+        scenery.push(setPiece);
+      });
+    })
+    .catch((error) => {
+      console.warn("3D model pack load failed; keeping deterministic fallback.", error);
+    });
 
   let width = Math.max(parent.clientWidth, 1);
   let height = Math.max(parent.clientHeight, 1);

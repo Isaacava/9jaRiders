@@ -1679,10 +1679,21 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   });
 
   const traffic: Traffic[] = [];
-  const trafficKinds: Traffic["kind"][] = ["danfo", "keke", "minibus", "sedan", "suv", "van"];
+  const trafficKinds: Traffic["kind"][] = [
+    "danfo",
+    "keke",
+    "minibus",
+    "sedan",
+    "suv",
+    "van",
+    "sedan",
+    "danfo",
+    "keke"
+  ];
+  const trafficLanes = [-0.84, 0.84, -0.56, 0.56, -0.28, 0.28, -0.72, 0.72, 0];
   trafficKinds.forEach((kind, index) => {
     const group = createTraffic(kind);
-    const lane = [-0.82, 0.78, -0.22, 0.3, -0.56, 0.58][index];
+    const lane = trafficLanes[index];
     group.position.set(lane * 5.25, 0, -28 - index * 34);
     scene.add(group);
     traffic.push({

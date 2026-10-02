@@ -246,18 +246,27 @@ function normalizeExtractedSubmodel(source: THREE.Object3D, pattern: RegExp) {
 
   const wrapper = new THREE.Group();
   const pivot = new THREE.Group();
-  pivot.position.copy(worldPosition);
+  // Preserve orientation/scale from the assembled starter scene, but discard its
+  // world translation so the traffic asset can be placed at the race lane origin.
+  pivot.position.set(0, 0, 0);
   pivot.quaternion.copy(worldQuaternion);
   pivot.scale.copy(worldScale);
 
   const clone = target.clone(true) as THREE.Object3D;
-  // The pivot now owns the complete world transform of the source node.
   clone.position.set(0, 0, 0);
   clone.quaternion.identity();
   clone.scale.setScalar(1);
 
   pivot.add(clone);
   wrapper.add(pivot);
+
+  wrapper.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(wrapper);
+  const center = bounds.getCenter(new THREE.Vector3());
+  wrapper.position.x -= center.x;
+  wrapper.position.y -= bounds.min.y;
+  wrapper.position.z -= center.z;
+
   wrapper.userData.animations = source.userData.animations;
   return wrapper;
 }

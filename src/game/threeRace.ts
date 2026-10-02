@@ -1,5 +1,8 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { getSharedRealtimeClient } from "./multiplayer";
 
 type Mode = "solo" | "multiplayer";
@@ -10,6 +13,7 @@ type BikeSpec = {
   maxSpeed: number;
   accel: number;
   handling: number;
+  silhouette: "street" | "sport" | "cruiser" | "futuristic" | "superbike";
 };
 
 type RiderSpec = {
@@ -17,6 +21,8 @@ type RiderSpec = {
   accent: number;
   hair: number;
   skin: number;
+  build: number;
+  hairStyle: "short" | "braids" | "locs" | "bun" | "high";
 };
 
 type Racer = {
@@ -46,25 +52,25 @@ type Traffic = {
 };
 
 const BIKES: Record<string, BikeSpec> = {
-  starter: { color: 0x14a89c, accent: 0xf1c64d, maxSpeed: 150, accel: 88, handling: 8.4 },
-  speed: { color: 0x2779dc, accent: 0xf39a4a, maxSpeed: 185, accel: 112, handling: 9.4 },
-  heavy: { color: 0xbd4a42, accent: 0xe2e0d5, maxSpeed: 168, accel: 76, handling: 6.8 },
-  elite: { color: 0x8159c6, accent: 0x69dcff, maxSpeed: 202, accel: 128, handling: 8.8 },
-  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1 }
+  starter: { color: 0x14a89c, accent: 0xf1c64d, maxSpeed: 150, accel: 88, handling: 8.4, silhouette: "street" },
+  speed: { color: 0x2779dc, accent: 0xf39a4a, maxSpeed: 185, accel: 112, handling: 9.4, silhouette: "sport" },
+  heavy: { color: 0xbd4a42, accent: 0xe2e0d5, maxSpeed: 168, accel: 76, handling: 6.8, silhouette: "cruiser" },
+  elite: { color: 0x8159c6, accent: 0x69dcff, maxSpeed: 202, accel: 128, handling: 8.8, silhouette: "futuristic" },
+  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" }
 };
 
 const RIDERS: Record<string, RiderSpec> = {
-  main: { jacket: 0x138e85, accent: 0xf2c94c, hair: 0x211715, skin: 0x956345 },
-  ada: { jacket: 0x8056bd, accent: 0xf2d0a9, hair: 0x27131f, skin: 0x8d5c45 },
-  kobby: { jacket: 0xbe514a, accent: 0xeee4d8, hair: 0x121212, skin: 0x7e5039 },
-  tobi: { jacket: 0xe0792b, accent: 0x172024, hair: 0x2b170e, skin: 0x956043 },
-  "cpu-01": { jacket: 0x246ba6, accent: 0xf2c94c, hair: 0x2a1a13, skin: 0x81543e },
-  "cpu-02": { jacket: 0x2c8c5c, accent: 0xf5e5ca, hair: 0x151515, skin: 0x784a35 },
-  "cpu-03": { jacket: 0xb34c89, accent: 0x65d9f4, hair: 0x281623, skin: 0x8d5a42 },
-  "cpu-04": { jacket: 0x6555bd, accent: 0xe7c06d, hair: 0x1b1512, skin: 0x7b503b },
-  "cpu-05": { jacket: 0x9f4c38, accent: 0xf0e9dc, hair: 0x111111, skin: 0x754733 },
-  "cpu-06": { jacket: 0xd26132, accent: 0x9ee8db, hair: 0x1a120e, skin: 0x925c43 },
-  "cpu-07": { jacket: 0xae8628, accent: 0xffefaa, hair: 0x23160f, skin: 0x80513b }
+  main: { jacket: 0x138e85, accent: 0xf2c94c, hair: 0x211715, skin: 0x956345, build: 1.0, hairStyle: "short" },
+  ada: { jacket: 0x8056bd, accent: 0xf2d0a9, hair: 0x27131f, skin: 0x8d5c45, build: 0.96, hairStyle: "braids" },
+  kobby: { jacket: 0xbe514a, accent: 0xeee4d8, hair: 0x121212, skin: 0x7e5039, build: 1.07, hairStyle: "locs" },
+  tobi: { jacket: 0xe0792b, accent: 0x172024, hair: 0x2b170e, skin: 0x956043, build: 1.01, hairStyle: "high" },
+  "cpu-01": { jacket: 0x246ba6, accent: 0xf2c94c, hair: 0x2a1a13, skin: 0x81543e, build: 0.98, hairStyle: "short" },
+  "cpu-02": { jacket: 0x2c8c5c, accent: 0xf5e5ca, hair: 0x151515, skin: 0x784a35, build: 1.03, hairStyle: "short" },
+  "cpu-03": { jacket: 0xb34b89, accent: 0x65d9f4, hair: 0x281623, skin: 0x8d5a42, build: 0.95, hairStyle: "bun" },
+  "cpu-04": { jacket: 0x6555bd, accent: 0xe7c06d, hair: 0x1b1512, skin: 0x7b503b, build: 1.01, hairStyle: "high" },
+  "cpu-05": { jacket: 0x9f4c38, accent: 0xf0e9dc, hair: 0x111111, skin: 0x754733, build: 1.06, hairStyle: "locs" },
+  "cpu-06": { jacket: 0xd26132, accent: 0x9ee8db, hair: 0x1a120e, skin: 0x925c43, build: 0.99, hairStyle: "short" },
+  "cpu-07": { jacket: 0xae8628, accent: 0xffefaa, hair: 0x23160f, skin: 0x80513b, build: 1.04, hairStyle: "short" }
 };
 
 const TRAFFIC_COLORS: Record<Traffic["kind"], number> = {
@@ -136,182 +142,316 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
   root.scale.setScalar(scale);
 
   const frameMat = material(0x151c1f, 0.56, 0.32);
-  const bodyMat = material(bike.color, 0.45, 0.12);
-  const accentMat = material(bike.accent, 0.45, 0.2);
+  const bodyMat = material(bike.color, 0.42, 0.16);
+  const accentMat = material(bike.accent, 0.4, 0.18);
+  const carbonMat = material(0x101417, 0.72, 0.24);
+  const metalMat = material(0x556064, 0.34, 0.72);
 
-  const rearWheel = wheel(0x727d80, 0.58, 0.18);
-  rearWheel.position.set(0, 0.58, 0.62);
+  const rearRadius = bike.silhouette === "cruiser" ? 0.64 : 0.57;
+  const frontRadius = bike.silhouette === "cruiser" ? 0.50 : 0.48;
+
+  const rearWheel = wheel(0x778186, rearRadius, 0.2);
+  rearWheel.position.set(0, rearRadius, 0.72);
   root.add(rearWheel);
 
-  const frontWheel = wheel(0x727d80, 0.49, 0.16);
-  frontWheel.position.set(0, 0.52, -1.38);
+  const frontWheel = wheel(0x778186, frontRadius, 0.17);
+  frontWheel.position.set(0, frontRadius, -1.43);
   root.add(frontWheel);
 
-  const tank = new THREE.Mesh(
-    new RoundedBoxGeometry(1.08, 0.42, 0.96, 4, 0.11),
-    bodyMat
-  );
-  tank.position.set(0, 1.06, -0.02);
-  tank.castShadow = true;
-  root.add(tank);
-
-  const tail = new THREE.Mesh(
-    new RoundedBoxGeometry(0.88, 0.34, 0.78, 4, 0.09),
-    accentMat
-  );
-  tail.position.set(0, 0.99, 0.78);
-  tail.castShadow = true;
-  root.add(tail);
-
-  const seat = new THREE.Mesh(
-    new RoundedBoxGeometry(0.64, 0.19, 1.02, 4, 0.06),
-    material(0x161b1d, 0.9)
-  );
-  seat.position.set(0, 1.25, 0.45);
-  seat.castShadow = true;
-  root.add(seat);
-
+  const wheelBase = bike.silhouette === "cruiser" ? 1.24 : 1.0;
+  const engineWidth = bike.silhouette === "cruiser" ? 0.9 : 0.72;
   const engine = new THREE.Mesh(
-    new RoundedBoxGeometry(0.72, 0.46, 0.68, 4, 0.08),
-    material(0x30383b, 0.42, 0.5)
+    new RoundedBoxGeometry(engineWidth, 0.5, 0.72, 5, 0.09),
+    material(0x2e373b, 0.38, 0.62)
   );
-  engine.position.set(0, 0.78, 0.05);
+  engine.position.set(0, 0.82, 0.05);
   engine.castShadow = true;
   root.add(engine);
 
-  const leftFrame = cylinderBetween(
-    new THREE.Vector3(-0.31, 0.92, 0.46),
-    new THREE.Vector3(-0.24, 0.54, 0.04),
-    0.055,
+  const lowerRailL = cylinderBetween(
+    new THREE.Vector3(-engineWidth * 0.42, 0.9, 0.55),
+    new THREE.Vector3(-0.22, 0.56, 0.05),
+    0.06,
     frameMat
   );
-  const rightFrame = leftFrame.clone();
-  rightFrame.position.x *= -1;
-  rightFrame.rotation.y *= -1;
-  root.add(leftFrame, rightFrame);
+  const lowerRailR = lowerRailL.clone();
+  lowerRailR.scale.x = -1;
+  root.add(lowerRailL, lowerRailR);
 
-  const rearFork = cylinderBetween(
-    new THREE.Vector3(-0.3, 0.7, 0.52),
-    new THREE.Vector3(0, 0.78, 0.15),
-    0.05,
-    material(0x697478, 0.42, 0.6)
+  const tank = new THREE.Mesh(
+    new RoundedBoxGeometry(
+      bike.silhouette === "cruiser" ? 1.28 : bike.silhouette === "sport" ? 0.92 : 1.08,
+      bike.silhouette === "cruiser" ? 0.52 : 0.44,
+      bike.silhouette === "sport" ? 1.2 : 0.98,
+      6,
+      0.11
+    ),
+    bodyMat
   );
-  const rearFork2 = rearFork.clone();
-  rearFork2.position.x *= -1;
-  root.add(rearFork, rearFork2);
+  tank.position.set(0, bike.silhouette === "cruiser" ? 1.07 : 1.12, -0.05);
+  tank.rotation.x = bike.silhouette === "sport" ? 0.12 : 0;
+  tank.castShadow = true;
+  root.add(tank);
 
-  const handle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.045, 0.055, 0.94, 10),
-    frameMat
+  const seat = new THREE.Mesh(
+    new RoundedBoxGeometry(
+      bike.silhouette === "cruiser" ? 0.78 : 0.64,
+      0.18,
+      bike.silhouette === "cruiser" ? 1.16 : 1.02,
+      5,
+      0.06
+    ),
+    carbonMat
   );
-  handle.rotation.z = Math.PI / 2;
-  handle.position.set(0, 1.64, -0.92);
-  handle.castShadow = true;
-  root.add(handle);
+  seat.position.set(0, bike.silhouette === "cruiser" ? 1.17 : 1.28, 0.45);
+  root.add(seat);
+
+  const tail = new THREE.Mesh(
+    new RoundedBoxGeometry(
+      bike.silhouette === "heavy" ? 0.96 : bike.silhouette === "superbike" ? 0.76 : 0.86,
+      bike.silhouette === "cruiser" ? 0.32 : 0.30,
+      bike.silhouette === "superbike" ? 0.94 : 0.78,
+      5,
+      0.08
+    ),
+    accentMat
+  );
+  tail.position.set(0, bike.silhouette === "cruiser" ? 0.99 : 1.01, 0.82);
+  root.add(tail);
+
+  if (bike.silhouette === "sport" || bike.silhouette === "superbike") {
+    const fairing = new THREE.Mesh(
+      new RoundedBoxGeometry(1.02, 0.66, 1.08, 6, 0.1),
+      bodyMat
+    );
+    fairing.position.set(0, 1.34, -0.68);
+    fairing.rotation.x = 0.08;
+    root.add(fairing);
+
+    const windshield = new THREE.Mesh(
+      new RoundedBoxGeometry(0.62, 0.26, 0.10, 4, 0.03),
+      material(0x29434b, 0.2, 0.14)
+    );
+    windshield.position.set(0, 1.72, -0.92);
+    root.add(windshield);
+
+    const wing = new THREE.Mesh(
+      new RoundedBoxGeometry(0.16, 0.06, 0.56, 3, 0.02),
+      accentMat
+    );
+    wing.rotation.y = 0.16;
+    wing.position.set(-0.62, 1.30, -0.62);
+    const wingR = wing.clone();
+    wingR.position.x *= -1;
+    wingR.rotation.y *= -1;
+    root.add(wing, wingR);
+  } else {
+    const lampHousing = new THREE.Mesh(
+      new RoundedBoxGeometry(0.44, 0.25, 0.22, 5, 0.06),
+      carbonMat
+    );
+    lampHousing.position.set(0, 1.48, -0.96);
+    root.add(lampHousing);
+  }
+
+  if (bike.silhouette === "futuristic") {
+    const sideBlade = new THREE.Mesh(
+      new RoundedBoxGeometry(0.12, 0.42, 0.76, 3, 0.04),
+      accentMat
+    );
+    sideBlade.rotation.z = 0.16;
+    sideBlade.position.set(-0.62, 1.1, 0.05);
+    const sideBladeR = sideBlade.clone();
+    sideBladeR.position.x *= -1;
+    sideBladeR.rotation.z *= -1;
+    root.add(sideBlade, sideBladeR);
+  }
+
+  if (bike.silhouette === "cruiser") {
+    const wideBar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.055, 1.22, 12),
+      frameMat
+    );
+    wideBar.rotation.z = Math.PI / 2;
+    wideBar.position.set(0, 1.62, -0.82);
+    root.add(wideBar);
+
+    const twinPipeA = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.09, 1.0, 16),
+      metalMat
+    );
+    twinPipeA.rotation.x = Math.PI / 2;
+    twinPipeA.position.set(0.42, 0.78, 0.52);
+    const twinPipeB = twinPipeA.clone();
+    twinPipeB.position.x *= -1;
+    root.add(twinPipeA, twinPipeB);
+  } else {
+    const bar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.042, 0.05, bike.silhouette === "sport" ? 0.78 : 0.96, 12),
+      frameMat
+    );
+    bar.rotation.z = Math.PI / 2;
+    bar.position.set(0, 1.6, -0.84);
+    root.add(bar);
+
+    const exhaust = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.065, 0.085, bike.silhouette === "superbike" ? 1.08 : 0.96, 14),
+      metalMat
+    );
+    exhaust.rotation.x = Math.PI / 2;
+    exhaust.position.set(bike.silhouette === "sport" ? 0.52 : 0.44, 0.78, bike.silhouette === "superbike" ? 0.34 : 0.5);
+    root.add(exhaust);
+  }
+
+  const rearLight = new THREE.Mesh(
+    new RoundedBoxGeometry(0.34, 0.09, 0.08, 3, 0.03),
+    emissiveMaterial(0xf0443b, 2.2)
+  );
+  rearLight.position.set(0, 1.10, 1.18);
+  root.add(rearLight);
 
   const headlamp = new THREE.Mesh(
-    new THREE.SphereGeometry(0.12, 16, 10),
-    emissiveMaterial(0xfff1ad, 2.8)
+    new THREE.SphereGeometry(0.11, 16, 10),
+    emissiveMaterial(0xffefad, 2.5)
   );
-  headlamp.scale.set(0.9, 0.7, 0.55);
-  headlamp.position.set(0, 1.58, -0.97);
+  headlamp.scale.set(1.1, 0.75, 0.5);
+  headlamp.position.set(0, bike.silhouette === "sport" || bike.silhouette === "superbike" ? 1.62 : 1.51, -1.03);
   root.add(headlamp);
 
-  const tailLamp = new THREE.Mesh(
-    new RoundedBoxGeometry(0.32, 0.08, 0.08, 3, 0.03),
-    emissiveMaterial(0xf0443b, 2.4)
-  );
-  tailLamp.position.set(0, 1.09, 1.2);
-  root.add(tailLamp);
-
-  const exhaust = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.07, 0.09, 0.95, 14),
-    material(0x596468, 0.42, 0.72)
-  );
-  exhaust.rotation.x = Math.PI / 2;
-  exhaust.position.set(0.48, 0.79, 0.53);
-  exhaust.castShadow = true;
-  root.add(exhaust);
-
   const riderRoot = new THREE.Group();
-  riderRoot.position.set(0, 1.52, 0.18);
-  riderRoot.rotation.x = -0.18;
+  const posture = bike.silhouette === "sport" || bike.silhouette === "superbike" ? -0.34 : bike.silhouette === "cruiser" ? 0.0 : -0.18;
+  riderRoot.position.set(0, bike.silhouette === "cruiser" ? 1.42 : 1.54, bike.silhouette === "cruiser" ? 0.22 : 0.14);
+  riderRoot.rotation.x = posture;
+  riderRoot.scale.setScalar(rider.build);
   root.add(riderRoot);
 
   const torso = new THREE.Mesh(
-    new RoundedBoxGeometry(0.64, 0.92, 0.38, 5, 0.09),
-    material(rider.jacket, 0.66, 0)
+    new THREE.CapsuleGeometry(0.32, 0.68, 6, 14),
+    material(rider.jacket, 0.68, 0)
   );
-  torso.rotation.x = -0.3;
+  torso.scale.set(1.0, 1.0, 0.62);
+  torso.rotation.x = -0.28;
   torso.castShadow = true;
   riderRoot.add(torso);
 
-  const backPanel = new THREE.Mesh(
-    new RoundedBoxGeometry(0.34, 0.26, 0.04, 3, 0.015),
-    material(rider.accent, 0.62, 0)
+  const shoulderBar = new THREE.Mesh(
+    new RoundedBoxGeometry(0.84, 0.22, 0.38, 5, 0.06),
+    material(rider.jacket, 0.68, 0)
   );
-  backPanel.position.set(0, 0.13, 0.205);
+  shoulderBar.position.set(0, 0.16, 0.02);
+  shoulderBar.rotation.x = -0.18;
+  riderRoot.add(shoulderBar);
+
+  const backPanel = new THREE.Mesh(
+    new RoundedBoxGeometry(0.40, 0.28, 0.045, 4, 0.02),
+    material(rider.accent, 0.58, 0)
+  );
+  backPanel.position.set(0, 0.04, 0.215);
   riderRoot.add(backPanel);
 
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.24, 18, 14),
-    material(rider.skin, 0.74)
+  const belt = new THREE.Mesh(
+    new RoundedBoxGeometry(0.62, 0.09, 0.36, 4, 0.02),
+    material(0x1b2327, 0.82, 0.04)
   );
-  head.scale.set(0.93, 1, 0.96);
-  head.position.set(0, 0.84, -0.13);
-  head.castShadow = true;
+  belt.position.set(0, -0.30, 0.03);
+  riderRoot.add(belt);
+
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.235, 20, 14),
+    material(rider.skin, 0.72, 0)
+  );
+  head.scale.set(0.94, 1.0, 0.92);
+  head.position.set(0, 0.78, -0.13);
   riderRoot.add(head);
 
-  const hair = new THREE.Mesh(
+  const hairBase = new THREE.Mesh(
     new THREE.SphereGeometry(0.27, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.72),
-    material(rider.hair, 0.92)
+    material(rider.hair, 0.92, 0)
   );
-  hair.scale.set(1.05, 0.85, 1.06);
-  hair.position.set(0, 0.94, -0.18);
-  hair.castShadow = true;
-  riderRoot.add(hair);
+  hairBase.scale.set(1.04, 0.88, 1.02);
+  hairBase.position.set(0, 0.88, -0.17);
+  riderRoot.add(hairBase);
+
+  if (rider.hairStyle === "braids") {
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 2; i += 1) {
+        const braid = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.055, 0.42, 4, 8),
+          material(rider.hair, 0.94, 0)
+        );
+        braid.position.set(sx * (0.19 + i * 0.07), 0.52, -0.03 + i * 0.03);
+        braid.rotation.z = sx * 0.16;
+        riderRoot.add(braid);
+      }
+    }
+  } else if (rider.hairStyle === "bun") {
+    const bun = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 16, 10),
+      material(rider.hair, 0.94, 0)
+    );
+    bun.position.set(0, 1.04, 0.02);
+    riderRoot.add(bun);
+  } else if (rider.hairStyle === "high") {
+    const puff = new THREE.Mesh(
+      new THREE.SphereGeometry(0.25, 16, 10),
+      material(rider.hair, 0.94, 0)
+    );
+    puff.scale.set(0.86, 1.28, 0.86);
+    puff.position.set(0, 1.06, 0.03);
+    riderRoot.add(puff);
+  } else if (rider.hairStyle === "locs") {
+    for (const sx of [-1, 1]) {
+      const lock = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.05, 0.48, 4, 8),
+        material(rider.hair, 0.94, 0)
+      );
+      lock.position.set(sx * 0.19, 0.65, 0.01);
+      lock.rotation.z = sx * 0.12;
+      riderRoot.add(lock);
+    }
+  }
 
   const leftArm = cylinderBetween(
-    new THREE.Vector3(-0.25, 0.25, -0.08),
-    new THREE.Vector3(-0.43, 0.07, -0.92),
-    0.095,
-    material(rider.jacket, 0.68)
+    new THREE.Vector3(-0.30, 0.14, -0.03),
+    new THREE.Vector3(-0.44, 0.0, -0.78),
+    0.092,
+    material(rider.jacket, 0.70, 0)
   );
   const rightArm = cylinderBetween(
-    new THREE.Vector3(0.25, 0.25, -0.08),
-    new THREE.Vector3(0.43, 0.07, -0.92),
-    0.095,
-    material(rider.jacket, 0.68)
+    new THREE.Vector3(0.30, 0.14, -0.03),
+    new THREE.Vector3(0.44, 0.0, -0.78),
+    0.092,
+    material(rider.jacket, 0.70, 0)
   );
   riderRoot.add(leftArm, rightArm);
 
-  const leftHand = new THREE.Mesh(
-    new THREE.SphereGeometry(0.105, 12, 8),
-    material(rider.skin, 0.8)
+  const hand = new THREE.Mesh(
+    new THREE.SphereGeometry(0.10, 12, 8),
+    material(rider.skin, 0.78, 0)
   );
-  leftHand.position.set(-0.43, 0.06, -0.93);
-  const rightHand = leftHand.clone();
-  rightHand.position.x *= -1;
-  riderRoot.add(leftHand, rightHand);
+  hand.position.set(-0.44, -0.005, -0.79);
+  const handR = hand.clone();
+  handR.position.x *= -1;
+  riderRoot.add(hand, handR);
 
   const leftLeg = cylinderBetween(
-    new THREE.Vector3(-0.23, -0.2, 0.1),
-    new THREE.Vector3(-0.3, -0.62, 0.48),
-    0.105,
-    material(0x242b30, 0.82)
+    new THREE.Vector3(-0.23, -0.28, 0.08),
+    new THREE.Vector3(-0.34, -0.64, 0.46),
+    0.108,
+    material(0x252d33, 0.84, 0.02)
   );
   const rightLeg = leftLeg.clone();
   rightLeg.position.x *= -1;
   riderRoot.add(leftLeg, rightLeg);
 
-  const leftBoot = new THREE.Mesh(
-    new RoundedBoxGeometry(0.18, 0.28, 0.34, 3, 0.05),
-    material(0x11171a, 0.9)
+  const boot = new THREE.Mesh(
+    new RoundedBoxGeometry(0.18, 0.28, 0.34, 4, 0.04),
+    material(0x11171a, 0.9, 0.02)
   );
-  leftBoot.position.set(-0.3, -0.73, 0.55);
-  const rightBoot = leftBoot.clone();
-  rightBoot.position.x *= -1;
-  riderRoot.add(leftBoot, rightBoot);
+  boot.position.set(-0.34, -0.78, 0.56);
+  const bootR = boot.clone();
+  bootR.position.x *= -1;
+  riderRoot.add(boot, bootR);
 
   root.traverse((node) => {
     const mesh = node as THREE.Mesh;
@@ -321,17 +461,17 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
     }
   });
 
-  const nitroLight = new THREE.PointLight(0x54d7ff, 0, 4.5);
-  nitroLight.position.set(0, 0.58, 1.25);
+  const nitroLight = new THREE.PointLight(0x54d7ff, 0, 5.0);
+  nitroLight.position.set(0, 0.62, 1.22);
   root.add(nitroLight);
   root.userData.nitroLight = nitroLight;
 
   const flame = new THREE.Mesh(
-    new THREE.ConeGeometry(0.19, 0.85, 12),
-    emissiveMaterial(0x53d8ff, 4)
+    new THREE.ConeGeometry(0.20, 0.95, 12),
+    emissiveMaterial(0x53d8ff, 4.5)
   );
   flame.rotation.x = -Math.PI / 2;
-  flame.position.set(0, 0.63, 1.52);
+  flame.position.set(0, 0.62, 1.48);
   flame.scale.set(0.72, 1, 0.85);
   flame.visible = false;
   root.add(flame);
@@ -343,99 +483,136 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
 function createTraffic(kind: Traffic["kind"]) {
   const group = new THREE.Group();
   const bodyColor = TRAFFIC_COLORS[kind];
+  const bodyMat = material(bodyColor, 0.58, 0.06);
+  const glassMat = material(0x29474f, 0.22, 0.12);
+  const darkMat = material(0x1a2023, 0.9, 0.02);
+  const metalMat = material(0x6c777b, 0.34, 0.45);
+  const redMat = emissiveMaterial(0xe8473f, 1.6);
+
+  const dims =
+    kind === "sedan" ? [2.52, 1.48, 4.35] :
+    kind === "keke" ? [2.12, 1.52, 3.55] :
+    kind === "suv" ? [2.82, 1.86, 4.62] :
+    kind === "van" ? [2.72, 1.95, 4.68] :
+    kind === "minibus" ? [2.68, 1.84, 4.52] :
+    [2.74, 1.92, 4.62];
+
   const body = new THREE.Mesh(
-    new RoundedBoxGeometry(kind === "sedan" ? 2.55 : 2.7, kind === "keke" ? 1.6 : 1.7, kind === "sedan" ? 4.2 : 4.5, 5, 0.18),
-    material(bodyColor, 0.72, 0.03)
+    new RoundedBoxGeometry(dims[0], dims[1], dims[2], 6, 0.16),
+    bodyMat
   );
-  body.position.y = 0.88;
-  body.castShadow = true;
+  body.position.y = 0.92;
   group.add(body);
 
-  const glass = new THREE.Mesh(
-    new RoundedBoxGeometry(kind === "keke" ? 2.2 : 2.28, kind === "sedan" ? 0.65 : 0.82, kind === "keke" ? 0.35 : 0.58, 4, 0.08),
-    material(0x37535c, 0.25, 0.12)
+  const cabinDepth = kind === "sedan" ? 1.55 : 2.05;
+  const cabinHeight = kind === "sedan" ? 1.55 : 1.72;
+  const cabin = new THREE.Mesh(
+    new RoundedBoxGeometry(dims[0] * (kind === "keke" ? 0.84 : 0.86), cabinHeight - 0.78, cabinDepth, 5, 0.11),
+    glassMat
   );
-  glass.position.set(0, kind === "sedan" ? 1.2 : 1.27, 1.72);
-  group.add(glass);
+  cabin.position.set(0, cabinHeight, 0.15);
+  group.add(cabin);
 
-  const tail = new THREE.Mesh(
-    new RoundedBoxGeometry(2.05, 0.38, 0.12, 3, 0.03),
-    material(0x24292c, 0.88)
+  const rearPanelHeight = kind === "sedan" ? 0.42 : kind === "keke" ? 0.55 : 0.64;
+  const rearPanel = new THREE.Mesh(
+    new RoundedBoxGeometry(dims[0] * 0.78, rearPanelHeight, 0.10, 4, 0.02),
+    darkMat
   );
-  tail.position.set(0, 0.58, 2.15);
-  group.add(tail);
+  rearPanel.position.set(0, kind === "sedan" ? 0.82 : 0.74, dims[2] / 2 + 0.05);
+  group.add(rearPanel);
 
-  const redLight = emissiveMaterial(0xee4d42, 1.8);
-  const lightL = new THREE.Mesh(new RoundedBoxGeometry(0.36, 0.12, 0.1, 3, 0.02), redLight);
-  lightL.position.set(-0.87, 0.68, 2.2);
-  const lightR = lightL.clone();
-  lightR.position.x *= -1;
-  group.add(lightL, lightR);
+  const tailL = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.13, 0.08, 3, 0.02), redMat);
+  tailL.position.set(-dims[0] * 0.31, kind === "sedan" ? 0.92 : 0.88, dims[2] / 2 + 0.09);
+  const tailR = tailL.clone();
+  tailR.position.x *= -1;
+  group.add(tailL, tailR);
 
   const bumper = new THREE.Mesh(
-    new RoundedBoxGeometry(2.3, 0.24, 0.16, 3, 0.03),
-    material(0x202528, 0.88)
+    new RoundedBoxGeometry(dims[0] * 0.84, 0.20, 0.16, 3, 0.03),
+    darkMat
   );
-  bumper.position.set(0, 0.42, 2.26);
+  bumper.position.set(0, 0.50, dims[2] / 2 + 0.10);
   group.add(bumper);
+
+  const plate = new THREE.Mesh(
+    new RoundedBoxGeometry(0.52, 0.16, 0.03, 2, 0.01),
+    material(0xf0e8d6, 0.55, 0.05)
+  );
+  plate.position.set(0, 0.70, dims[2] / 2 + 0.12);
+  group.add(plate);
 
   if (kind === "danfo") {
     const roof = new THREE.Mesh(
-      new RoundedBoxGeometry(2.75, 0.24, 4.12, 3, 0.08),
-      material(0xc4c0b6, 0.72)
+      new RoundedBoxGeometry(dims[0] * 0.92, 0.16, dims[2] * 0.86, 4, 0.05),
+      material(0xbdbab2, 0.68, 0.04)
     );
-    roof.position.set(0, 1.84, 0);
+    roof.position.set(0, 1.96, 0);
     group.add(roof);
 
     const stripe = new THREE.Mesh(
-      new RoundedBoxGeometry(2.4, 0.08, 4.05, 2, 0.02),
-      material(0x202426, 0.88)
+      new RoundedBoxGeometry(dims[0] * 0.90, 0.10, dims[2] * 0.90, 3, 0.02),
+      material(0x202326, 0.86, 0.01)
     );
-    stripe.position.set(0, 1.08, 0);
+    stripe.position.set(0, 1.12, 0);
     group.add(stripe);
-  }
 
-  if (kind === "keke") {
-    const canopy = new THREE.Mesh(
-      new RoundedBoxGeometry(2.25, 0.18, 3.5, 3, 0.06),
-      material(0x10201c, 0.72)
+    const routeBoard = new THREE.Mesh(
+      new RoundedBoxGeometry(1.0, 0.16, 0.48, 3, 0.03),
+      material(0xf3dc83, 0.68, 0.01)
     );
-    canopy.position.set(0, 1.95, 0);
+    routeBoard.position.set(0, 2.14, 0.38);
+    group.add(routeBoard);
+
+    const handle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.10, 0.44, 0.10),
+      metalMat
+    );
+    handle.position.set(dims[0] * 0.43, 0.95, dims[2] * 0.10);
+    group.add(handle);
+  } else if (kind === "keke") {
+    const canopy = new THREE.Mesh(
+      new RoundedBoxGeometry(dims[0] * 1.02, 0.14, dims[2] * 0.88, 3, 0.04),
+      darkMat
+    );
+    canopy.position.set(0, 2.0, 0);
     group.add(canopy);
 
-    const rearWindow = new THREE.Mesh(
-      new RoundedBoxGeometry(1.8, 0.72, 0.08, 3, 0.02),
-      material(0x6ea9b4, 0.24)
+    for (const x of [-0.76, 0, 0.76]) {
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.035, 0.035, 1.16, 10),
+        metalMat
+      );
+      post.position.set(x, 1.43, 1.62);
+      group.add(post);
+    }
+  } else if (kind === "suv") {
+    const spare = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.38, 0.38, 0.16, 20),
+      darkMat
     );
-    rearWindow.position.set(0, 1.48, 1.74);
-    group.add(rearWindow);
+    spare.rotation.z = Math.PI / 2;
+    spare.position.set(0, 1.06, dims[2] / 2 + 0.16);
+    group.add(spare);
+  } else if (kind === "van") {
+    const divider = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.65, 0.10),
+      material(0x879297, 0.62, 0.2)
+    );
+    divider.position.set(0, 1.18, dims[2] / 2 + 0.09);
+    group.add(divider);
   }
 
-  const wheelPositions = [
-    [-1.05, 0.46, 1.35],
-    [1.05, 0.46, 1.35],
-    [-1.05, 0.46, -1.35],
-    [1.05, 0.46, -1.35]
-  ];
-
-  wheelPositions.forEach((p) => {
-    const w = new THREE.Mesh(
-      new THREE.CylinderGeometry(kind === "keke" ? 0.37 : 0.45, kind === "keke" ? 0.37 : 0.45, 0.18, 18),
-      material(0x090b0d, 0.95)
-    );
-    w.rotation.z = Math.PI / 2;
-    w.position.set(p[0], p[1], p[2]);
-    w.castShadow = true;
-    group.add(w);
-  });
-
-  if (kind === "danfo") {
-    const roofSign = new THREE.Mesh(
-      new RoundedBoxGeometry(1.1, 0.16, 0.48, 3, 0.03),
-      material(0xffe498, 0.62)
-    );
-    roofSign.position.set(0, 2.18, 0.45);
-    group.add(roofSign);
+  const wheelRadius = kind === "keke" ? 0.32 : kind === "sedan" ? 0.39 : 0.45;
+  for (const x of [-dims[0] * 0.42, dims[0] * 0.42]) {
+    for (const z of [-dims[2] * 0.33, dims[2] * 0.33]) {
+      const wheelMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.18, 20),
+        darkMat
+      );
+      wheelMesh.rotation.z = Math.PI / 2;
+      wheelMesh.position.set(x, wheelRadius + 0.03, z);
+      group.add(wheelMesh);
+    }
   }
 
   group.traverse((node) => {
@@ -730,11 +907,11 @@ function makeHud(parent: HTMLElement) {
 export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   const mode = options.mode ?? "solo";
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x83cde2);
-  scene.fog = new THREE.Fog(0x83cde2, 65, 250);
+  scene.background = new THREE.Color(0x7fc9dc);
+  scene.fog = new THREE.Fog(0x7fc9dc, 58, 230);
 
   const camera = new THREE.PerspectiveCamera(61, 1, 0.1, 500);
-  camera.position.set(0, 2.65, 7.5);
+  camera.position.set(0, 2.42, 6.25);
 
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
@@ -743,11 +920,17 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.18;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   parent.appendChild(renderer.domElement);
+
+  const composer = new EffectComposer(renderer);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.28, 0.6, 0.78);
+  composer.addPass(bloom);
 
   const ambient = new THREE.HemisphereLight(0xccecf8, 0x4c382f, 1.55);
   scene.add(ambient);
@@ -762,11 +945,34 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   sun.shadow.camera.bottom = -30;
   scene.add(sun);
 
-  const roadMat = material(0x31363a, 0.95, 0);
-  const dirtMat = material(0x95775a, 1);
-  const curbDark = material(0x242628, 0.9);
-  const curbYellow = material(0xe0b51f, 0.72);
-  const laneMat = material(0xece6cc, 0.76);
+  const asphaltCanvas = document.createElement("canvas");
+  asphaltCanvas.width = 256;
+  asphaltCanvas.height = 512;
+  const asphaltCtx = asphaltCanvas.getContext("2d")!;
+  asphaltCtx.fillStyle = "#35383a";
+  asphaltCtx.fillRect(0, 0, 256, 512);
+  for (let i = 0; i < 2600; i += 1) {
+    const v = 35 + Math.floor(Math.random() * 45);
+    asphaltCtx.fillStyle = `rgb(${v},${v + 2},${v + 3})`;
+    const size = Math.random() < 0.9 ? 1 : 2;
+    asphaltCtx.fillRect(Math.random() * 256, Math.random() * 512, size, size);
+  }
+  const asphaltTexture = new THREE.CanvasTexture(asphaltCanvas);
+  asphaltTexture.wrapS = THREE.RepeatWrapping;
+  asphaltTexture.wrapT = THREE.RepeatWrapping;
+  asphaltTexture.repeat.set(1, 3.5);
+  asphaltTexture.anisotropy = 8;
+
+  const roadMat = new THREE.MeshStandardMaterial({
+    map: asphaltTexture,
+    color: 0xffffff,
+    roughness: 0.93,
+    metalness: 0.02
+  });
+  const dirtMat = material(0x8e7259, 1);
+  const curbDark = material(0x222629, 0.92);
+  const curbYellow = material(0xe1b522, 0.66);
+  const laneMat = material(0xf2ead7, 0.66);
 
   const roadSegments: THREE.Group[] = [];
   const segmentLength = 80;
@@ -812,17 +1018,38 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     scene.add(segment);
   }
 
+  const skylineMat = material(0x45545c, 0.96, 0.01);
+  const skylineWindow = emissiveMaterial(0x9ed6d4, 0.35);
+  for (let i = 0; i < 18; i += 1) {
+    const h = 11 + (i % 6) * 3;
+    const w = 5 + (i % 4) * 1.5;
+    const building = new THREE.Mesh(
+      new RoundedBoxGeometry(w, h, 4.8, 4, 0.14),
+      skylineMat
+    );
+    building.position.set((i % 2 === 0 ? -1 : 1) * (22 + (i % 5) * 4), h / 2 - 0.5, -125 - Math.floor(i / 2) * 8);
+    scene.add(building);
+    for (let row = 0; row < 3; row += 1) {
+      const win = new THREE.Mesh(
+        new THREE.BoxGeometry(w * 0.55, 0.12, 0.04),
+        skylineWindow
+      );
+      win.position.set(building.position.x, 3 + row * 3.0, building.position.z - 2.42);
+      scene.add(win);
+    }
+  }
+
   const scenery: THREE.Object3D[] = [];
-  for (let i = 0; i < 42; i += 1) {
+  for (let i = 0; i < 56; i += 1) {
     const side = i % 2 === 0 ? -1 : 1;
     const z = -20 - Math.floor(i / 2) * 13 - (i % 3) * 4;
     let obj: THREE.Object3D;
-    if (i % 9 === 0) obj = createBillboard();
-    else if (i % 4 === 0) obj = createPalm();
-    else obj = createShop(i % 3 === 0 ? 0xc48b5a : i % 3 === 1 ? 0x9d7457 : 0x7e9162);
+    if (i % 11 === 0) obj = createBillboard();
+    else if (i % 5 === 0) obj = createPalm();
+    else obj = createShop(i % 4 === 0 ? 0xc48b5a : i % 4 === 1 ? 0x9d7457 : i % 4 === 2 ? 0x7e9162 : 0x9b6a59);
 
-    obj.position.set(side * (11 + (i % 5)), 0, z);
-    obj.scale.setScalar(0.9 + (i % 4) * 0.11);
+    obj.position.set(side * (11 + (i % 5) * 1.4), 0, z);
+    obj.scale.setScalar(0.82 + (i % 5) * 0.10);
     scene.add(obj);
     scenery.push(obj);
   }
@@ -835,7 +1062,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     : "main";
 
   const player = createBikeAndRider(playerBikeId, playerRiderId, 1.08);
-  player.position.set(0, 0, 5.2);
+  player.position.set(0, 0, 3.85);
   scene.add(player);
 
   const speedStreaks: THREE.Mesh[] = [];
@@ -1226,13 +1453,13 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
     camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerX * 0.32, 0.09);
     camera.position.y = THREE.MathUtils.lerp(camera.position.y, 2.62 + normalized * 0.15, 0.08);
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, boosting ? 8.15 : 7.5, 0.08);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, boosting ? 6.95 : 6.25, 0.08);
 
     cameraShake *= 0.88;
     camera.position.x += (Math.random() - 0.5) * cameraShake;
     camera.position.y += (Math.random() - 0.5) * cameraShake;
 
-    camera.lookAt(playerX * 0.16, 1.05, -24);
+    camera.lookAt(playerX * 0.16, 1.12, -26);
 
     const flame = player.userData.flame as THREE.Mesh;
     const light = player.userData.nitroLight as THREE.PointLight;
@@ -1309,7 +1536,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
     lastTime = now;
     update(dt);
-    renderer.render(scene, camera);
+    composer.render();
     requestAnimationFrame(frame);
   }
 
@@ -1327,7 +1554,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       void connectPromise;
       audioContext?.close().catch(() => undefined);
       hud.dispose();
+      composer.dispose();
       renderer.dispose();
+      asphaltTexture.dispose();
       parent.removeChild(renderer.domElement);
     }
   };

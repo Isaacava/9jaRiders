@@ -625,6 +625,25 @@ function prepareLoadedRiderBike(
   const bikeMixer = createLoopingWheelMixer(bike);
   if (bikeMixer) root.userData.bikeMixer = bikeMixer;
   root.userData.wheels = wheels;
+
+  if (player) {
+    const nitroLight = new THREE.PointLight(0x54d7ff, 0, 5.0);
+    nitroLight.position.set(0, 0.62, 1.22);
+    root.add(nitroLight);
+    root.userData.nitroLight = nitroLight;
+
+    const flame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.20, 0.95, 12),
+      emissiveMaterial(0x53d8ff, 4.5)
+    );
+    flame.rotation.x = -Math.PI / 2;
+    flame.position.set(0, 0.62, 1.48);
+    flame.scale.set(0.72, 1, 0.85);
+    flame.visible = false;
+    root.add(flame);
+    root.userData.flame = flame;
+  }
+
   return root;
 }
 
@@ -2368,8 +2387,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     beep(true);
     showMessage("NITRO!", 650);
     cameraShake = Math.max(cameraShake, 0.09);
-    const flame = activePlayer.userData.flame as THREE.Mesh;
-    const light = activePlayer.userData.nitroLight as THREE.PointLight;
+    const flame = activePlayer.userData.flame as THREE.Mesh | undefined;
+    const light = activePlayer.userData.nitroLight as THREE.PointLight | undefined;
+    if (!flame || !light) return;
     flame.visible = true;
     light.intensity = 9;
     window.setTimeout(() => {
@@ -2771,14 +2791,15 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
     camera.lookAt(playerX * 0.42, 1.18, -26);
 
-    const flame = activePlayer.userData.flame as THREE.Mesh;
-    const light = activePlayer.userData.nitroLight as THREE.PointLight;
-    flame.scale.y = 0.82 + Math.sin(performance.now() * 0.035) * 0.18;
-    if (!boosting) {
-      flame.visible = false;
-      light.intensity = 0;
+    const flame = activePlayer.userData.flame as THREE.Mesh | undefined;
+    const light = activePlayer.userData.nitroLight as THREE.PointLight | undefined;
+    if (flame && light) {
+      flame.scale.y = 0.82 + Math.sin(performance.now() * 0.035) * 0.18;
+      if (!boosting) {
+        flame.visible = false;
+        light.intensity = 0;
+      }
     }
-
     if (engineOsc && engineGain && audioContext) {
       engineOsc.frequency.value = 74 + normalized * 168 + (boosting ? 48 : 0);
       engineGain.gain.value = 0.012 + normalized * 0.024 + (boosting ? 0.016 : 0);

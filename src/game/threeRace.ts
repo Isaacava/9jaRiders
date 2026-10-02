@@ -5,6 +5,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { SkeletonUtils } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { getSharedRealtimeClient } from "./multiplayer";
 
 function PhaserLikeClamp(value: number) { return Math.min(1, Math.max(-1, value)); }
@@ -182,7 +183,7 @@ async function loadRaceModelPack() {
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
   if (!source) throw new Error("Missing race model: " + label);
-  const clone = source.clone(true) as THREE.Group;
+  const clone = SkeletonUtils.clone(source) as THREE.Group;
 
   // GLTF clones share material instances by default. Make each race instance independent
   // so a bike/traffic livery change never recolours another racer.

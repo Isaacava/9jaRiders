@@ -235,6 +235,24 @@ function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: st
     if (/wheel/i.test(object.name)) wheels.push(object);
   });
 
+  if (player) {
+    const nitroLight = new THREE.PointLight(0x54d7ff, 0, 5.0);
+    nitroLight.position.set(0, 0.62, 1.22);
+    root.add(nitroLight);
+    root.userData.nitroLight = nitroLight;
+
+    const flame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.20, 0.95, 12),
+      emissiveMaterial(0x53d8ff, 4.5)
+    );
+    flame.rotation.x = -Math.PI / 2;
+    flame.position.set(0, 0.62, 1.48);
+    flame.scale.set(0.72, 1, 0.85);
+    flame.visible = false;
+    root.add(flame);
+    root.userData.flame = flame;
+  }
+
   root.add(bike, rider);
   root.userData.modelBacked = true;
   root.userData.bikeModel = bike;
@@ -1495,7 +1513,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   const hud = makeHud(parent);
 
   let activePlayer = player;
-  let raceArmed = false;
+  let raceArmed = true;
 
   const applySupportModels = (pack: {
     bikes: Record<string, THREE.Group>;
@@ -1607,8 +1625,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       activePlayer = realPlayer;
     }
 
-    // Arm the race as soon as the player-facing assets are ready.
-    raceArmed = true;
+    // Keep the fallback race playable while remaining 3D assets stream in.
 
     // Load AI, traffic and environment progressively so they never block the countdown/render loop.
     window.setTimeout(async () => {
@@ -2105,13 +2122,11 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     requestAnimationFrame(frame);
   }
 
-  void raceModelsPromise.then(() => {
-    start();
-  });
+  start();
   requestAnimationFrame(frame);
 
   return {
-    ready: raceModelsPromise,
+    ready: Promise.resolve(),
     destroy() {
       if (disposed) return;
       disposed = true;

@@ -1,1 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="360" height="260" viewBox="0 0 360 260"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#788f9d"/><stop offset=".6" stop-color="#637887"/><stop offset="1" stop-color="#222d34"/></linearGradient><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#86bfca"/><stop offset="1" stop-color="#24383f"/></linearGradient></defs><ellipse cx="180" cy="238" rx="115" ry="11" fill="#111417" opacity=".25"/><g stroke="#111417" stroke-linejoin="round"><path d="M60 137L79 90Q86 70 111 61H249Q274 70 281 90L300 137L290 205H70Z" fill="url(#b)" stroke-width="8"/><path d="M94 87H266L278 133H82Z" fill="url(#g)" stroke-width="7"/><path d="M72 145H288V196H72Z" fill="#252b2f" stroke-width="6"/><path d="M98 154H133M227 154H262" stroke="#cfd8d9" stroke-width="6"/><circle cx="101" cy="202" r="23" fill="#080b0d" stroke-width="8"/><circle cx="259" cy="202" r="23" fill="#080b0d" stroke-width="8"/><circle cx="101" cy="202" r="10" fill="#8d969b" stroke-width="4"/><circle cx="259" cy="202" r="10" fill="#8d969b" stroke-width="4"/><rect x="93" y="157" width="20" height="14" rx="4" fill="#d8433e" stroke-width="3"/><rect x="247" y="157" width="20" height="14" rx="4" fill="#d8433e" stroke-width="3"/></g></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="280" viewBox="0 0 360 280">
+<defs>
+ <linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#677f8c"/><stop offset=".58" stop-color="#677f8c"/><stop offset="1" stop-color="#253038"/></linearGradient>
+ <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7daeb7"/><stop offset="1" stop-color="#233a42"/></linearGradient>
+ <linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#697275"/><stop offset="1" stop-color="#22272a"/></linearGradient>
+ <filter id="shadow"><feGaussianBlur stdDeviation="7"/></filter>
+</defs>
+<ellipse cx="180" cy="230" rx="116" ry="13" fill="#0b1012" opacity=".26" filter="url(#shadow)"/>
+<g stroke="#101518" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M59 132L77 91Q84 73 108 64H252Q276 73 283 91L301 132L293 207H67Z" fill="url(#b)" stroke-width="8"/>
+ <path d="M91 91H269L281 132H79Z" fill="url(#g)" stroke-width="7"/>
+ 
+ 
+ 
+ <path d="M71 143H289V198H71Z" fill="#252b2e" stroke-width="6"/><path d="M95 155H132M228 155H265" stroke="#e4e7e1" stroke-width="6"/>
+ <!-- tail lamps -->
+ <path d="M84 156H118" stroke="#ee4f48" stroke-width="10"/>
+ <path d="M242 156H276" stroke="#ee4f48" stroke-width="10"/>
+ <path d="M84 157H118" stroke="#ff9e91" stroke-width="3"/>
+ <path d="M242 157H276" stroke="#ff9e91" stroke-width="3"/>
+ <!-- bumper -->
+ <path d="M72 196H288L281 215H79Z" fill="#252b2e" stroke-width="6"/>
+ 
+ 
+ <path d="M110 79Q180 52 250 79" stroke="#d7e2e2" stroke-width="5" opacity=".45"/>
+ 
+ <!-- plate -->
+ <rect x="159" y="184" width="42" height="15" rx="3" fill="#efe9d9" stroke-width="3"/>
+ <rect x="163" y="188" width="34" height="3" fill="#3a4549"/>
+ <!-- wheels -->
+ <circle cx="104" cy="208" r="24" fill="#080b0d" stroke-width="8"/><circle cx="256" cy="208" r="24" fill="#080b0d" stroke-width="8"/>
+ <circle cx="104" cy="208" r="11" fill="url(#m)" stroke-width="4"/><circle cx="256" cy="208" r="11" fill="url(#m)" stroke-width="4"/>
+ <path d="M99 208h10M251 208h10" stroke="#c2c8c6" stroke-width="3"/>
+ <!-- panel reflections -->
+ <path d="M84 92H276" stroke="#ffffff" stroke-width="4" opacity=".25"/>
+ <path d="M85 162H275" stroke="#ffffff" stroke-width="3" opacity=".14"/>
+</g>
+
+</svg>

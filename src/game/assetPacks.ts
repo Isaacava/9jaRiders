@@ -15,7 +15,7 @@ export type AssetPack = {
 
 const assets = (...ids: string[]) => ids.map(getReadyAssetPath);
 
-export const ASSET_CACHE_VERSION = 6;
+export const ASSET_CACHE_VERSION = 7;
 export const DEFAULT_ROUTE_PACK_ID: AssetPackId = "route-lagos-01";
 
 export const ASSET_PACKS: AssetPack[] = [
@@ -23,10 +23,13 @@ export const ASSET_PACKS: AssetPack[] = [
     id: "core",
     kind: "core",
     label: "Core Race",
-    version: 6,
-    sizeHintMb: 6,
+    version: 7,
+    sizeHintMb: 8,
     preload: [
       ...assets(
+        "AR-MODELS-BIKES",
+        "AR-MODELS-RIDERS",
+        "AR-MODELS-TRAFFIC",
         "AR-RACE-BIKE-STARTER",
         "AR-RACE-BIKE-SPEED",
         "AR-RACE-BIKE-HEAVY",
@@ -61,7 +64,7 @@ export const ASSET_PACKS: AssetPack[] = [
     id: "route-lagos-01",
     kind: "route",
     label: "Lagos Streets",
-    version: 6,
+    version: 7,
     sizeHintMb: 2,
     preload: [
       ...assets(

@@ -5,11 +5,15 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 const BIKE_URLS: Record<string, string> = {
-  starter: "https://cdn.3dassets.dev/assets/15423/v1/model.glb",
-  speed: "https://cdn.3dassets.dev/assets/15424/v1/model.glb",
-  heavy: "https://cdn.3dassets.dev/assets/15428/v1/model.glb",
-  elite: "https://cdn.3dassets.dev/assets/15416/v1/model.glb",
-  legendary: "https://cdn.3dassets.dev/assets/15415/v1/model.glb"
+  starter: "/api/3dassets/model?asset=15423",
+  speed: "/api/3dassets/model?asset=15424",
+  heavy: "/api/3dassets/model?asset=15428",
+  elite: "/api/3dassets/model?asset=15416",
+  legendary: "/api/3dassets/model?asset=15415",
+  cafe: "/api/3dassets/model?asset=15429",
+  flattrack: "/api/3dassets/model?asset=15420",
+  lightweight: "/api/3dassets/model?asset=15421",
+  dirt: "/assets/dirt-bike.glb"
 };
 
 type Props = {

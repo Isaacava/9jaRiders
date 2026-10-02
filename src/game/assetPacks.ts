@@ -1,7 +1,6 @@
 import { getReadyAssetPath } from "./assetManifest";
 
 export type AssetPackKind = "core" | "route";
-
 export type AssetPackId = "core" | "route-lagos-01";
 
 export type AssetPack = {
@@ -25,10 +24,9 @@ export const ASSET_PACKS: AssetPack[] = [
     kind: "core",
     label: "Core Race",
     version: 5,
-    sizeHintMb: 4,
+    sizeHintMb: 5,
     preload: [
       ...assets(
-        "AR-01",
         "AR-RACE-BIKE-STARTER",
         "AR-RACE-BIKE-SPEED",
         "AR-RACE-BIKE-HEAVY",
@@ -51,27 +49,6 @@ export const ASSET_PACKS: AssetPack[] = [
         "AR-RACE-SEDAN",
         "AR-RACE-SUV",
         "AR-RACE-VAN",
-        "AR-02",
-        "AR-03",
-        "AR-04",
-        "AR-05-BIKE",
-        "AR-05",
-        "AR-06",
-        "AR-07",
-        "AR-08",
-        "AR-09",
-        "AR-10",
-        "AR-11",
-        "AR-12",
-        "AR-13",
-        "AR-14",
-        "AR-15",
-        "AR-21-DANFO",
-        "AR-22-MINIBUS",
-        "AR-23-KEKE",
-        "AR-24-SEDAN",
-        "AR-25",
-        "AR-26",
         "AR-49",
         "AR-50",
         "AR-51",

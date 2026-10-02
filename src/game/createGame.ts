@@ -162,7 +162,7 @@ class AbokiRaceScene extends Phaser.Scene {
     this.load.image("rider-ada", getReadyAssetPath("AR-RACE-RIDER-ADA"));
     this.load.image("rider-kobby", getReadyAssetPath("AR-RACE-RIDER-KOBBY"));
     this.load.image("rider-tobi", getReadyAssetPath("AR-RACE-RIDER-TOBI"));
-    this.load.image("rider-cpu-01", getReadyAssetPath("AR-09"));
+    this.load.image("rider-cpu-01", getReadyAssetPath("AR-RACE-RIDER-CPU-01"));
     this.load.image("rider-cpu-02", getReadyAssetPath("AR-RACE-RIDER-CPU-02"));
     this.load.image("rider-cpu-03", getReadyAssetPath("AR-RACE-RIDER-CPU-03"));
     this.load.image("rider-cpu-04", getReadyAssetPath("AR-RACE-RIDER-CPU-04"));

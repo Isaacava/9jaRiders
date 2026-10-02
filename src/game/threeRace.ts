@@ -6,6 +6,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { fitRiderToBike } from "./riderBikeFit";
 import { getSharedRealtimeClient } from "./multiplayer";
 
 function PhaserLikeClamp(value: number) { return Math.min(1, Math.max(-1, value)); }
@@ -533,6 +534,17 @@ function prepareLoadedRiderBike(
   const root = riderRoot;
   root.userData.modelBacked = true;
   root.userData.bikeModel = bike;
+
+  const character = root.userData.riderRoot as THREE.Object3D | undefined;
+  if (character) {
+    try {
+      const fit = fitRiderToBike(root, character, bike, { buildScale: rider.build });
+      root.userData.bikeMounts = fit.mounts;
+      root.userData.riderFitScale = fit.scale;
+    } catch (error) {
+      console.warn("Rider/bike auto-fit failed; keeping existing rider pose.", error);
+    }
+  }
 
   const wheels: THREE.Object3D[] = [];
   bike.traverse((object) => {

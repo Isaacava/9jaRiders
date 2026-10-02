@@ -127,13 +127,13 @@ class AbokiRaceScene extends Phaser.Scene {
 
   preload() {
     this.load.image("route-sky", getReadyAssetPath("AR-ROUTE-LAGOS-SKY"));
-    this.load.image("hero-bike-rear3q", getReadyAssetPath("AR-01-REAR3Q"));
-    this.load.image("hero-rider-rear", getReadyAssetPath("AR-05-REAR"));
+    this.load.image("race-bike-starter", getReadyAssetPath("AR-RACE-BIKE-STARTER"));
+    this.load.image("race-rider-main", getReadyAssetPath("AR-RACE-RIDER-MAIN"));
     this.load.image("route-skyline", getReadyAssetPath("AR-ROUTE-SKYLINE"));
     this.load.image("road-texture", getReadyAssetPath("AR-30"));
-    this.load.image("traffic-danfo", getReadyAssetPath("AR-21-DANFO"));
-    this.load.image("traffic-keke", getReadyAssetPath("AR-23-KEKE"));
-    this.load.image("traffic-sedan", getReadyAssetPath("AR-24-SEDAN"));
+    this.load.image("traffic-danfo", getReadyAssetPath("AR-RACE-DANFO"));
+    this.load.image("traffic-keke", getReadyAssetPath("AR-RACE-KEKE"));
+    this.load.image("traffic-sedan", getReadyAssetPath("AR-RACE-SEDAN"));
     this.load.image("route-shop", getReadyAssetPath("AR-36-SHOP"));
     this.load.image("route-palm", getReadyAssetPath("AR-42-PALM"));
     this.load.image("route-barrier", getReadyAssetPath("AR-44-BARRIER"));
@@ -146,29 +146,29 @@ class AbokiRaceScene extends Phaser.Scene {
     this.load.image("route-billboard", getReadyAssetPath("AR-48-BILLBOARD"));
     this.load.image("route-drainage", getReadyAssetPath("AR-49-DRAINAGE"));
     this.load.image("route-wall", getReadyAssetPath("AR-50-WALL"));
-    this.load.image("traffic-minibus", getReadyAssetPath("AR-22-MINIBUS"));
-    this.load.image("traffic-suv", getReadyAssetPath("AR-25"));
-    this.load.image("traffic-van", getReadyAssetPath("AR-26"));
+    this.load.image("traffic-minibus", getReadyAssetPath("AR-RACE-MINIBUS"));
+    this.load.image("traffic-suv", getReadyAssetPath("AR-RACE-SUV"));
+    this.load.image("traffic-van", getReadyAssetPath("AR-RACE-VAN"));
     this.load.image("powerup-nitro", getReadyAssetPath("AR-49"));
     this.load.image("powerup-shield", getReadyAssetPath("AR-50"));
     this.load.image("powerup-surge", getReadyAssetPath("AR-51"));
     this.load.image("powerup-mega", getReadyAssetPath("AR-52"));
-    this.load.image("bike-starter", getReadyAssetPath("AR-01"));
-    this.load.image("bike-speed", getReadyAssetPath("AR-02"));
-    this.load.image("bike-heavy", getReadyAssetPath("AR-03"));
-    this.load.image("bike-elite", getReadyAssetPath("AR-04"));
-    this.load.image("bike-legendary", getReadyAssetPath("AR-05-BIKE"));
-    this.load.image("rider-main", getReadyAssetPath("AR-05"));
-    this.load.image("rider-ada", getReadyAssetPath("AR-06"));
-    this.load.image("rider-kobby", getReadyAssetPath("AR-07"));
-    this.load.image("rider-tobi", getReadyAssetPath("AR-08"));
+    this.load.image("bike-starter", getReadyAssetPath("AR-RACE-BIKE-STARTER"));
+    this.load.image("bike-speed", getReadyAssetPath("AR-RACE-BIKE-SPEED"));
+    this.load.image("bike-heavy", getReadyAssetPath("AR-RACE-BIKE-HEAVY"));
+    this.load.image("bike-elite", getReadyAssetPath("AR-RACE-BIKE-ELITE"));
+    this.load.image("bike-legendary", getReadyAssetPath("AR-RACE-BIKE-LEGENDARY"));
+    this.load.image("rider-main", getReadyAssetPath("AR-RACE-RIDER-MAIN"));
+    this.load.image("rider-ada", getReadyAssetPath("AR-RACE-RIDER-ADA"));
+    this.load.image("rider-kobby", getReadyAssetPath("AR-RACE-RIDER-KOBBY"));
+    this.load.image("rider-tobi", getReadyAssetPath("AR-RACE-RIDER-TOBI"));
     this.load.image("rider-cpu-01", getReadyAssetPath("AR-09"));
-    this.load.image("rider-cpu-02", getReadyAssetPath("AR-10"));
-    this.load.image("rider-cpu-03", getReadyAssetPath("AR-11"));
-    this.load.image("rider-cpu-04", getReadyAssetPath("AR-12"));
-    this.load.image("rider-cpu-05", getReadyAssetPath("AR-13"));
-    this.load.image("rider-cpu-06", getReadyAssetPath("AR-14"));
-    this.load.image("rider-cpu-07", getReadyAssetPath("AR-15"));
+    this.load.image("rider-cpu-02", getReadyAssetPath("AR-RACE-RIDER-CPU-02"));
+    this.load.image("rider-cpu-03", getReadyAssetPath("AR-RACE-RIDER-CPU-03"));
+    this.load.image("rider-cpu-04", getReadyAssetPath("AR-RACE-RIDER-CPU-04"));
+    this.load.image("rider-cpu-05", getReadyAssetPath("AR-RACE-RIDER-CPU-05"));
+    this.load.image("rider-cpu-06", getReadyAssetPath("AR-RACE-RIDER-CPU-06"));
+    this.load.image("rider-cpu-07", getReadyAssetPath("AR-RACE-RIDER-CPU-07"));
   }
 
   create() {
@@ -819,7 +819,7 @@ class AbokiRaceScene extends Phaser.Scene {
 
     if (this.textures.exists(bikeKey)) {
       const bike = this.add.image(0, 28, bikeKey);
-      bike.setDisplaySize(112, 162);
+      bike.setDisplaySize(154, 128);
       visual.add(bike);
     } else {
       const wheelA = this.add.ellipse(-18, 38, 12, 28, COLORS.ink);
@@ -829,13 +829,13 @@ class AbokiRaceScene extends Phaser.Scene {
     }
 
     if (this.textures.exists(riderKey)) {
-      const rider = this.add.image(0, -34, riderKey);
-      rider.setDisplaySize(86, 120);
+      const rider = this.add.image(0, -64, riderKey);
+      rider.setDisplaySize(104, 118);
       visual.add(rider);
     } else {
       const body = this.add.rectangle(0, -20, 36, 52, this.selectedRider?.color ?? COLORS.bikeLight).setStrokeStyle(3, COLORS.ink);
-      const helmet = this.add.circle(0, -54, 13, this.selectedRider?.color ?? COLORS.bikeLight).setStrokeStyle(3, COLORS.ink);
-      visual.add([body, helmet]);
+      const hair = this.add.ellipse(0, -55, 28, 22, this.selectedRider?.color ?? COLORS.ink).setStrokeStyle(3, COLORS.ink);
+      visual.add([body, hair]);
     }
 
     visual.setScale(scale);
@@ -843,9 +843,8 @@ class AbokiRaceScene extends Phaser.Scene {
   }
 
   private createRider() {
-    const useHeroRear = this.selectedBike.id === "starter" && this.selectedRider.id === "main";
-    const bikeKey = useHeroRear ? "hero-bike-rear3q" : `bike-${this.selectedBike.id}`;
-    const riderKey = useHeroRear ? "hero-rider-rear" : `rider-${this.selectedRider.id}`;
+    const bikeKey = `bike-${this.selectedBike.id}`;
+    const riderKey = `rider-${this.selectedRider.id}`;
 
     this.riderGlow = this.add.circle(0, 0, 66, COLORS.shield, 0.16);
     this.riderGlow.setVisible(false);

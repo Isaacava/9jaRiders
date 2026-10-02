@@ -93,47 +93,77 @@ const EXTERNAL_BIKE_ASSETS: Record<string, string> = {
 };
 
 const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
-  danfo: "https://cdn.3dassets.dev/assets/34194/v1/model.glb",
+  // Exact assets requested from 3DAssets.dev.
+  danfo: "air-land-sea-vehicles-city-bus-0c71b14a",
+  // Existing free catalogue models kept for Lagos-specific traffic placeholders.
   keke: "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
   minibus: "https://cdn.3dassets.dev/assets/32486/v1/model.glb",
-  sedan: "https://cdn.3dassets.dev/assets/32490/v1/model.glb",
-  suv: "https://cdn.3dassets.dev/assets/32529/v1/model.glb",
-  van: "https://cdn.3dassets.dev/assets/32487/v1/model.glb"
+  sedan: "air-land-sea-vehicles-city-hatchback-da84bd12",
+  suv: "car-park-and-road-vehicle-fleet-executive-saloon-4895d629",
+  van: "car-park-and-road-vehicle-fleet-double-cab-pickup-cano-aa92dedb"
 };
+
+const EXTERNAL_ENVIRONMENT_ASSETS = {
+  busStation: "https://cdn.3dassets.dev/assets/34221/v1/model.glb",
+  market: "https://cdn.3dassets.dev/assets/34323/v1/model.glb"
+} as const;
+
+type LoadedAsset = THREE.Group | null;
+
+async function resolve3DAssetUrl(slugOrUrl: string) {
+  if (slugOrUrl.startsWith("http")) return slugOrUrl;
+
+  const response = await fetch(
+    `/api/3dassets?slug=${encodeURIComponent(slugOrUrl)}`,
+    { cache: "force-cache" }
+  );
+  if (!response.ok) throw new Error(`3D asset lookup failed: ${slugOrUrl}`);
+  const data = await response.json() as { cdnUrl?: string };
+  if (!data.cdnUrl) throw new Error(`3D asset has no CDN URL: ${slugOrUrl}`);
+  return data.cdnUrl;
+}
+
+async function loadOptionalAsset(loader: GLTFLoader, slugOrUrl: string): Promise<LoadedAsset> {
+  try {
+    return (await loader.loadAsync(await resolve3DAssetUrl(slugOrUrl))).scene;
+  } catch (error) {
+    console.warn("3DAssets.dev asset unavailable:", slugOrUrl, error);
+    return null;
+  }
+}
 
 async function loadRaceModelPack() {
   const loader = new GLTFLoader();
-  const trafficAssetCount = Object.keys(EXTERNAL_TRAFFIC_ASSETS).length;
-  const bikeAssetCount = Object.keys(EXTERNAL_BIKE_ASSETS).length;
-  const [riders, ...results] = await Promise.all([
-    loader.loadAsync("/assets/models/riders.glb"),
-    ...Object.values(EXTERNAL_BIKE_ASSETS).map((url) => loader.loadAsync(url)),
-    ...Object.values(EXTERNAL_TRAFFIC_ASSETS).map((url) => loader.loadAsync(url)),
-    ...Object.values(EXTERNAL_ENVIRONMENT_ASSETS).map((url) => loader.loadAsync(url))
-  ]);
-
   const bikeIds = Object.keys(EXTERNAL_BIKE_ASSETS);
   const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
   const environmentIds = Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>;
+
+  const [riderResult, bikeResults, trafficResults, environmentResults] = await Promise.all([
+    loader.loadAsync("/assets/models/riders.glb"),
+    Promise.all(bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))),
+    Promise.all(trafficKinds.map((kind) => loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]))),
+    Promise.all(environmentIds.map((id) => loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id])))
+  ]);
+
   const bikes: Record<string, THREE.Group> = {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
   const environments = {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 
   bikeIds.forEach((bikeId, index) => {
-    bikes[bikeId] = results[index].scene;
+    if (bikeResults[index]) bikes[bikeId] = bikeResults[index] as THREE.Group;
   });
 
   trafficKinds.forEach((kind, index) => {
-    traffic[kind] = results[bikeAssetCount + index].scene;
+    if (trafficResults[index]) traffic[kind] = trafficResults[index] as THREE.Group;
   });
 
   environmentIds.forEach((id, index) => {
-    environments[id] = results[bikeAssetCount + trafficAssetCount + index].scene;
+    if (environmentResults[index]) environments[id] = environmentResults[index] as THREE.Group;
   });
 
   return {
     bikes,
-    riders: riders.scene,
+    riders: riderResult.scene,
     traffic,
     environments
   };
@@ -187,14 +217,17 @@ function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: st
 }
 
 function prepareLoadedTraffic(pack: RaceModelPack, kind: Traffic["kind"]) {
-  const model = cloneLoadedModel(pack.traffic[kind], "traffic-" + kind);
+  const source = pack.traffic[kind];
+  if (!source) return null;
+
+  const model = cloneLoadedModel(source, "traffic-" + kind);
   const targetHeights: Record<Traffic["kind"], number> = {
     danfo: 2.9,
     keke: 2.15,
-    minibus: 1.55,
+    minibus: 1.75,
     sedan: 1.55,
     suv: 1.82,
-    van: 1.55
+    van: 1.86
   };
   fitModel(model, targetHeights[kind]);
   model.rotation.y = Math.PI;
@@ -1450,9 +1483,10 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
     for (const vehicle of traffic) {
       const next = prepareLoadedTraffic(pack, vehicle.kind);
+      if (!next) continue;
       next.position.copy(vehicle.group.position);
       scene.remove(vehicle.group);
-      vehicle.group = next as THREE.Group;
+      vehicle.group = next;
       scene.add(vehicle.group);
     }
 
@@ -1474,7 +1508,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     ] as const;
 
     environmentPlacements.forEach(([kind, side, z, scale]) => {
-      const setPiece = pack.environments[kind].clone(true);
+      const source = pack.environments[kind];
+      if (!source) return;
+      const setPiece = source.clone(true);
       setPiece.scale.setScalar(scale);
       setPiece.position.set(side * 19, 0, z);
       setPiece.userData.externalEnvironment = kind;

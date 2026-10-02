@@ -2,6 +2,9 @@ const CACHE_NAMESPACE = "aboki-riders-assets-v10";
 const CACHE_PREFIX = `${CACHE_NAMESPACE}-`;
 const RUNTIME_CACHE = `${CACHE_NAMESPACE}-runtime`;
 const EXTERNAL_CDN_ORIGIN = "https://cdn.3dassets.dev";
+const EXTERNAL_RIDER_URLS = new Set([
+  "https://cdn.jsdelivr.net/gh/kunalkushwaha/vsim@3f97faf85e46d2f9a122b0a8b8d3ccc0af598f91/packages/assets/library/human.glb"
+]);
 const EXTERNAL_BIKE_URLS = new Set([
   "https://cdn.3dassets.dev/assets/15423/v1/model.glb",
   "https://cdn.3dassets.dev/assets/15424/v1/model.glb",
@@ -43,7 +46,8 @@ self.addEventListener("fetch", (event) => {
   const sameOriginAssetApi = url.origin === self.location.origin && url.pathname === "/api/3dassets";
   const externalBikeAsset = EXTERNAL_BIKE_URLS.has(request.url);
   const externalCdnAsset = url.origin === EXTERNAL_CDN_ORIGIN && url.pathname.startsWith("/assets/");
-  if (request.method !== "GET" || (!sameOriginAsset && !sameOriginAssetApi && !externalBikeAsset && !externalCdnAsset)) return;
+  const externalRiderAsset = EXTERNAL_RIDER_URLS.has(request.url);
+  if (request.method !== "GET" || (!sameOriginAsset && !sameOriginAssetApi && !externalBikeAsset && !externalCdnAsset && !externalRiderAsset)) return;
   event.respondWith((async () => {
     const runtimeCache = await caches.open(RUNTIME_CACHE);
     const cached = await runtimeCache.match(request);

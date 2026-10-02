@@ -69,7 +69,7 @@ AR-14 CPU 06 — riders/cpu-06.webp
 AR-15 CPU 07 — riders/cpu-07.webp
 
 **Rider generation script**
-> Stylized Nigerian motorcycle racer, premium semi-3D cel-shaded arcade-game character, modern motorcycle helmet, protective racing gear, distinctive color identity, exaggerated but believable proportions, energetic racing posture, consistent lighting and camera with the Aboki Riders bike family, transparent background.
+> Stylized Nigerian motorcycle racer, premium semi-3D cel-shaded arcade-game character, protective racing gear with visible natural hair, no helmet, distinctive color identity, exaggerated but believable proportions, energetic racing posture, consistent lighting and camera with the Aboki Riders bike family, transparent background.
 
 Animation set: idle, accelerate, lean-left, lean-right, brake, nitro, pickup, crash, airborne, land, finish, victory, defeat.
 

@@ -67,7 +67,8 @@ const BIKES: Record<string, BikeSpec> = {
   speed: { color: 0x2779dc, accent: 0xf39a4a, maxSpeed: 185, accel: 112, handling: 9.4, silhouette: "sport" },
   heavy: { color: 0xbd4a42, accent: 0xe2e0d5, maxSpeed: 168, accel: 76, handling: 6.8, silhouette: "cruiser" },
   elite: { color: 0x8159c6, accent: 0x69dcff, maxSpeed: 202, accel: 128, handling: 8.8, silhouette: "futuristic" },
-  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" }
+  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" },
+  dirt: { color: 0x1b6f5c, accent: 0xe7b83f, maxSpeed: 176, accel: 106, handling: 9.2, silhouette: "dirt" }
 };
 
 const RIDERS: Record<string, RiderSpec> = {
@@ -509,157 +510,14 @@ function createRiderFromFallback(riderId: string, player = false) {
   return root;
 }
 
-function findRiderBone(root: THREE.Object3D, patterns: RegExp[], side?: "l" | "r") {
+function findRiderBone(root: THREE.Object3D, pattern: RegExp) {
   let result: THREE.Object3D | undefined;
   root.traverse((node) => {
     if (result || node.type !== "Bone") return;
     const name = node.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (side && !name.endsWith(side)) return;
-    if (patterns.some((pattern) => pattern.test(name))) result = node;
+    if (pattern.test(name)) result = node;
   });
   return result;
-}
-
-function worldPoint(object: THREE.Object3D) {
-  return object.getWorldPosition(new THREE.Vector3());
-}
-
-function aimRiderBone(bone: THREE.Object3D | undefined, targetWorld: THREE.Vector3) {
-  if (!bone) return;
-  const parent = bone.parent;
-  const targetLocal = parent ? parent.worldToLocal(targetWorld.clone()) : targetWorld.clone();
-  const direction = targetLocal.sub(bone.position);
-  if (direction.lengthSq() < 1e-8) return;
-  bone.quaternion.copy(
-    new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize())
-  );
-  bone.updateMatrixWorld(true);
-}
-
-function solveRiderLimb(
-  upper: THREE.Object3D | undefined,
-  lower: THREE.Object3D | undefined,
-  targetWorld: THREE.Vector3
-) {
-  if (!upper || !lower) return;
-
-  const start = worldPoint(upper);
-  const joint = worldPoint(lower);
-  const child = lower.children.find((node) => node.type === "Bone");
-  const end = child ? worldPoint(child) : joint.clone().add(new THREE.Vector3(0, 0.25, 0));
-  const upperLength = Math.max(0.08, start.distanceTo(joint));
-  const lowerLength = Math.max(0.08, joint.distanceTo(end));
-  const delta = targetWorld.clone().sub(start);
-  const distance = THREE.MathUtils.clamp(delta.length(), 0.06, upperLength + lowerLength - 0.01);
-  const direction = delta.normalize();
-
-  const x = (upperLength * upperLength - lowerLength * lowerLength + distance * distance) / (2 * distance);
-  const h = Math.sqrt(Math.max(upperLength * upperLength - x * x, 0));
-  const bend = start.clone()
-    .add(direction.clone().multiplyScalar(x))
-    .add(new THREE.Vector3(0, 0, -1).multiplyScalar(h));
-
-  aimRiderBone(upper, bend);
-  aimRiderBone(lower, targetWorld);
-}
-
-function fitRiderToBike(
-  riderRoot: THREE.Object3D,
-  riderModel: THREE.Object3D,
-  bike: THREE.Object3D,
-  buildScale = 1
-) {
-  const bikeBounds = new THREE.Box3().setFromObject(bike);
-  const bikeSize = bikeBounds.getSize(new THREE.Vector3());
-  const bikeMin = bikeBounds.min.clone();
-  const bikeMax = bikeBounds.max.clone();
-
-  const riderBounds = new THREE.Box3().setFromObject(riderModel);
-  const riderHeight = Math.max(0.001, riderBounds.max.y - riderBounds.min.y);
-  riderModel.scale.multiplyScalar(
-    (1.72 * THREE.MathUtils.clamp(buildScale, 0.92, 1.08)) / riderHeight
-  );
-  riderModel.rotation.y = Math.PI;
-  riderModel.updateMatrixWorld(true);
-
-  const seatNodes: THREE.Object3D[] = [];
-  const handleNodes: THREE.Object3D[] = [];
-  const pegNodes: THREE.Object3D[] = [];
-
-  bike.traverse((node) => {
-    const name = node.name.toLowerCase();
-    if (/seat|saddle|seatpad|saddlepad/.test(name)) seatNodes.push(node);
-    if (/handlebar|handle.?bar|steer|grip|clip.?on/.test(name)) handleNodes.push(node);
-    if (/foot.?peg|foot.?rest|footrest|peg/.test(name)) pegNodes.push(node);
-  });
-
-  const seat = seatNodes[0]
-    ? worldPoint(seatNodes[0])
-    : new THREE.Vector3(
-        (bikeMin.x + bikeMax.x) * 0.5,
-        bikeMin.y + THREE.MathUtils.clamp(bikeSize.y * 0.61, 0.56, 0.96),
-        bikeMin.z + bikeSize.z * 0.50
-      );
-
-  const handleCenter = handleNodes[0]
-    ? worldPoint(handleNodes[0])
-    : new THREE.Vector3(
-        (bikeMin.x + bikeMax.x) * 0.5,
-        bikeMin.y + THREE.MathUtils.clamp(bikeSize.y * 0.70, 0.68, 1.12),
-        bikeMax.z - bikeSize.z * 0.10
-      );
-
-  const halfWidth = THREE.MathUtils.clamp(bikeSize.x * 0.23, 0.18, 0.34);
-  const pegY = bikeMin.y + bikeSize.y * 0.33;
-  const pegZ = seat.z - bikeSize.z * 0.08;
-
-  const pegPositions = pegNodes.map((node) => worldPoint(node)).sort((a, b) => a.x - b.x);
-  const pegL = pegPositions.length >= 2
-    ? pegPositions[pegPositions.length - 1].clone().setX(Math.abs(pegPositions[pegPositions.length - 1].x))
-    : new THREE.Vector3(halfWidth, pegY, pegZ);
-  const pegR = pegPositions.length >= 2
-    ? pegPositions[0].clone().setX(-Math.abs(pegPositions[0].x))
-    : new THREE.Vector3(-halfWidth, pegY, pegZ);
-
-  const barHalfWidth = Math.max(0.12, bikeSize.x * 0.18);
-  const handleL = handleCenter.clone().setX(handleCenter.x - barHalfWidth);
-  const handleR = handleCenter.clone().setX(handleCenter.x + barHalfWidth);
-
-  const hip = findRiderBone(riderModel, [/pelvis/, /hips?/, /root/]);
-  const thighL = findRiderBone(riderModel, [/thigh/, /upperleg/], "l");
-  const thighR = findRiderBone(riderModel, [/thigh/, /upperleg/], "r");
-  const calfL = findRiderBone(riderModel, [/calf/, /shin/, /lowerleg/], "l");
-  const calfR = findRiderBone(riderModel, [/calf/, /shin/, /lowerleg/], "r");
-  const armL = findRiderBone(riderModel, [/upperarm/, /arm/], "l");
-  const armR = findRiderBone(riderModel, [/upperarm/, /arm/], "r");
-  const forearmL = findRiderBone(riderModel, [/forearm/, /lowerarm/], "l");
-  const forearmR = findRiderBone(riderModel, [/forearm/, /lowerarm/], "r");
-  const spine = findRiderBone(riderModel, [/spine02/, /spine01/, /spine/, /chest/]);
-  const head = findRiderBone(riderModel, [/head/, /neck/]);
-
-  if (hip) {
-    const parent = riderModel.parent ?? riderRoot;
-    const hipLocal = parent.worldToLocal(worldPoint(hip));
-    const seatLocal = parent.worldToLocal(seat.clone());
-    riderModel.position.add(seatLocal.sub(hipLocal));
-    riderModel.updateMatrixWorld(true);
-  }
-
-  solveRiderLimb(thighL, calfL, pegL);
-  solveRiderLimb(thighR, calfR, pegR);
-  solveRiderLimb(armL, forearmL, handleL);
-  solveRiderLimb(armR, forearmR, handleR);
-
-  const horizontal = Math.max(0.1, Math.hypot(handleCenter.x - seat.x, handleCenter.z - seat.z));
-  const pitch = THREE.MathUtils.clamp(
-    Math.atan2(handleCenter.y - seat.y, horizontal) * 0.85,
-    -0.50,
-    0.30
-  );
-  if (spine) spine.rotation.x = pitch * 0.55;
-  if (head) head.rotation.x = -pitch * 0.50;
-
-  return { seat, handleCenter, pegL, pegR };
 }
 
 function prepareLoadedRiderBike(
@@ -687,17 +545,6 @@ function prepareLoadedRiderBike(
   root.userData.modelBacked = true;
   root.userData.bikeModel = bike;
 
-  const character = root.userData.riderRoot as THREE.Object3D | undefined;
-  if (character) {
-    try {
-      const fit = fitRiderToBike(root, character, bike, { buildScale: rider.build });
-      root.userData.bikeMounts = fit.mounts;
-      root.userData.riderFitScale = fit.scale;
-    } catch (error) {
-      console.warn("Rider/bike auto-fit failed; keeping existing rider pose.", error);
-    }
-  }
-
   const wheels: THREE.Object3D[] = [];
   bike.traverse((object) => {
     if (/wheel/i.test(object.name)) wheels.push(object);
@@ -705,13 +552,36 @@ function prepareLoadedRiderBike(
 
   root.add(bike);
 
+  // Generic geometry-derived rider fit. Different motorcycles get different
+  // seat height, fore/aft position and lean without a bike-specific branch.
+  const bikeBox = new THREE.Box3().setFromObject(bike);
+  const bikeCenter = bikeBox.getCenter(new THREE.Vector3());
+  const bikeSize = bikeBox.getSize(new THREE.Vector3());
   const character = root.userData.riderRoot as THREE.Object3D | undefined;
   if (character) {
-    try {
-      root.userData.bikeMounts = fitRiderToBike(root, character, bike, rider.build);
-    } catch (error) {
-      console.warn("Rider/bike auto-fit failed; keeping rider source pose.", error);
-    }
+    const seatHeight = THREE.MathUtils.clamp(
+      bikeBox.min.y + bikeSize.y * 0.61,
+      0.82,
+      1.36
+    );
+    const seatZ = THREE.MathUtils.clamp(
+      bikeBox.min.z + bikeSize.z * 0.50,
+      bikeBox.min.z + 0.10,
+      bikeBox.max.z - 0.10
+    );
+
+    character.position.set(bikeCenter.x, seatHeight, seatZ);
+    character.rotation.x = THREE.MathUtils.clamp(
+      -Math.atan2(bikeSize.y * 0.18, Math.max(0.4, bikeSize.z * 0.34)),
+      -0.34,
+      0.08
+    );
+    character.rotation.z = 0;
+
+    const spine = findRiderBone(character, /spine02|spine01|spine|chest/);
+    const head = findRiderBone(character, /head|neck/);
+    if (spine) spine.rotation.x = character.rotation.x * 0.55;
+    if (head) head.rotation.x = -character.rotation.x * 0.45;
   }
 
   const bikeMixer = createLoopingWheelMixer(bike);

@@ -516,139 +516,336 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
   root.add(headlamp);
 
   const riderRoot = new THREE.Group();
-  const posture = bike.silhouette === "sport" || bike.silhouette === "superbike" ? -0.34 : bike.silhouette === "cruiser" ? 0.0 : -0.18;
-  riderRoot.position.set(0, bike.silhouette === "cruiser" ? 1.42 : 1.54, bike.silhouette === "cruiser" ? 0.22 : 0.14);
-  riderRoot.rotation.x = posture;
+  const rider = RIDERS[riderId] ?? RIDERS.main;
+  const ridingPosture =
+    bike.silhouette === "sport" || bike.silhouette === "superbike"
+      ? -0.38
+      : bike.silhouette === "cruiser"
+        ? -0.08
+        : -0.26;
+
+  riderRoot.position.set(
+    0,
+    bike.silhouette === "cruiser" ? 1.38 : 1.46,
+    bike.silhouette === "cruiser" ? 0.24 : 0.16
+  );
+  riderRoot.rotation.x = ridingPosture;
   riderRoot.scale.setScalar(rider.build);
   root.add(riderRoot);
 
-  const torso = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.32, 0.68, 6, 14),
-    material(rider.jacket, 0.68, 0)
-  );
-  torso.scale.set(1.0, 1.0, 0.62);
-  torso.rotation.x = -0.28;
-  torso.castShadow = true;
-  riderRoot.add(torso);
+  const jacketMat = material(rider.jacket, 0.18, 0.48);
+  const accentMatRider = material(rider.accent, 0.12, 0.42);
+  const skinMat = material(rider.skin, 0.02, 0.64);
+  const hairMat = material(rider.hair, 0.01, 0.92);
+  const pantsMat = material(0x151b20, 0.02, 0.82);
+  const bootMat = material(0x0b1014, 0.16, 0.82);
+  const gloveMat = material(0x1b2329, 0.18, 0.72);
+  const metalRider = material(0x556168, 0.62, 0.36);
 
-  const shoulderBar = new THREE.Mesh(
-    new RoundedBoxGeometry(0.84, 0.22, 0.38, 5, 0.06),
-    material(rider.jacket, 0.68, 0)
+  const jacket = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.34, 0.72, 8, 18),
+    jacketMat
   );
-  shoulderBar.position.set(0, 0.16, 0.02);
-  shoulderBar.rotation.x = -0.18;
-  riderRoot.add(shoulderBar);
+  jacket.scale.set(1.08, 1.06, 0.72);
+  jacket.position.set(0, 0.10, 0.06);
+  jacket.rotation.x = -0.20;
+  jacket.castShadow = true;
+  riderRoot.add(jacket);
 
-  const backPanel = new THREE.Mesh(
-    new RoundedBoxGeometry(0.40, 0.28, 0.045, 4, 0.02),
-    material(rider.accent, 0.58, 0)
+  const chest = new THREE.Mesh(
+    new RoundedBoxGeometry(0.66, 0.34, 0.44, 6, 0.07),
+    accentMatRider
   );
-  backPanel.position.set(0, 0.04, 0.215);
-  riderRoot.add(backPanel);
+  chest.position.set(0, 0.20, -0.11);
+  chest.rotation.x = -0.12;
+  riderRoot.add(chest);
 
-  const belt = new THREE.Mesh(
-    new RoundedBoxGeometry(0.62, 0.09, 0.36, 4, 0.02),
-    material(0x1b2327, 0.82, 0.04)
+  const jacketZip = new THREE.Mesh(
+    new RoundedBoxGeometry(0.045, 0.52, 0.035, 4, 0.01),
+    metalRider
   );
-  belt.position.set(0, -0.30, 0.03);
-  riderRoot.add(belt);
+  jacketZip.position.set(0, 0.16, -0.34);
+  jacketRootSafe.add(jacketZip);
 
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.235, 20, 14),
-    material(rider.skin, 0.72, 0)
+  function addSafe(node: THREE.Object3D) {
+    riderRoot.add(node);
+    return node;
+  }
+
+  const collar = addSafe(
+    new THREE.Mesh(
+      new RoundedBoxGeometry(0.52, 0.18, 0.32, 5, 0.05),
+      jacketMat
+    )
   );
-  head.scale.set(0.94, 1.0, 0.92);
-  head.position.set(0, 0.78, -0.13);
-  riderRoot.add(head);
+  collar.position.set(0, 0.50, -0.01);
+  collar.rotation.x = -0.18;
 
-  const hairBase = new THREE.Mesh(
-    new THREE.SphereGeometry(0.27, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.72),
-    material(rider.hair, 0.92, 0)
+  const backPanel = addSafe(
+    new THREE.Mesh(
+      new RoundedBoxGeometry(0.54, 0.34, 0.12, 5, 0.04),
+      accentMatRider
+    )
   );
-  hairBase.scale.set(1.04, 0.88, 1.02);
-  hairBase.position.set(0, 0.88, -0.17);
-  riderRoot.add(hairBase);
+  backPanel.position.set(0, 0.20, 0.34);
+  backPanel.rotation.x = -0.06;
 
-  if (rider.hairStyle === "braids") {
+  const waist = addSafe(
+    new THREE.Mesh(
+      new RoundedBoxGeometry(0.58, 0.18, 0.36, 5, 0.04),
+      pantsMat
+    )
+  );
+  waist.position.set(0, -0.30, 0.18);
+
+  const belt = addSafe(
+    new THREE.Mesh(
+      new RoundedBoxGeometry(0.62, 0.07, 0.38, 5, 0.025),
+      metalRider
+    )
+  );
+  belt.position.set(0, -0.18, 0.02);
+
+  const neck = addSafe(
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(0.115, 0.13, 0.20, 14),
+      skinMat
+    )
+  );
+  neck.position.set(0, 0.63, -0.02);
+
+  const head = addSafe(
+    new THREE.Mesh(
+      new THREE.SphereGeometry(0.245, 24, 18),
+      skinMat
+    )
+  );
+  head.scale.set(0.98, 1.05, 0.94);
+  head.position.set(0, 0.96, -0.15);
+
+  const earL = addSafe(new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 10), skinMat));
+  earL.position.set(-0.22, 0.96, -0.14);
+  const earR = earL.clone();
+  earR.position.x *= -1;
+  riderRoot.add(earR);
+
+  const nose = addSafe(
+    new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 12, 10),
+      skinMat
+    )
+  );
+  nose.scale.set(0.8, 0.75, 1.35);
+  nose.position.set(0, 0.92, -0.37);
+
+  const hairCap = addSafe(
+    new THREE.Mesh(
+      new THREE.SphereGeometry(0.275, 22, 16),
+      hairMat
+    )
+  );
+  hairCap.scale.set(1.03, 0.84, 1.00);
+  hairCap.position.set(0, 1.06, -0.17);
+
+  const hairstyle = rider.hairStyle;
+  if (hairstyle === "short") {
+    const crown = addSafe(
+      new THREE.Mesh(
+        new RoundedBoxGeometry(0.46, 0.16, 0.34, 5, 0.045),
+        hairMat
+      )
+    );
+    crown.position.set(0, 1.18, 0.00);
+  } else if (hairstyle === "braids") {
     for (const sx of [-1, 1]) {
-      for (let i = 0; i < 2; i += 1) {
-        const braid = new THREE.Mesh(
-          new THREE.CapsuleGeometry(0.055, 0.42, 4, 8),
-          material(rider.hair, 0.94, 0)
+      for (let i = 0; i < 4; i += 1) {
+        const braid = addSafe(
+          new THREE.Mesh(
+            new THREE.CapsuleGeometry(0.045, 0.26, 5, 10),
+            hairMat
+          )
         );
-        braid.position.set(sx * (0.19 + i * 0.07), 0.52, -0.03 + i * 0.03);
-        braid.rotation.z = sx * 0.16;
-        riderRoot.add(braid);
+        braid.position.set(sx * (0.15 + i * 0.05), 0.78 - i * 0.02, 0.00 + i * 0.025);
+        braid.rotation.z = sx * (0.12 + i * 0.025);
       }
     }
-  } else if (rider.hairStyle === "bun") {
-    const bun = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 16, 10),
-      material(rider.hair, 0.94, 0)
-    );
-    bun.position.set(0, 1.04, 0.02);
-    riderRoot.add(bun);
-  } else if (rider.hairStyle === "high") {
-    const puff = new THREE.Mesh(
-      new THREE.SphereGeometry(0.25, 16, 10),
-      material(rider.hair, 0.94, 0)
-    );
-    puff.scale.set(0.86, 1.28, 0.86);
-    puff.position.set(0, 1.06, 0.03);
-    riderRoot.add(puff);
-  } else if (rider.hairStyle === "locs") {
+  } else if (hairstyle === "locs") {
     for (const sx of [-1, 1]) {
-      const lock = new THREE.Mesh(
-        new THREE.CapsuleGeometry(0.05, 0.48, 4, 8),
-        material(rider.hair, 0.94, 0)
+      for (let i = 0; i < 3; i += 1) {
+        const loc = addSafe(
+          new THREE.Mesh(
+            new THREE.CapsuleGeometry(0.042, 0.30, 5, 10),
+            hairMat
+          )
+        );
+        loc.position.set(sx * (0.16 + i * 0.06), 0.78 - i * 0.015, 0.02 + i * 0.02);
+        loc.rotation.z = sx * (0.10 + i * 0.02);
+      }
+    }
+  } else if (hairstyle === "bun") {
+    const bun = addSafe(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(0.17, 18, 12),
+        hairMat
+      )
+    );
+    bun.position.set(0, 1.28, 0.07);
+    const bunBand = addSafe(
+      new THREE.Mesh(
+        new THREE.TorusGeometry(0.11, 0.025, 8, 16),
+        accentMatRider
+      )
+    );
+    bunBand.position.set(0, 1.27, 0.07);
+    bunBand.rotation.x = Math.PI / 2;
+  } else {
+    const puff = addSafe(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(0.21, 18, 12),
+        hairMat
+      )
+    );
+    puff.scale.set(0.86, 1.35, 0.86);
+    puff.position.set(0, 1.30, 0.03);
+  }
+
+  // Layered riding arms with visible elbows and gloves, rather than single cylinders.
+  for (const sx of [-1, 1]) {
+    const shoulder = addSafe(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(0.13, 18, 12),
+        jacketMat
+      )
+    );
+    shoulder.position.set(sx * 0.31, 0.33, -0.03);
+
+    const upperArm = cylinderBetween(
+      new THREE.Vector3(sx * 0.31, 0.30, -0.03),
+      new THREE.Vector3(sx * 0.43, 0.05, -0.43),
+      0.095,
+      jacketMat,
+      16
+    );
+    addSafe(upperArm);
+
+    const elbow = addSafe(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(0.10, 16, 12),
+        jacketMat
+      )
+    );
+    elbow.position.set(sx * 0.43, 0.05, -0.43);
+
+    const forearm = cylinderBetween(
+      new THREE.Vector3(sx * 0.43, 0.05, -0.43),
+      new THREE.Vector3(sx * 0.47, -0.07, -0.85),
+      0.082,
+      jacketMat,
+      16
+    );
+    addSafe(forearm);
+
+    const glove = addSafe(
+      new THREE.Mesh(
+        new RoundedBoxGeometry(0.18, 0.15, 0.24, 5, 0.04),
+        gloveMat
+      )
+    );
+    glove.position.set(sx * 0.47, -0.09, -0.90);
+    glove.rotation.x = -0.18;
+
+    for (let finger = 0; finger < 3; finger += 1) {
+      const fingertip = addSafe(
+        new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.022, 0.085, 4, 8),
+          gloveMat
+        )
       );
-      lock.position.set(sx * 0.19, 0.65, 0.01);
-      lock.rotation.z = sx * 0.12;
-      riderRoot.add(lock);
+      fingertip.position.set(
+        sx * (0.41 + finger * 0.035),
+        -0.10,
+        -1.00 - finger * 0.008
+      );
+      fingertip.rotation.y = sx * 0.08;
     }
   }
 
-  const leftArm = cylinderBetween(
-    new THREE.Vector3(-0.30, 0.14, -0.03),
-    new THREE.Vector3(-0.44, 0.0, -0.78),
-    0.092,
-    material(rider.jacket, 0.70, 0)
+  // Real seated legs: thigh volume, knees, shin, boot and sole.
+  const hips = addSafe(
+    new THREE.Mesh(
+      new RoundedBoxGeometry(0.58, 0.34, 0.42, 6, 0.06),
+      pantsMat
+    )
   );
-  const rightArm = cylinderBetween(
-    new THREE.Vector3(0.30, 0.14, -0.03),
-    new THREE.Vector3(0.44, 0.0, -0.78),
-    0.092,
-    material(rider.jacket, 0.70, 0)
-  );
-  riderRoot.add(leftArm, rightArm);
+  hips.position.set(0, -0.36, 0.20);
 
-  const hand = new THREE.Mesh(
-    new THREE.SphereGeometry(0.10, 12, 8),
-    material(rider.skin, 0.78, 0)
-  );
-  hand.position.set(-0.44, -0.005, -0.79);
-  const handR = hand.clone();
-  handR.position.x *= -1;
-  riderRoot.add(hand, handR);
+  for (const sx of [-1, 1]) {
+    const thigh = cylinderBetween(
+      new THREE.Vector3(sx * 0.19, -0.38, 0.30),
+      new THREE.Vector3(sx * 0.27, -0.66, 0.58),
+      0.13,
+      pantsMat,
+      16
+    );
+    addSafe(thigh);
 
-  const leftLeg = cylinderBetween(
-    new THREE.Vector3(-0.23, -0.28, 0.08),
-    new THREE.Vector3(-0.34, -0.64, 0.46),
-    0.108,
-    material(0x252d33, 0.84, 0.02)
-  );
-  const rightLeg = leftLeg.clone();
-  rightLeg.position.x *= -1;
-  riderRoot.add(leftLeg, rightLeg);
+    const knee = addSafe(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(0.12, 18, 12),
+        pantsMat
+      )
+    );
+    knee.position.set(sx * 0.27, -0.67, 0.60);
 
-  const boot = new THREE.Mesh(
-    new RoundedBoxGeometry(0.18, 0.28, 0.34, 4, 0.04),
-    material(0x11171a, 0.9, 0.02)
+    const shin = cylinderBetween(
+      new THREE.Vector3(sx * 0.27, -0.67, 0.62),
+      new THREE.Vector3(sx * 0.34, -0.88, 0.93),
+      0.105,
+      pantsMat,
+      16
+    );
+    addSafe(shin);
+
+    const boot = addSafe(
+      new THREE.Mesh(
+        new RoundedBoxGeometry(0.24, 0.30, 0.42, 6, 0.05),
+        bootMat
+      )
+    );
+    boot.position.set(sx * 0.35, -1.02, 1.03);
+    boot.rotation.x = 0.10;
+
+    const bootSole = addSafe(
+      new THREE.Mesh(
+        new RoundedBoxGeometry(0.27, 0.08, 0.46, 5, 0.02),
+        gloveMat
+      )
+    );
+    bootSole.position.set(sx * 0.35, -1.20, 1.04);
+
+    const kneePatch = addSafe(
+      new THREE.Mesh(
+        new THREE.CylinderGeometry(0.095, 0.095, 0.035, 14),
+        accentMatRider
+      )
+    );
+    kneePatch.rotation.x = Math.PI / 2;
+    kneePatch.position.set(sx * 0.27, -0.68, 0.71);
+  }
+
+  // Character-specific racing accent so riders do not look cloned.
+  const shoulderStripe = addSafe(
+    new THREE.Mesh(
+      new RoundedBoxGeometry(0.10, 0.50, 0.06, 4, 0.02),
+      accentMatRider
+    )
   );
-  boot.position.set(-0.34, -0.78, 0.56);
-  const bootR = boot.clone();
-  bootR.position.x *= -1;
-  riderRoot.add(boot, bootR);
+  shoulderStripe.position.set(-0.33, 0.20, -0.08);
+  shoulderStripe.rotation.z = -0.10;
+  const shoulderStripeR = shoulderStripe.clone();
+  shoulderStripeR.position.x *= -1;
+  shoulderStripeR.rotation.z *= -1;
+  riderRoot.add(shoulderStripeR);
 
   root.userData.riderRoot = riderRoot;
   root.userData.wheels = [rearWheel, frontWheel];

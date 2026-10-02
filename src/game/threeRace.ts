@@ -67,7 +67,11 @@ const BIKES: Record<string, BikeSpec> = {
   speed: { color: 0x2779dc, accent: 0xf39a4a, maxSpeed: 185, accel: 112, handling: 9.4, silhouette: "sport" },
   heavy: { color: 0xbd4a42, accent: 0xe2e0d5, maxSpeed: 168, accel: 76, handling: 6.8, silhouette: "cruiser" },
   elite: { color: 0x8159c6, accent: 0x69dcff, maxSpeed: 202, accel: 128, handling: 8.8, silhouette: "futuristic" },
-  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" }
+  legendary: { color: 0xd0a02b, accent: 0xffefac, maxSpeed: 220, accel: 138, handling: 9.1, silhouette: "superbike" },
+  cafe: { color: 0x4c83b6, accent: 0xe2e0d5, maxSpeed: 158, accel: 102, handling: 8.8, silhouette: "street" },
+  flattrack: { color: 0xd1653c, accent: 0xf4d1a4, maxSpeed: 176, accel: 110, handling: 8.3, silhouette: "sport" },
+  lightweight: { color: 0x37a884, accent: 0xe9f6ee, maxSpeed: 165, accel: 114, handling: 9.4, silhouette: "street" },
+  dirt: { color: 0x9f5f31, accent: 0xd9b273, maxSpeed: 162, accel: 108, handling: 8.6, silhouette: "street" }
 };
 
 const RIDERS: Record<string, RiderSpec> = {
@@ -92,23 +96,24 @@ type RaceModelPack = {
 };
 
 const EXTERNAL_BIKE_ASSETS: Record<string, string> = {
-  starter: "https://cdn.3dassets.dev/assets/15423/v1/model.glb",
-  speed: "https://cdn.3dassets.dev/assets/15424/v1/model.glb",
-  heavy: "https://cdn.3dassets.dev/assets/15428/v1/model.glb",
-  elite: "https://cdn.3dassets.dev/assets/15416/v1/model.glb",
-  legendary: "https://cdn.3dassets.dev/assets/15415/v1/model.glb",
+  starter: "/api/3dassets/model?asset=15423",
+  speed: "/api/3dassets/model?asset=15424",
+  heavy: "/api/3dassets/model?asset=15428",
+  elite: "/api/3dassets/model?asset=15416",
+  legendary: "/api/3dassets/model?asset=15415",
+  cafe: "/api/3dassets/model?asset=15429",
+  flattrack: "/api/3dassets/model?asset=15420",
+  lightweight: "/api/3dassets/model?asset=15421",
   dirt: "/assets/dirt-bike.glb"
 };
 
 const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
-  // Verified 3DAssets.dev traffic models.
-  danfo: "https://cdn.3dassets.dev/assets/34194/v1/model.glb",
-  keke: "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
-  // The transit starter scene contains the verified Community Minibus. We extract that submodel at load time.
-  minibus: "https://cdn.3dassets.dev/assets/34231/v1/model.glb",
-  sedan: "https://cdn.3dassets.dev/assets/32490/v1/model.glb",
-  suv: "https://cdn.3dassets.dev/assets/32500/v1/model.glb",
-  van: "https://cdn.3dassets.dev/assets/18680/v1/model.glb"
+  danfo: "/api/3dassets/model?asset=34194",
+  keke: "/api/3dassets/model?asset=34283",
+  minibus: "/api/3dassets/model?asset=34231",
+  sedan: "/api/3dassets/model?asset=32490",
+  suv: "/api/3dassets/model?asset=32500",
+  van: "/api/3dassets/model?asset=18680"
 };
 
 const EXTERNAL_RIDER_ASSETS: Record<RiderGender, string> = {
@@ -117,8 +122,8 @@ const EXTERNAL_RIDER_ASSETS: Record<RiderGender, string> = {
 };
 
 const EXTERNAL_ENVIRONMENT_ASSETS = {
-  busStation: "https://cdn.3dassets.dev/assets/34221/v1/model.glb",
-  market: "https://cdn.3dassets.dev/assets/34323/v1/model.glb"
+  busStation: "/api/3dassets/model?asset=34221",
+  market: "/api/3dassets/model?asset=34323"
 } as const;
 
 type LoadedAsset = THREE.Group | null;
@@ -133,7 +138,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
 }
 
 async function resolve3DAssetUrl(slugOrUrl: string) {
-  if (slugOrUrl.startsWith("http")) return slugOrUrl;
+  if (slugOrUrl.startsWith("http") || slugOrUrl.startsWith("/")) return slugOrUrl;
 
   const response = await fetch(
     `/api/3dassets?slug=${encodeURIComponent(slugOrUrl)}`,
@@ -2011,6 +2016,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
   const player = createBikeAndRider(playerBikeId, playerRiderId, 1.12);
   player.position.set(0, 0, 3.85);
+  player.visible = false;
   scene.add(player);
 
   const speedStreaks: THREE.Mesh[] = [];
@@ -2027,11 +2033,11 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   const aiRacers: Racer[] = [];
   const aiConfigs = [
     ["cpu-01", "speed", 0.18, 0.88, -32],
-    ["cpu-02", "heavy", -0.14, 0.92, -51],
+    ["cpu-02", "flattrack", -0.14, 0.92, -51],
     ["cpu-03", "elite", 0.38, 0.98, -74],
-    ["cpu-04", "starter", -0.36, 0.86, -93],
+    ["cpu-04", "cafe", -0.36, 0.86, -93],
     ["cpu-05", "heavy", 0.10, 1.0, -116],
-    ["cpu-06", "speed", -0.48, 0.94, -138],
+    ["cpu-06", "lightweight", -0.48, 0.94, -138],
     ["cpu-07", "legendary", 0.48, 1.02, -162]
   ] as const;
 
@@ -2039,6 +2045,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     const [riderId, bikeId, laneBias, skill, z] = cfg;
     const group = createBikeAndRider(bikeId, riderId, 0.86);
     group.position.set(laneBias * 5.3, 0, z);
+    group.visible = false;
     scene.add(group);
     aiRacers.push({
       id: "cpu-" + (index + 1),
@@ -2107,20 +2114,42 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     .then((pack) => {
       loadedRacePack = pack;
 
-      if (pack.bikes[playerBikeId]) {
-        const realPlayer = prepareLoadedRiderBike(pack, playerBikeId, playerRiderId, true);
+      const loadedPlayerBikeId = pack.bikes[playerBikeId]
+        ? playerBikeId
+        : pack.bikes.dirt
+          ? "dirt"
+          : null;
+      const playerRiderSpec = RIDERS[playerRiderId] ?? RIDERS.main;
+      const playerRiderReady =
+        Boolean(pack.riders[playerRiderSpec.gender] ?? pack.riders.male ?? pack.riders.female);
+
+      if (loadedPlayerBikeId && playerRiderReady) {
+        const realPlayer = prepareLoadedRiderBike(pack, loadedPlayerBikeId, playerRiderId, true);
         if (scene.children.includes(player)) scene.remove(player);
         realPlayer.position.copy(player.position);
+        realPlayer.visible = true;
         scene.add(realPlayer);
         activePlayer = realPlayer;
+      } else {
+        player.visible = true;
       }
 
       for (const ai of aiRacers) {
-        if (!pack.bikes[ai.bikeId]) continue;
-        const next = prepareLoadedRiderBike(pack, ai.bikeId, ai.riderId, false);
+        const loadedBikeId = pack.bikes[ai.bikeId]
+          ? ai.bikeId
+          : pack.bikes.dirt
+            ? "dirt"
+            : null;
+        if (!loadedBikeId || !playerRiderReady) {
+          ai.group.visible = true;
+          continue;
+        }
+        const next = prepareLoadedRiderBike(pack, loadedBikeId, ai.riderId, false);
         next.position.copy(ai.group.position);
+        next.visible = true;
         scene.remove(ai.group);
         ai.group = next;
+        ai.bikeId = loadedBikeId;
         scene.add(next);
       }
 
@@ -2129,6 +2158,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         const next = prepareLoadedTraffic(pack, vehicle.kind);
         if (!next) continue;
         next.position.copy(vehicle.group.position);
+        next.visible = true;
         scene.remove(vehicle.group);
         vehicle.group = next;
         scene.add(next);
@@ -2164,7 +2194,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       }
     })
     .catch((error) => {
-      console.warn("3D model pack load failed; keeping handcrafted rider fallback.", error);
+      console.warn("3D model pack load failed; using guaranteed project-local 3D rider/bike.", error);
+      player.visible = true;
+      aiRacers.forEach((ai) => { ai.group.visible = true; });
     });
 
   let width = Math.max(parent.clientWidth, 1);
@@ -2327,11 +2359,14 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         let node = remoteRacers.get(remote.id);
         if (!node || node.bikeId !== remote.bikeId || node.riderId !== remote.riderId) {
           if (node) scene.remove(node.group);
-          const remoteBikeId = remote.bikeId || "starter";
+          const remoteBikeId =
+            remote.bikeId && loadedRacePack?.bikes[remote.bikeId]
+              ? remote.bikeId
+              : "dirt";
           const remoteRiderId = remote.riderId || "main";
           const group = loadedRacePack?.bikes[remoteBikeId]
             ? prepareLoadedRiderBike(loadedRacePack, remoteBikeId, remoteRiderId, false)
-            : createBikeAndRider(remoteBikeId, remoteRiderId, 0.86);
+            : createBikeAndRider("dirt", remoteRiderId, 0.86);
           scene.add(group);
           node = { group, bikeId: remoteBikeId, riderId: remoteRiderId };
           remoteRacers.set(remote.id, node);
@@ -2755,7 +2790,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   requestAnimationFrame(frame);
 
   return {
-    ready: Promise.resolve(),
+    ready: raceModelsPromise.catch(() => undefined),
     destroy() {
       if (disposed) return;
       disposed = true;

@@ -1288,7 +1288,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     : "main";
 
   const player = createBikeAndRider(playerBikeId, playerRiderId, 1.12);
-  activePlayer.position.set(0, 0, 3.85);
+  player.position.set(0, 0, 3.85);
   scene.add(player);
 
   const speedStreaks: THREE.Mesh[] = [];
@@ -1365,17 +1365,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   const hud = makeHud(parent);
 
   const raceModelsPromise = loadRaceModelPack().then((pack) => {
-    const replaceRoot = (oldRoot: THREE.Group, nextRoot: THREE.Group) => {
-      nextRoot.position.copy(oldRoot.position);
-      nextRoot.rotation.copy(oldRoot.rotation);
-      nextRoot.scale.copy(oldRoot.scale);
-      oldRoot.parent?.remove(oldRoot);
-      scene.add(nextRoot);
-      return nextRoot;
-    };
-
     const realPlayer = prepareLoadedRiderBike(pack, playerBikeId, playerRiderId, true);
-    activePlayer.position.set(0, 0, 3.85);
     const playerIndex = scene.children.indexOf(player);
     if (playerIndex >= 0) scene.remove(player);
     realPlayer.position.copy(player.position);

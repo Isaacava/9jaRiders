@@ -1,4 +1,4 @@
-const CACHE_NAMESPACE = "aboki-riders-assets-v9";
+const CACHE_NAMESPACE = "aboki-riders-assets-v10";
 const CACHE_PREFIX = `${CACHE_NAMESPACE}-`;
 const RUNTIME_CACHE = `${CACHE_NAMESPACE}-runtime`;
 const EXTERNAL_CDN_ORIGIN = "https://cdn.3dassets.dev";
@@ -12,6 +12,9 @@ const EXTERNAL_BIKE_URLS = new Set([
   "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
   "https://cdn.3dassets.dev/assets/32486/v1/model.glb",
   "https://cdn.3dassets.dev/assets/32490/v1/model.glb",
+  "https://cdn.3dassets.dev/assets/32500/v1/model.glb",
+  "https://cdn.3dassets.dev/assets/18680/v1/model.glb",
+  "https://cdn.3dassets.dev/assets/34231/v1/model.glb",
   "https://cdn.3dassets.dev/assets/32529/v1/model.glb",
   "https://cdn.3dassets.dev/assets/32487/v1/model.glb",
   "https://cdn.3dassets.dev/assets/34231/v1/model.glb",

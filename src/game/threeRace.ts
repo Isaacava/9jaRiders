@@ -640,6 +640,18 @@ function makeHud(parent: HTMLElement) {
   nitroLabel.style.textShadow = "0 2px 6px rgba(0,0,0,.8)";
   hud.appendChild(nitroLabel);
 
+  const countdown = document.createElement("div");
+  countdown.style.position = "absolute";
+  countdown.style.left = "50%";
+  countdown.style.top = "50%";
+  countdown.style.transform = "translate(-50%,-50%)";
+  countdown.style.fontSize = "76px";
+  countdown.style.fontWeight = "1000";
+  countdown.style.fontStyle = "italic";
+  countdown.style.textShadow = "0 5px 16px rgba(0,0,0,.75)";
+  countdown.style.opacity = "0";
+  hud.appendChild(countdown);
+
   const message = document.createElement("div");
   message.style.position = "absolute";
   message.style.left = "50%";
@@ -705,6 +717,7 @@ function makeHud(parent: HTMLElement) {
     speedUnit,
     nitroFill,
     message,
+    countdown,
     leftButton,
     rightButton,
     nitroButton,
@@ -825,6 +838,16 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   player.position.set(0, 0, 5.2);
   scene.add(player);
 
+  const speedStreaks: THREE.Mesh[] = [];
+  const streakMaterial = emissiveMaterial(0x9cecff, 2.8);
+  for (let i = 0; i < 18; i += 1) {
+    const streak = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 1.6), streakMaterial);
+    streak.position.set((Math.random() - 0.5) * 13.5, 0.35 + Math.random() * 1.9, -10 - Math.random() * 110);
+    streak.visible = false;
+    scene.add(streak);
+    speedStreaks.push(streak);
+  }
+
   const riderNames = ["Tega", "Chidi", "Zina", "Emeka", "Bisi", "Femi", "Yemi"];
   const aiRacers: Racer[] = [];
   const aiConfigs = [
@@ -908,6 +931,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let engineOsc: OscillatorNode | null = null;
   let engineGain: GainNode | null = null;
   let networkState: any = null;
+  let networkLocal: any = null;
   let lastNetworkInput = 0;
   const remoteRacers = new Map<string, { group: THREE.Group; bikeId: string; riderId: string }>();
 
@@ -1025,8 +1049,12 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     realtime.onState((state) => {
       networkState = state;
       const local = state.players.find((p) => p.id === networkPlayerId);
+      networkLocal = local ?? null;
       if (local) {
-        if (state.status === "racing") countdown = 0;
+        if (state.status === "racing") {
+          if (countdown > 0) raceStartedAt = performance.now();
+          countdown = 0;
+        }
         if (state.status === "countdown") countdown = Math.max(1, Math.ceil((state.countdownMs ?? 3000) / 1000));
         if (state.status === "finished" && !finished) {
           finished = true;
@@ -1094,20 +1122,31 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     if (finished) return;
 
     if (countdown > 0) {
-      const elapsed = performance.now() - raceStartedAt;
-      countdown = Math.max(0, 3 - Math.floor(elapsed / 900));
+      if (mode === "multiplayer" && networkState?.status === "countdown") {
+        playerSpeed = THREE.MathUtils.lerp(playerSpeed, 0, 0.12);
+      } else {
+        const elapsed = performance.now() - raceStartedAt;
+        countdown = Math.max(0, 3 - Math.floor(elapsed / 900));
+      }
       if (countdown === 0) beep(false);
       playerSpeed = THREE.MathUtils.lerp(playerSpeed, 0, 0.1);
     } else {
       const spec = BIKES[playerBikeId] ?? BIKES.starter;
-      const max = spec.maxSpeed * (boosting ? 1.34 : 1);
-      const accel = spec.accel * dt;
-      playerSpeed = Math.min(max, playerSpeed + accel);
+      if (mode === "multiplayer" && networkLocal) {
+        playerSpeed = networkLocal.speed ?? playerSpeed;
+        playerDistance = networkLocal.distance ?? playerDistance;
+        const serverX = (networkLocal.lane - 0.5) * 10.6;
+        playerX = THREE.MathUtils.lerp(playerX, serverX, 0.16);
+      } else {
+        const max = spec.maxSpeed * (boosting ? 1.34 : 1);
+        const accel = spec.accel * dt;
+        playerSpeed = Math.min(max, playerSpeed + accel);
       if (!boosting && playerSpeed > spec.maxSpeed) playerSpeed = Math.max(spec.maxSpeed, playerSpeed - 20 * dt);
       const lateral = steering * (spec.handling * 0.36) * dt;
       playerX += lateral * (0.7 + playerSpeed / Math.max(spec.maxSpeed, 1));
       playerX = THREE.MathUtils.clamp(playerX, -6.1, 6.1);
-      playerDistance += (playerSpeed / 3.6) * dt;
+        playerDistance += (playerSpeed / 3.6) * dt;
+      }
 
       const worldSpeed = (playerSpeed / 3.6) * 0.62;
       recycleRoadSegments(worldSpeed * dt);
@@ -1171,7 +1210,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         }
       });
 
-      if (playerDistance >= 3500) finishRace();
+      if (mode === "solo" && playerDistance >= 3500) finishRace();
     }
 
     const normalized = Math.min(1, playerSpeed / 220);
@@ -1208,10 +1247,42 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       engineGain.gain.value = 0.012 + normalized * 0.024 + (boosting ? 0.016 : 0);
     }
 
+    if (countdown > 0) {
+      hud.countdown.style.opacity = "1";
+      hud.countdown.textContent = countdown === 1 ? "GO!" : String(countdown);
+    } else {
+      hud.countdown.style.opacity = "0";
+    }
+
     if (messageUntil < performance.now()) {
       hud.message.style.opacity = "0";
     } else {
       hud.message.style.opacity = "1";
+      hud.message.textContent = messageText;
+    }
+
+    if (mode === "solo") {
+      const place = 1 + aiRacers.filter((ai) => ai.distance > playerDistance).length;
+      hud.position.textContent = place + "/8";
+    } else if (networkLocal) {
+      const place = 1 + (networkState?.players ?? []).filter((p: any) => p.id !== networkPlayerId && p.distance > networkLocal.distance).length;
+      hud.position.textContent = place + "/" + (networkState?.players?.length ?? 1);
+    }
+
+    if (boosting) {
+      speedStreaks.forEach((streak, index) => {
+        streak.visible = true;
+        streak.position.z += (playerSpeed / 3.6) * dt * (1.5 + (index % 4) * 0.25);
+        if (streak.position.z > 8) {
+          streak.position.z = -90 - Math.random() * 70;
+          streak.position.x = (Math.random() - 0.5) * 13.5;
+          streak.position.y = 0.35 + Math.random() * 1.9;
+        }
+      });
+    } else {
+      speedStreaks.forEach((streak) => {
+        streak.visible = false;
+      });
     }
 
     hud.timer.textContent = new Date(Math.max(performance.now() - raceStartedAt, 0)).toISOString().substring(14, 19);

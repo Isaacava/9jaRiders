@@ -137,7 +137,9 @@ async function resolve3DAssetUrl(slugOrUrl: string) {
 async function loadOptionalAsset(loader: GLTFLoader, slugOrUrl: string): Promise<LoadedAsset> {
   try {
     const url = await withTimeout(resolve3DAssetUrl(slugOrUrl), 6500, "3D asset lookup");
-    return (await withTimeout(loader.loadAsync(url), 8500, "3D asset load")).scene;
+    const gltf = await withTimeout(loader.loadAsync(url), 8500, "3D asset load");
+    gltf.scene.userData.animations = gltf.animations;
+    return gltf.scene;
   } catch (error) {
     console.warn("3DAssets.dev asset unavailable:", slugOrUrl, error);
     return null;
@@ -264,6 +266,17 @@ function prepareLoadedTraffic(pack: RaceModelPack, kind: Traffic["kind"]) {
   };
   fitModel(model, targetHeights[kind]);
   model.rotation.y = Math.PI;
+
+  const animations = model.userData.animations as THREE.AnimationClip[] | undefined;
+  if (animations?.length) {
+    const mixer = new THREE.AnimationMixer(model);
+    const rollClip =
+      animations.find((clip) => /roll|wheel/i.test(clip.name)) ??
+      animations[animations.length - 1];
+    mixer.clipAction(rollClip).play();
+    model.userData.mixer = mixer;
+  }
+
   model.userData.modelBacked = true;
   const wheels: THREE.Object3D[] = [];
   model.traverse((object) => {
@@ -2024,11 +2037,20 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         if (now < ai.laneChangeAt) return false;
 
         const currentZ = ai.group.position.z;
-        const blocker = traffic.find((vehicle) => {
+        const trafficBlocker = traffic.find((vehicle) => {
           const ahead = vehicle.group.position.z < currentZ + 0.25;
           const gap = currentZ - vehicle.group.position.z;
           return ahead && gap > 0 && gap < 13 && Math.abs(vehicle.group.position.x - ai.group.position.x) < 1.55;
         });
+
+        const racerBlocker = aiRacers.find((other) => {
+          if (other.id === ai.id) return false;
+          const ahead = other.group.position.z < currentZ + 0.25;
+          const gap = currentZ - other.group.position.z;
+          return ahead && gap > 0 && gap < 9 && Math.abs(other.group.position.x - ai.group.position.x) < 1.45;
+        });
+
+        const blocker = trafficBlocker ?? racerBlocker;
 
         if (!blocker) {
           ai.targetSpeed = ai.maxSpeed * (0.92 + ai.aggression * 0.06);
@@ -2101,10 +2123,15 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         }
         vehicle.group.position.z = vehicle.z;
         vehicle.group.rotation.y = Math.sin(now * 0.0008 + index) * 0.004;
-        const trafficWheels = vehicle.group.userData.wheels as THREE.Object3D[] | undefined;
-        trafficWheels?.forEach((wheelObject) => {
-          wheelObject.rotation.x -= (worldSpeed * vehicle.speedFactor * dt) / 0.43;
-        });
+        const trafficMixer = vehicle.group.userData.mixer as THREE.AnimationMixer | undefined;
+        if (trafficMixer) {
+          trafficMixer.update(dt);
+        } else {
+          const trafficWheels = vehicle.group.userData.wheels as THREE.Object3D[] | undefined;
+          trafficWheels?.forEach((wheelObject) => {
+            wheelObject.rotation.x -= (worldSpeed * vehicle.speedFactor * dt) / 0.43;
+          });
+        }
         if (vehicle.z > 28) {
           const lanePool = [-0.82, -0.28, 0.28, 0.78];
           vehicle.lane = lanePool[(index + Math.floor(now / 1800)) % lanePool.length];

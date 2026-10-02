@@ -21,12 +21,15 @@ type BikeSpec = {
   silhouette: "street" | "sport" | "cruiser" | "futuristic" | "superbike";
 };
 
+type RiderGender = "male" | "female";
+
 type RiderSpec = {
   jacket: number;
   accent: number;
   hair: number;
   skin: number;
   build: number;
+  gender: RiderGender;
   hairStyle: "short" | "braids" | "locs" | "bun" | "high";
 };
 
@@ -68,10 +71,10 @@ const BIKES: Record<string, BikeSpec> = {
 };
 
 const RIDERS: Record<string, RiderSpec> = {
-  main: { jacket: 0x138e85, accent: 0xf2c94c, hair: 0x211715, skin: 0x956345, build: 1.0, hairStyle: "short" },
-  ada: { jacket: 0x8056bd, accent: 0xf2d0a9, hair: 0x27131f, skin: 0x8d5c45, build: 0.96, hairStyle: "braids" },
-  kobby: { jacket: 0xbe514a, accent: 0xeee4d8, hair: 0x121212, skin: 0x7e5039, build: 1.07, hairStyle: "locs" },
-  tobi: { jacket: 0xe0792b, accent: 0x172024, hair: 0x2b170e, skin: 0x956043, build: 1.01, hairStyle: "high" },
+  main: { jacket: 0x138e85, accent: 0xf2c94c, hair: 0x211715, skin: 0x956345, build: 1.0, gender: "male", hairStyle: "short" },
+  ada: { jacket: 0x8056bd, accent: 0xf2d0a9, hair: 0x27131f, skin: 0x8d5c45, build: 0.96, gender: "female", hairStyle: "braids" },
+  kobby: { jacket: 0xbe514a, accent: 0xeee4d8, hair: 0x121212, skin: 0x7e5039, build: 1.07, gender: "male", hairStyle: "locs" },
+  tobi: { jacket: 0xe0792b, accent: 0x172024, hair: 0x2b170e, skin: 0x956043, build: 1.01, gender: "male", hairStyle: "high" },
   "cpu-01": { jacket: 0x246ba6, accent: 0xf2c94c, hair: 0x2a1a13, skin: 0x81543e, build: 0.98, hairStyle: "short" },
   "cpu-02": { jacket: 0x2c8c5c, accent: 0xf5e5ca, hair: 0x151515, skin: 0x784a35, build: 1.03, hairStyle: "short" },
   "cpu-03": { jacket: 0xb34b89, accent: 0x65d9f4, hair: 0x281623, skin: 0x8d5a42, build: 0.95, hairStyle: "bun" },
@@ -83,7 +86,7 @@ const RIDERS: Record<string, RiderSpec> = {
 
 type RaceModelPack = {
   bikes: Record<string, THREE.Group>;
-  riders: { base: THREE.Group };
+  riders: Partial<Record<RiderGender, THREE.Group>>;
   traffic: Record<Traffic["kind"], THREE.Group>;
   environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 };
@@ -108,7 +111,10 @@ const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
   van: "https://cdn.3dassets.dev/assets/18680/v1/model.glb"
 };
 
-const EXTERNAL_RIDER_ASSET = "/assets/aboki_male_rider_stylized_v2.glb";
+const EXTERNAL_RIDER_ASSETS: Record<RiderGender, string> = {
+  male: "/assets/aboki_male_rider_stylized_v2.glb",
+  female: "/assets/aboki_female_rider_stylized_v2.glb"
+};
 
 const EXTERNAL_ENVIRONMENT_ASSETS = {
   busStation: "https://cdn.3dassets.dev/assets/34221/v1/model.glb",
@@ -154,23 +160,27 @@ async function loadOptionalAsset(loader: GLTFLoader, slugOrUrl: string): Promise
 async function loadRaceModelPack() {
   const loader = new GLTFLoader();
   const bikeIds = Object.keys(EXTERNAL_BIKE_ASSETS);
+  const riderGenders = Object.keys(EXTERNAL_RIDER_ASSETS) as RiderGender[];
   const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
   const environmentIds = Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>;
 
-  const [bikeResults, riderResult, trafficResults, environmentResults] = await Promise.all([
+  const [bikeResults, riderResults, trafficResults, environmentResults] = await Promise.all([
     Promise.all(bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))),
-    loadOptionalAsset(loader, EXTERNAL_RIDER_ASSET),
+    Promise.all(riderGenders.map((gender) => loadOptionalAsset(loader, EXTERNAL_RIDER_ASSETS[gender]))),
     Promise.all(trafficKinds.map((kind) => loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]))),
     Promise.all(environmentIds.map((id) => loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id])))
   ]);
 
   const bikes: Record<string, THREE.Group> = {};
-  const riders = riderResult ? { base: riderResult as THREE.Group } : {};
+  const riders: Partial<Record<RiderGender, THREE.Group>> = {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
   const environments = {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 
   bikeIds.forEach((bikeId, index) => {
     if (bikeResults[index]) bikes[bikeId] = bikeResults[index] as THREE.Group;
+  });
+  riderGenders.forEach((gender, index) => {
+    if (riderResults[index]) riders[gender] = riderResults[index] as THREE.Group;
   });
   trafficKinds.forEach((kind, index) => {
     if (trafficResults[index]) traffic[kind] = trafficResults[index] as THREE.Group;
@@ -179,7 +189,7 @@ async function loadRaceModelPack() {
     if (environmentResults[index]) environments[id] = environmentResults[index] as THREE.Group;
   });
 
-  return { bikes, riders: riders as { base: THREE.Group }, traffic, environments };
+  return { bikes, riders, traffic, environments };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -505,8 +515,14 @@ function prepareLoadedRiderBike(
   riderId: string,
   player = false
 ) {
-  const riderRoot = pack.riders.base
-    ? prepareExternalRider(pack.riders.base, riderId, player)
+  const rider = RIDERS[riderId] ?? RIDERS.main;
+  const riderSource =
+    pack.riders[rider.gender] ??
+    pack.riders.male ??
+    pack.riders.female;
+
+  const riderRoot = riderSource
+    ? prepareExternalRider(riderSource, riderId, player)
     : createRiderFromFallback(riderId, player);
   const bikeSource = pack.bikes[bikeId] ?? pack.bikes.starter;
   const bike = cloneLoadedModel(bikeSource, "bike-" + bikeId);

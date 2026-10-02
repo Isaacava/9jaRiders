@@ -15,7 +15,7 @@ export type AssetPack = {
 
 const assets = (...ids: string[]) => ids.map(getReadyAssetPath);
 
-export const ASSET_CACHE_VERSION = 9;
+export const ASSET_CACHE_VERSION = 10;
 export const DEFAULT_ROUTE_PACK_ID: AssetPackId = "route-lagos-01";
 
 export const ASSET_PACKS: AssetPack[] = [

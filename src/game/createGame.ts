@@ -857,8 +857,8 @@ class AbokiRaceScene extends Phaser.Scene {
     const visual = this.add.container(0, 0);
 
     if (this.textures.exists(bikeKey)) {
-      const bike = this.add.image(0, 28, bikeKey);
-      bike.setDisplaySize(154, 128);
+      const bike = this.add.image(0, 0, bikeKey);
+      bike.setDisplaySize(180, 223);
       visual.add(bike);
     } else {
       const wheelA = this.add.ellipse(-18, 38, 12, 28, COLORS.ink);
@@ -868,8 +868,8 @@ class AbokiRaceScene extends Phaser.Scene {
     }
 
     if (this.textures.exists(riderKey)) {
-      const rider = this.add.image(0, -64, riderKey);
-      rider.setDisplaySize(104, 118);
+      const rider = this.add.image(0, 0, riderKey);
+      rider.setDisplaySize(180, 223);
       visual.add(rider);
     } else {
       const body = this.add.rectangle(0, -20, 36, 52, this.selectedRider?.color ?? COLORS.bikeLight).setStrokeStyle(3, COLORS.ink);

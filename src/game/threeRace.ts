@@ -406,6 +406,8 @@ function prepareLoadedRiderBike(
   if (!bikeSource) return riderRoot;
 
   const bike = cloneLoadedModel(bikeSource, "bike-" + bikeId);
+  // 3DAssets.dev bikes are authored nose +Z; Aboki Riders race travel is -Z.
+  bike.rotation.y = Math.PI;
   const bikeSpec = BIKES[bikeId] ?? BIKES.starter;
 
   if (bikeSpec.scale && bikeSpec.scale !== 1) {

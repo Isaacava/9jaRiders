@@ -1,4 +1,4 @@
-const CACHE_NAMESPACE = "aboki-riders-assets-v5";
+const CACHE_NAMESPACE = "aboki-riders-assets-v6";
 const CACHE_PREFIX = `${CACHE_NAMESPACE}-`;
 
 self.addEventListener("install", (event) => {

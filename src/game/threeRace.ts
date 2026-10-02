@@ -161,7 +161,7 @@ function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: st
 }
 
 function prepareLoadedTraffic(pack: RaceModelPack, kind: Traffic["kind"]) {
-  const model = cloneNamedModel(pack.traffic, "traffic-" + kind);
+  const model = cloneLoadedModel(pack.traffic.getObjectByName("traffic-" + kind) ?? pack.traffic, "traffic-" + kind);
   const sizes: Record<Traffic["kind"], number> = {
     danfo: 2.75,
     keke: 2.25,

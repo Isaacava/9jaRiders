@@ -81,6 +81,7 @@ type RaceModelPack = {
   bikes: Record<string, THREE.Group>;
   riders: THREE.Group;
   traffic: Record<Traffic["kind"], THREE.Group>;
+  environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 };
 
 const EXTERNAL_BIKE_ASSETS: Record<string, string> = {

@@ -106,7 +106,7 @@ const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
   van: "https://cdn.3dassets.dev/assets/18680/v1/model.glb"
 };
 
-const EXTERNAL_RIDER_ASSET = "https://cdn.3dassets.dev/assets/32901/v1/model.glb";
+const EXTERNAL_RIDER_ASSET = "https://cdn.jsdelivr.net/gh/kunalkushwaha/vsim@3f97faf85e46d2f9a122b0a8b8d3ccc0af598f91/packages/assets/library/human.glb";
 
 const EXTERNAL_ENVIRONMENT_ASSETS = {
   busStation: "https://cdn.3dassets.dev/assets/34221/v1/model.glb",
@@ -293,12 +293,12 @@ function fitBikeModel(model: THREE.Object3D, targetLength: number) {
 }
 
 function prepareExternalRider(source: THREE.Object3D, riderId: string, player = false) {
-  const model = cloneLoadedModel(source, "rider-base");
+  const model = cloneLoadedModel(source, "rider-human");
   const rider = RIDERS[riderId] ?? RIDERS.main;
+  const bones = new Map<string, THREE.Object3D>();
 
-  // Keep the base character human and clean for Aboki Riders: remove unrelated
-  // survival-game equipment that should never appear on a motorcycle racer.
   model.traverse((node) => {
+    if (node.type === "Bone") bones.set(node.name.toLowerCase(), node);
     if (/helmet|headgear|hardhat|cap|backpack|ruck|rifle|carbine|weapon|gun|pouch|holster/i.test(node.name)) {
       node.visible = false;
     }
@@ -306,13 +306,21 @@ function prepareExternalRider(source: THREE.Object3D, riderId: string, player = 
     const mesh = node as THREE.Mesh;
     if (!mesh.isMesh || !mesh.material) return;
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+
     for (const materialInstance of materials) {
       if (!(materialInstance instanceof THREE.MeshStandardMaterial)) continue;
       const role = `${node.name} ${materialInstance.name}`.toLowerCase();
-      if (!/shirt|jacket|top|vest|hood|sleeve|outfit|clothes|pant|trouser|jean|boot|shoe/i.test(role)) continue;
-      materialInstance.color.lerp(new THREE.Color(rider.jacket), 0.40);
-      materialInstance.roughness = Math.min(materialInstance.roughness, 0.72);
-      materialInstance.needsUpdate = true;
+
+      if (/skin|body|face|head|ear|neck|hand|arm_skin|leg_skin/i.test(role)) {
+        materialInstance.color.lerp(new THREE.Color(rider.skin), 0.28);
+        materialInstance.needsUpdate = true;
+      } else if (/hair/i.test(role)) {
+        materialInstance.color.lerp(new THREE.Color(rider.hair), 0.34);
+        materialInstance.needsUpdate = true;
+      } else if (/shirt|jacket|top|vest|hood|sleeve|outfit|clothes|pant|trouser|jean|boot|shoe|suit/i.test(role)) {
+        materialInstance.color.lerp(new THREE.Color(rider.jacket), 0.34);
+        materialInstance.needsUpdate = true;
+      }
     }
   });
 
@@ -322,25 +330,58 @@ function prepareExternalRider(source: THREE.Object3D, riderId: string, player = 
   model.position.x -= center.x;
   model.position.z -= center.z;
   model.position.y -= bounds.min.y;
-
-  // The source character faces +Z; race models face down -Z.
   model.rotation.y = Math.PI;
 
-  // Slightly different scale/build reads keep the CPU field from becoming clones.
-  const buildScale = THREE.MathUtils.clamp(rider.build, 0.93, 1.07);
+  const buildScale = THREE.MathUtils.clamp(rider.build, 0.94, 1.06);
   model.scale.x *= buildScale;
   model.scale.z *= buildScale;
 
+  // MakeHuman game_engine rig bone names are stable in this source.
+  // Seat the human independently from the bike so the rider never becomes a fused asset.
+  const thighL = bones.get("thigh_l");
+  const thighR = bones.get("thigh_r");
+  const calfL = bones.get("calf_l");
+  const calfR = bones.get("calf_r");
+  const footL = bones.get("foot_l");
+  const footR = bones.get("foot_r");
+  const armL = bones.get("upperarm_l");
+  const armR = bones.get("upperarm_r");
+  const forearmL = bones.get("lowerarm_l");
+  const forearmR = bones.get("lowerarm_r");
+  const spine = bones.get("spine_02") ?? bones.get("spine_01");
+  const head = bones.get("head");
+
+  [thighL, thighR, calfL, calfR, footL, footR, armL, armR, forearmL, forearmR, spine, head]
+    .forEach((bone) => {
+      if (bone) bone.rotation.order = "XYZ";
+    });
+
+  // Seated, forward-leaning riding pose.
+  if (thighL && thighR) {
+    thighL.rotation.x = -1.10;
+    thighR.rotation.x = -1.10;
+  }
+  if (calfL && calfR) {
+    calfL.rotation.x = 1.22;
+    calfR.rotation.x = 1.22;
+  }
+  if (footL && footR) {
+    footL.rotation.x = -0.30;
+    footR.rotation.x = -0.30;
+  }
+  if (armL && armR) {
+    armL.rotation.x = -0.78;
+    armR.rotation.x = -0.78;
+  }
+  if (forearmL && forearmR) {
+    forearmL.rotation.x = -0.58;
+    forearmR.rotation.x = -0.58;
+  }
+  if (spine) spine.rotation.x = 0.30;
+  if (head) head.rotation.x = -0.08;
+
   const root = new THREE.Group();
   root.add(model);
-
-  const animations = model.userData.animations as THREE.AnimationClip[] | undefined;
-  const idleClip = animations?.find((clip) => /idle/i.test(clip.name));
-  if (idleClip) {
-    const mixer = new THREE.AnimationMixer(model);
-    mixer.clipAction(idleClip).play();
-    root.userData.riderMixer = mixer;
-  }
 
   root.userData.riderRoot = model;
   root.userData.realHuman = true;
@@ -2438,7 +2479,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     const bob = Math.sin(performance.now() * 0.012 + playerSpeed * 0.02) * (0.012 + normalized * 0.035);
     activePlayer.position.y = bob;
 
-    const riderRoot = activePlayer.userData.riderRoot as THREE.Group | undefined;
+    const riderRoot = activePlayer.userData.riderRoot as THREE.Object3D | undefined;
     if (riderRoot) {
       riderRoot.rotation.z = THREE.MathUtils.lerp(
         riderRoot.rotation.z,

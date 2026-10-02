@@ -1,5 +1,6 @@
 const CACHE_NAMESPACE = "aboki-riders-assets-v8";
 const CACHE_PREFIX = `${CACHE_NAMESPACE}-`;
+const EXTERNAL_CDN_ORIGIN = "https://cdn.3dassets.dev";
 const EXTERNAL_BIKE_URLS = new Set([
   "https://cdn.3dassets.dev/assets/15423/v1/model.glb",
   "https://cdn.3dassets.dev/assets/15424/v1/model.glb",
@@ -35,7 +36,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   const sameOriginAsset = url.origin === self.location.origin && url.pathname.startsWith("/assets/");
   const externalBikeAsset = EXTERNAL_BIKE_URLS.has(request.url);
-  if (request.method !== "GET" || (!sameOriginAsset && !externalBikeAsset)) return;
+  const externalCdnAsset = url.origin === EXTERNAL_CDN_ORIGIN && url.pathname.startsWith("/assets/");
+  if (request.method !== "GET" || (!sameOriginAsset && !externalBikeAsset && !externalCdnAsset)) return;
   event.respondWith((async () => {
     const cacheNames = await caches.keys();
     for (const name of cacheNames) {

@@ -80,7 +80,6 @@ const RIDERS: Record<string, RiderSpec> = {
 
 type RaceModelPack = {
   bikes: Record<string, THREE.Group>;
-  riders: THREE.Group;
   traffic: Record<Traffic["kind"], THREE.Group>;
   environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 };
@@ -149,19 +148,6 @@ async function loadRaceModelPack() {
   const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
   const environmentIds = Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>;
 
-  let riderResult: THREE.Group;
-  try {
-    riderResult = (await withTimeout(
-      loader.loadAsync("/assets/models/riders.glb"),
-      6500,
-      "local rider pack"
-    )).scene;
-  } catch (error) {
-    console.warn("Local rider pack unavailable:", error);
-    const fallback = createBikeAndRider("starter", "main", 1);
-    riderResult = (fallback.userData.riderRoot as THREE.Group | undefined)?.clone(true) ?? new THREE.Group();
-  }
-
   const [bikeResults, trafficResults, environmentResults] = await Promise.all([
     Promise.all(bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))),
     Promise.all(trafficKinds.map((kind) => loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]))),
@@ -182,7 +168,7 @@ async function loadRaceModelPack() {
     if (environmentResults[index]) environments[id] = environmentResults[index] as THREE.Group;
   });
 
-  return { bikes, riders: riderResult, traffic, environments };
+  return { bikes, traffic, environments };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -206,23 +192,12 @@ function fitBikeModel(model: THREE.Object3D, targetLength: number) {
   model.scale.multiplyScalar(scale);
 }
 
-function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: string, player = false) {
+function createRiderFromFallback(riderId: string, player = false) {
+  const fallback = createBikeAndRider("starter", riderId, player ? 1.12 : 0.86);
+  const riderRoot = fallback.userData.riderRoot as THREE.Group | undefined;
+  if (!riderRoot) return fallback;
   const root = new THREE.Group();
-  const bike = cloneLoadedModel(pack.bikes[bikeId] ?? pack.bikes.starter, "bike-" + bikeId);
-  const rider = cloneLoadedModel(pack.riders, "riders-pack");
-
-  // 3DAssets.dev bikes face +Z; Aboki Riders drives toward -Z.
-  bike.rotation.y = Math.PI;
-
-  fitBikeModel(bike, player ? 2.55 : 2.15);
-  rider.scale.setScalar(player ? 0.92 : 0.72);
-  fitModel(rider, player ? 2.45 : 1.98);
-  rider.position.y = player ? 0.48 : 0.38;
-
-  const wheels: THREE.Object3D[] = [];
-  bike.traverse((object) => {
-    if (/wheel/i.test(object.name)) wheels.push(object);
-  });
+  root.add(riderRoot.clone(true));
 
   if (player) {
     const nitroLight = new THREE.PointLight(0x54d7ff, 0, 5.0);
@@ -242,10 +217,31 @@ function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: st
     root.userData.flame = flame;
   }
 
-  root.add(bike, rider);
+  root.userData.riderRoot = root.children[0];
+  return root;
+}
+
+function prepareLoadedRiderBike(
+  pack: RaceModelPack,
+  bikeId: string,
+  riderId: string,
+  player = false
+) {
+  const riderRoot = createRiderFromFallback(riderId, player);
+  const bike = cloneLoadedModel(pack.bikes[bikeId] ?? pack.bikes.starter, "bike-" + bikeId);
+  bike.rotation.y = Math.PI;
+  fitBikeModel(bike, player ? 2.55 : 2.15);
+
+  const root = riderRoot;
   root.userData.modelBacked = true;
   root.userData.bikeModel = bike;
-  root.userData.riderModel = rider;
+
+  const wheels: THREE.Object3D[] = [];
+  bike.traverse((object) => {
+    if (/wheel/i.test(object.name)) wheels.push(object);
+  });
+
+  root.add(bike);
   root.userData.wheels = wheels;
   return root;
 }
@@ -1552,7 +1548,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       });
     })
     .catch((error) => {
-      console.warn("3D model pack load failed; keeping deterministic fallback.", error);
+      console.warn("3D model pack load failed; keeping handcrafted rider fallback.", error);
     });
 
   let width = Math.max(parent.clientWidth, 1);

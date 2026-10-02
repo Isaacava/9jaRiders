@@ -13,7 +13,7 @@ export default function GameCanvas({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let game: { destroy: () => void } | undefined;
+    let game: { destroy: () => void; ready?: Promise<unknown> } | undefined;
     let disposed = false;
 
     const boot = async () => {
@@ -21,6 +21,8 @@ export default function GameCanvas({
         const { createThreeRace } = await import("../game/threeRace");
         if (disposed || !mountRef.current) return;
         game = createThreeRace(mountRef.current, { mode });
+        await game.ready;
+        if (disposed) return;
         setLoading(false);
       } catch (cause) {
         if (disposed) return;
@@ -44,8 +46,8 @@ export default function GameCanvas({
       {loading && (
         <div className="game-loading" role="status" aria-live="polite">
           <strong>ABOKI RIDERS</strong>
-          <span>BOOTING 3D RACE</span>
-          <small>WEBGL · LOW-DATA RUNTIME</small>
+          <span>LOADING RACE WORLD</span>
+          <small>3D MODELS · LAGOS WORLD · CACHED</small>
         </div>
       )}
       {error && !loading && (

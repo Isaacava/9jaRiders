@@ -2035,7 +2035,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
   const player = createBikeAndRider(playerBikeId, playerRiderId, 1.12);
   player.position.set(0, 0, 3.85);
-  player.visible = false;
+  // Keep the project-local 3D bootstrap visible until the real GLB replacement
+  // is ready. This prevents a blank race if a network/cache/model parse is slow.
+  player.visible = true;
   scene.add(player);
 
   const speedStreaks: THREE.Mesh[] = [];
@@ -2064,7 +2066,8 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     const [riderId, bikeId, laneBias, skill, z] = cfg;
     const group = createBikeAndRider(bikeId, riderId, 0.86);
     group.position.set(laneBias * 5.3, 0, z);
-    group.visible = false;
+    // AI bootstrap models stay visible until upgraded to the loaded GLBs.
+    group.visible = true;
     scene.add(group);
     aiRacers.push({
       id: "cpu-" + (index + 1),
@@ -2280,7 +2283,10 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       }
     })
     .catch((error) => {
-      console.warn("Optional 3D pack upgrade failed; keeping the critical 3D race assets.", error);
+      // Never leave the race invisible because optional asset streaming failed.
+      player.visible = true;
+      aiRacers.forEach((ai) => { ai.group.visible = true; });
+      console.warn("Optional 3D pack upgrade failed; keeping the visible bootstrap race assets.", error);
     });
 
   let width = Math.max(parent.clientWidth, 1);
@@ -2308,6 +2314,22 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let lastNetworkInput = 0;
   let loadedRacePack: RaceModelPack | null = null;
   const remoteRacers = new Map<string, { group: THREE.Group; bikeId: string; riderId: string }>();
+
+  function updateMixerSafe(
+    owner: THREE.Object3D,
+    key: "riderMixer" | "bikeMixer" | "mixer",
+    dt: number,
+    label: string
+  ) {
+    const mixer = owner.userData[key] as THREE.AnimationMixer | undefined;
+    if (!mixer) return;
+    try {
+      mixer.update(dt);
+    } catch (error) {
+      console.warn("3D animation disabled after mixer error:", label, error);
+      delete owner.userData[key];
+    }
+  }
 
   // Player model activation is handled inside the streaming loader.
 
@@ -2507,6 +2529,11 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   function update(dt: number) {
     if (finished) return;
 
+    // Paint countdown immediately so a later 3D/model hiccup cannot leave
+    // the UI visually frozen at a single number.
+    hud.countdown.style.opacity = countdown > 0 ? "1" : "0";
+    hud.countdown.textContent = countdown === 1 ? "GO!" : String(countdown);
+
     if (!raceArmed) {
       playerSpeed = THREE.MathUtils.lerp(playerSpeed, 0, 0.18);
       countdown = 3;
@@ -2630,12 +2657,10 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
           0.10
         );
 
-        const aiRiderMixer = ai.group.userData.riderMixer as THREE.AnimationMixer | undefined;
-        aiRiderMixer?.update(dt);
-
+        updateMixerSafe(ai.group, "riderMixer", dt, ai.riderId);
         const aiBikeMixer = ai.group.userData.bikeMixer as THREE.AnimationMixer | undefined;
         if (aiBikeMixer) {
-          aiBikeMixer.update(dt);
+          updateMixerSafe(ai.group, "bikeMixer", dt, ai.bikeId);
         } else {
           const aiWheels = ai.group.userData.wheels as THREE.Object3D[] | undefined;
           aiWheels?.forEach((wheelObject) => {
@@ -2662,7 +2687,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         vehicle.group.rotation.y = Math.sin(now * 0.0008 + index) * 0.004;
         const trafficMixer = vehicle.group.userData.mixer as THREE.AnimationMixer | undefined;
         if (trafficMixer) {
-          trafficMixer.update(dt);
+          updateMixerSafe(vehicle.group, "mixer", dt, vehicle.kind);
         } else {
           const trafficWheels = vehicle.group.userData.wheels as THREE.Object3D[] | undefined;
           trafficWheels?.forEach((wheelObject) => {
@@ -2767,12 +2792,10 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       );
     }
 
-    const playerRiderMixer = activePlayer.userData.riderMixer as THREE.AnimationMixer | undefined;
-    playerRiderMixer?.update(dt);
-
+    updateMixerSafe(activePlayer, "riderMixer", dt, "player-rider");
     const playerBikeMixer = activePlayer.userData.bikeMixer as THREE.AnimationMixer | undefined;
     if (playerBikeMixer) {
-      playerBikeMixer.update(dt);
+      updateMixerSafe(activePlayer, "bikeMixer", dt, "player-bike");
     } else {
       const playerWheels = activePlayer.userData.wheels as THREE.Object3D[] | undefined;
       playerWheels?.forEach((wheelObject, index) => {
@@ -2803,13 +2826,6 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     if (engineOsc && engineGain && audioContext) {
       engineOsc.frequency.value = 74 + normalized * 168 + (boosting ? 48 : 0);
       engineGain.gain.value = 0.012 + normalized * 0.024 + (boosting ? 0.016 : 0);
-    }
-
-    if (countdown > 0) {
-      hud.countdown.style.opacity = "1";
-      hud.countdown.textContent = countdown === 1 ? "GO!" : String(countdown);
-    } else {
-      hud.countdown.style.opacity = "0";
     }
 
     if (messageUntil < performance.now()) {
@@ -2863,12 +2879,35 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     }
   }
 
+  let composerRenderFailed = false;
+
   function frame(now: number) {
     if (disposed) return;
     const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
     lastTime = now;
-    update(dt);
-    composer.render();
+
+    try {
+      update(dt);
+    } catch (error) {
+      console.warn("3D race frame update recovered from error:", error);
+    }
+
+    try {
+      if (!composerRenderFailed) {
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
+    } catch (error) {
+      composerRenderFailed = true;
+      console.warn("3D post-processing disabled after render error:", error);
+      try {
+        renderer.render(scene, camera);
+      } catch (fallbackError) {
+        console.warn("3D renderer also failed for this frame:", fallbackError);
+      }
+    }
+
     requestAnimationFrame(frame);
   }
 

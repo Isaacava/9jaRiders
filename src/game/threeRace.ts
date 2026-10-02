@@ -82,6 +82,7 @@ const RIDERS: Record<string, RiderSpec> = {
 
 type RaceModelPack = {
   bikes: Record<string, THREE.Group>;
+  riders: { base: THREE.Group };
   traffic: Record<Traffic["kind"], THREE.Group>;
   environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 };
@@ -104,6 +105,8 @@ const EXTERNAL_TRAFFIC_ASSETS: Record<Traffic["kind"], string> = {
   suv: "https://cdn.3dassets.dev/assets/32500/v1/model.glb",
   van: "https://cdn.3dassets.dev/assets/18680/v1/model.glb"
 };
+
+const EXTERNAL_RIDER_ASSET = "https://cdn.3dassets.dev/assets/32901/v1/model.glb";
 
 const EXTERNAL_ENVIRONMENT_ASSETS = {
   busStation: "https://cdn.3dassets.dev/assets/34221/v1/model.glb",
@@ -152,13 +155,15 @@ async function loadRaceModelPack() {
   const trafficKinds = Object.keys(EXTERNAL_TRAFFIC_ASSETS) as Traffic["kind"][];
   const environmentIds = Object.keys(EXTERNAL_ENVIRONMENT_ASSETS) as Array<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS>;
 
-  const [bikeResults, trafficResults, environmentResults] = await Promise.all([
+  const [bikeResults, riderResult, trafficResults, environmentResults] = await Promise.all([
     Promise.all(bikeIds.map((id) => loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS[id]))),
+    loadOptionalAsset(loader, EXTERNAL_RIDER_ASSET),
     Promise.all(trafficKinds.map((kind) => loadOptionalAsset(loader, EXTERNAL_TRAFFIC_ASSETS[kind]))),
     Promise.all(environmentIds.map((id) => loadOptionalAsset(loader, EXTERNAL_ENVIRONMENT_ASSETS[id])))
   ]);
 
   const bikes: Record<string, THREE.Group> = {};
+  const riders = riderResult ? { base: riderResult as THREE.Group } : {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
   const environments = {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 
@@ -172,7 +177,7 @@ async function loadRaceModelPack() {
     if (environmentResults[index]) environments[id] = environmentResults[index] as THREE.Group;
   });
 
-  return { bikes, traffic, environments };
+  return { bikes, riders: riders as { base: THREE.Group }, traffic, environments };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -287,6 +292,63 @@ function fitBikeModel(model: THREE.Object3D, targetLength: number) {
   model.scale.multiplyScalar(scale);
 }
 
+function prepareExternalRider(source: THREE.Object3D, riderId: string, player = false) {
+  const model = cloneLoadedModel(source, "rider-base");
+  const rider = RIDERS[riderId] ?? RIDERS.main;
+
+  // Keep the base character human and clean for Aboki Riders: remove unrelated
+  // survival-game equipment that should never appear on a motorcycle racer.
+  model.traverse((node) => {
+    if (/helmet|headgear|hardhat|cap|backpack|ruck|rifle|carbine|weapon|gun|pouch|holster/i.test(node.name)) {
+      node.visible = false;
+    }
+
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const materialInstance of materials) {
+      if (!(materialInstance instanceof THREE.MeshStandardMaterial)) continue;
+      const role = `${node.name} ${materialInstance.name}`.toLowerCase();
+      if (!/shirt|jacket|top|vest|hood|sleeve|outfit|clothes|pant|trouser|jean|boot|shoe/i.test(role)) continue;
+      materialInstance.color.lerp(new THREE.Color(rider.jacket), 0.40);
+      materialInstance.roughness = Math.min(materialInstance.roughness, 0.72);
+      materialInstance.needsUpdate = true;
+    }
+  });
+
+  fitModel(model, 1.72);
+  const bounds = new THREE.Box3().setFromObject(model);
+  const center = bounds.getCenter(new THREE.Vector3());
+  model.position.x -= center.x;
+  model.position.z -= center.z;
+  model.position.y -= bounds.min.y;
+
+  // The source character faces +Z; race models face down -Z.
+  model.rotation.y = Math.PI;
+
+  // Slightly different scale/build reads keep the CPU field from becoming clones.
+  const buildScale = THREE.MathUtils.clamp(rider.build, 0.93, 1.07);
+  model.scale.x *= buildScale;
+  model.scale.z *= buildScale;
+
+  const root = new THREE.Group();
+  root.add(model);
+
+  const animations = model.userData.animations as THREE.AnimationClip[] | undefined;
+  const idleClip = animations?.find((clip) => /idle/i.test(clip.name));
+  if (idleClip) {
+    const mixer = new THREE.AnimationMixer(model);
+    mixer.clipAction(idleClip).play();
+    root.userData.riderMixer = mixer;
+  }
+
+  root.userData.riderRoot = model;
+  root.userData.realHuman = true;
+  root.userData.riderId = riderId;
+  root.userData.playerRider = player;
+  return root;
+}
+
 function createRiderFromFallback(riderId: string, player = false) {
   // Build the character once at neutral scale, then apply exactly one game-world scale.
   // The previous implementation scaled both the source fallback and its wrapper, which
@@ -326,7 +388,9 @@ function prepareLoadedRiderBike(
   riderId: string,
   player = false
 ) {
-  const riderRoot = createRiderFromFallback(riderId, player);
+  const riderRoot = pack.riders.base
+    ? prepareExternalRider(pack.riders.base, riderId, player)
+    : createRiderFromFallback(riderId, player);
   const bikeSource = pack.bikes[bikeId] ?? pack.bikes.starter;
   const bike = cloneLoadedModel(bikeSource, "bike-" + bikeId);
   bike.rotation.y = Math.PI;
@@ -353,11 +417,12 @@ function prepareLoadedRiderBike(
   if (character) {
     character.position.set(
       0,
-      THREE.MathUtils.clamp(bikeBox.max.y * 0.78, 0.98, 1.46),
-      THREE.MathUtils.clamp(bikeCenter.z + bikeSize.z * 0.08, -0.08, 0.34)
+      THREE.MathUtils.clamp(bikeBox.max.y * 0.70, 0.88, 1.34),
+      THREE.MathUtils.clamp(bikeCenter.z + bikeSize.z * 0.10, -0.14, 0.30)
     );
     const sportPosture = bikeId === "speed" || bikeId === "elite" || bikeId === "legendary";
-    character.rotation.x = sportPosture ? -0.36 : bikeId === "heavy" ? -0.12 : -0.24;
+    character.rotation.x = sportPosture ? -0.28 : bikeId === "heavy" ? -0.08 : -0.20;
+    character.rotation.z = 0;
   }
 
   const bikeMixer = createLoopingWheelMixer(bike);
@@ -2245,6 +2310,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
           0.10
         );
 
+        const aiRiderMixer = ai.group.userData.riderMixer as THREE.AnimationMixer | undefined;
+        aiRiderMixer?.update(dt);
+
         const aiBikeMixer = ai.group.userData.bikeMixer as THREE.AnimationMixer | undefined;
         if (aiBikeMixer) {
           aiBikeMixer.update(dt);
@@ -2378,6 +2446,9 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         0.18
       );
     }
+
+    const playerRiderMixer = activePlayer.userData.riderMixer as THREE.AnimationMixer | undefined;
+    playerRiderMixer?.update(dt);
 
     const playerBikeMixer = activePlayer.userData.bikeMixer as THREE.AnimationMixer | undefined;
     if (playerBikeMixer) {

@@ -1831,6 +1831,8 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
   const raceModelsPromise = loadRaceModelPack()
     .then((pack) => {
+      loadedRacePack = pack;
+
       if (pack.bikes[playerBikeId]) {
         const realPlayer = prepareLoadedRiderBike(pack, playerBikeId, playerRiderId, true);
         if (scene.children.includes(player)) scene.remove(player);
@@ -1877,6 +1879,15 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         scene.add(setPiece);
         scenery.push(setPiece);
       });
+
+      for (const remote of remoteRacers.values()) {
+        if (!pack.bikes[remote.bikeId]) continue;
+        const upgradedGroup = prepareLoadedRiderBike(pack, remote.bikeId, remote.riderId, false);
+        upgradedGroup.position.copy(remote.group.position);
+        scene.remove(remote.group);
+        remote.group = upgradedGroup;
+        scene.add(upgradedGroup);
+      }
     })
     .catch((error) => {
       console.warn("3D model pack load failed; keeping handcrafted rider fallback.", error);
@@ -1905,6 +1916,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let networkState: any = null;
   let networkLocal: any = null;
   let lastNetworkInput = 0;
+  let loadedRacePack: RaceModelPack | null = null;
   const remoteRacers = new Map<string, { group: THREE.Group; bikeId: string; riderId: string }>();
 
   // Player model activation is handled inside the streaming loader.
@@ -2041,9 +2053,13 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         let node = remoteRacers.get(remote.id);
         if (!node || node.bikeId !== remote.bikeId || node.riderId !== remote.riderId) {
           if (node) scene.remove(node.group);
-          const group = createBikeAndRider(remote.bikeId || "starter", remote.riderId || "main", 0.86);
+          const remoteBikeId = remote.bikeId || "starter";
+          const remoteRiderId = remote.riderId || "main";
+          const group = loadedRacePack?.bikes[remoteBikeId]
+            ? prepareLoadedRiderBike(loadedRacePack, remoteBikeId, remoteRiderId, false)
+            : createBikeAndRider(remoteBikeId, remoteRiderId, 0.86);
           scene.add(group);
-          node = { group, bikeId: remote.bikeId || "starter", riderId: remote.riderId || "main" };
+          node = { group, bikeId: remoteBikeId, riderId: remoteRiderId };
           remoteRacers.set(remote.id, node);
         }
         node.group.position.x = THREE.MathUtils.lerp(node.group.position.x, (remote.lane - 0.5) * 10.6, 0.13);

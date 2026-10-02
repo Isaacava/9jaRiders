@@ -175,7 +175,7 @@ function createBikeAndRider(bikeId: string, riderId: string, scale = 1) {
     frameMat
   );
   const lowerRailR = lowerRailL.clone();
-  lowerRailR.scale.x = -1;
+  lowerRailR.position.x *= -1;
   root.add(lowerRailL, lowerRailR);
 
   const tank = new THREE.Mesh(
@@ -626,6 +626,100 @@ function createTraffic(kind: Traffic["kind"]) {
   return group;
 }
 
+function createUtilityPole() {
+  const group = new THREE.Group();
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.10, 0.15, 7.2, 10),
+    material(0x5a6265, 0.88, 0.18)
+  );
+  pole.position.y = 3.6;
+  group.add(pole);
+
+  const cross = new THREE.Mesh(
+    new THREE.BoxGeometry(1.9, 0.11, 0.11),
+    material(0x3e474a, 0.82, 0.24)
+  );
+  cross.position.y = 6.15;
+  group.add(cross);
+
+  for (const x of [-0.67, 0, 0.67]) {
+    const insulator = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.065, 0.065, 0.23, 8),
+      material(0xcdd2ce, 0.6, 0.02)
+    );
+    insulator.position.set(x, 6.32, 0);
+    group.add(insulator);
+  }
+
+  group.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (mesh.isMesh) mesh.castShadow = true;
+  });
+  return group;
+}
+
+function createRoadsideFence() {
+  const group = new THREE.Group();
+  const railMat = material(0x71797b, 0.84, 0.24);
+
+  for (let x = -3; x <= 3; x += 1.5) {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055, 0.07, 1.35, 8),
+      railMat
+    );
+    post.position.set(x, 0.68, 0);
+    group.add(post);
+  }
+
+  for (const y of [0.34, 0.76, 1.10]) {
+    const rail = new THREE.Mesh(
+      new THREE.BoxGeometry(9, 0.045, 0.045),
+      railMat
+    );
+    rail.position.y = y;
+    group.add(rail);
+  }
+
+  return group;
+}
+
+function createStreetSign(text: string, background: number) {
+  const group = new THREE.Group();
+  const canvas = document.createElement("canvas");
+  canvas.width = 384;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#" + background.toString(16).padStart(6, "0");
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#111417";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+  ctx.fillStyle = "#fff8e9";
+  ctx.font = "900 42px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const board = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.6, 0.86),
+    new THREE.MeshBasicMaterial({ map: texture })
+  );
+  board.position.y = 2.3;
+  group.add(board);
+
+  const post = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.11, 2.2, 8),
+    material(0x596166, 0.82, 0.22)
+  );
+  post.position.y = 1.1;
+  group.add(post);
+
+  group.userData.texture = texture;
+  return group;
+}
+
 function createPalm() {
   const group = new THREE.Group();
   const trunk = new THREE.Mesh(
@@ -1044,7 +1138,11 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     const side = i % 2 === 0 ? -1 : 1;
     const z = -20 - Math.floor(i / 2) * 13 - (i % 3) * 4;
     let obj: THREE.Object3D;
-    if (i % 11 === 0) obj = createBillboard();
+    if (i % 17 === 0) obj = createStreetSign("LAGOS", 0x0f765e);
+    else if (i % 13 === 0) obj = createStreetSign("BUS STOP", 0xc49322);
+    else if (i % 11 === 0) obj = createBillboard();
+    else if (i % 7 === 0) obj = createUtilityPole();
+    else if (i % 6 === 0) obj = createRoadsideFence();
     else if (i % 5 === 0) obj = createPalm();
     else obj = createShop(i % 4 === 0 ? 0xc48b5a : i % 4 === 1 ? 0x9d7457 : i % 4 === 2 ? 0x7e9162 : 0x9b6a59);
 
@@ -1061,7 +1159,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     ? window.localStorage.getItem("aboki:rider") || "main"
     : "main";
 
-  const player = createBikeAndRider(playerBikeId, playerRiderId, 1.08);
+  const player = createBikeAndRider(playerBikeId, playerRiderId, 1.12);
   player.position.set(0, 0, 3.85);
   scene.add(player);
 
@@ -1168,6 +1266,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
+    composer.setSize(width, height);
   }
   resize();
   window.addEventListener("resize", resize);

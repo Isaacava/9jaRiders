@@ -197,14 +197,6 @@ function cloneLoadedModel(source: THREE.Object3D, label: string) {
   return clone;
 }
 
-function findNamedSubmodel(root: THREE.Object3D, pattern: RegExp) {
-  let match: THREE.Object3D | null = null;
-  root.traverse((node) => {
-    if (match || node === root) return;
-    if (pattern.test(node.name)) match = node;
-  });
-  return match;
-}
 
 function createLoopingWheelMixer(model: THREE.Object3D) {
   const animations = model.userData.animations as THREE.AnimationClip[] | undefined;
@@ -240,7 +232,12 @@ function tintBikeLivery(model: THREE.Object3D, spec: BikeSpec) {
 }
 
 function normalizeExtractedSubmodel(source: THREE.Object3D, pattern: RegExp) {
-  const target = findNamedSubmodel(source, pattern);
+  let target: THREE.Object3D | null = null;
+  source.traverse((node) => {
+    if (target || node === source) return;
+    if (pattern.test(node.name)) target = node;
+  });
+
   if (!target) return null;
 
   target.updateWorldMatrix(true, true);
@@ -275,6 +272,7 @@ function normalizeExtractedSubmodel(source: THREE.Object3D, pattern: RegExp) {
   wrapper.userData.animations = source.userData.animations;
   return wrapper;
 }
+
 
 function fitModel(model: THREE.Object3D, targetHeight: number) {
   const box = new THREE.Box3().setFromObject(model);
@@ -614,10 +612,19 @@ function emissiveMaterial(color: number, intensity = 2) {
   });
 }
 
-function cylinderBetween(a: THREE.Vector3, b: THREE.Vector3, radius: number, mat: THREE.Material) {
+function cylinderBetween(
+  a: THREE.Vector3,
+  b: THREE.Vector3,
+  radius: number,
+  mat: THREE.Material,
+  segments = 10
+) {
   const direction = new THREE.Vector3().subVectors(b, a);
   const length = direction.length();
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.05, length, 10), mat);
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius * 1.05, length, segments),
+    mat
+  );
   mesh.position.copy(a).add(b).multiplyScalar(0.5);
   mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
   mesh.castShadow = true;

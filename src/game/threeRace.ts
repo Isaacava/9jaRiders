@@ -1627,8 +1627,6 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     return undefined;
   });
 
-  let activePlayer = player;
-
   let width = Math.max(parent.clientWidth, 1);
   let height = Math.max(parent.clientHeight, 1);
   let disposed = false;

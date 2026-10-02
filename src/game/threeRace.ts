@@ -1286,7 +1286,6 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     }
 
     hud.timer.textContent = new Date(Math.max(performance.now() - raceStartedAt, 0)).toISOString().substring(14, 19);
-    hud.position.textContent = "1/8";
     hud.speed.textContent = String(Math.round(playerSpeed)).padStart(3, "0");
     hud.speedUnit.textContent = "KM/H";
     hud.nitroFill.style.width = Math.round(nitro * 100) + "%";

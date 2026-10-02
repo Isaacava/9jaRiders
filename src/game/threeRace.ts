@@ -1649,7 +1649,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   };
 
   const raceModelsPromise = (async () => {
-    const initial = await loadPlayerRaceModels(playerBikeId);
+    const initial = await loadPlayerRaceModels(playerRiderId, playerBikeId);
 
     if (initial.riders[resolveRiderModelId(playerRiderId)] && initial.bike) {
       const realPlayer = prepareLoadedRiderBike(

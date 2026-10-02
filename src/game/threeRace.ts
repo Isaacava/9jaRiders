@@ -1884,6 +1884,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.domElement.style.visibility = "hidden";
   renderer.toneMappingExposure = 1.18;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -2129,10 +2130,82 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
   const hud = makeHud(parent);
 
+  const loadingOverlay = document.createElement("div");
+  loadingOverlay.style.position = "absolute";
+  loadingOverlay.style.inset = "0";
+  loadingOverlay.style.zIndex = "50";
+  loadingOverlay.style.display = "flex";
+  loadingOverlay.style.alignItems = "center";
+  loadingOverlay.style.justifyContent = "center";
+  loadingOverlay.style.background = "radial-gradient(circle at 50% 35%, rgba(30,48,55,.96), rgba(9,14,17,.99))";
+  loadingOverlay.style.fontFamily = "Arial, sans-serif";
+  loadingOverlay.style.color = "#fff";
+  loadingOverlay.style.pointerEvents = "auto";
+
+  const loadingCard = document.createElement("div");
+  loadingCard.style.width = "min(88vw, 430px)";
+  loadingCard.style.padding = "30px 26px 26px";
+  loadingCard.style.borderRadius = "24px";
+  loadingCard.style.background = "rgba(17,24,27,.94)";
+  loadingCard.style.border = "1px solid rgba(255,255,255,.14)";
+  loadingCard.style.boxShadow = "0 24px 80px rgba(0,0,0,.45)";
+  loadingCard.style.textAlign = "center";
+  loadingOverlay.appendChild(loadingCard);
+
+  const loadingBrand = document.createElement("div");
+  loadingBrand.textContent = "ABOKI RIDERS";
+  loadingBrand.style.fontSize = "28px";
+  loadingBrand.style.fontWeight = "1000";
+  loadingBrand.style.letterSpacing = "2px";
+  loadingBrand.style.fontStyle = "italic";
+  loadingCard.appendChild(loadingBrand);
+
+  const loadingTitle = document.createElement("div");
+  loadingTitle.textContent = "Preparing the race";
+  loadingTitle.style.marginTop = "18px";
+  loadingTitle.style.fontSize = "20px";
+  loadingTitle.style.fontWeight = "900";
+  loadingCard.appendChild(loadingTitle);
+
+  const loadingStatus = document.createElement("div");
+  loadingStatus.textContent = "Loading bikes, riders and Lagos traffic…";
+  loadingStatus.style.marginTop = "8px";
+  loadingStatus.style.fontSize = "13px";
+  loadingStatus.style.opacity = "0.72";
+  loadingStatus.style.lineHeight = "1.5";
+  loadingCard.appendChild(loadingStatus);
+
+  const loadingTrack = document.createElement("div");
+  loadingTrack.style.height = "8px";
+  loadingTrack.style.marginTop = "20px";
+  loadingTrack.style.borderRadius = "999px";
+  loadingTrack.style.background = "rgba(255,255,255,.12)";
+  loadingTrack.style.overflow = "hidden";
+  loadingCard.appendChild(loadingTrack);
+
+  const loadingBar = document.createElement("div");
+  loadingBar.style.height = "100%";
+  loadingBar.style.width = "8%";
+  loadingBar.style.borderRadius = "999px";
+  loadingBar.style.background = "linear-gradient(90deg,#18a99b,#4dc9ff)";
+  loadingBar.style.transition = "width .35s ease";
+  loadingTrack.appendChild(loadingBar);
+
+  const loadingHint = document.createElement("div");
+  loadingHint.textContent = "First launch can take a little longer.";
+  loadingHint.style.marginTop = "14px";
+  loadingHint.style.fontSize = "11px";
+  loadingHint.style.opacity = "0.5";
+  loadingCard.appendChild(loadingHint);
+
+  parent.appendChild(loadingOverlay);
+
   let activePlayer = player;
-  let raceArmed = true;
+  let raceArmed = false;
 
   const critical3DPromise = (async () => {
+    loadingStatus.textContent = "Loading core bike and rider models…";
+    loadingBar.style.width = "28%";
     const loader = new GLTFLoader();
     const [dirtBike, maleRider, femaleRider] = await Promise.all([
       loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS.dirt),
@@ -2156,6 +2229,8 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   const raceModelsPromise = critical3DPromise
     .then((criticalPack) => {
       loadedRacePack = criticalPack;
+      loadingStatus.textContent = "Loading motorcycles, riders, traffic and scenery…";
+      loadingBar.style.width = "58%";
 
       const riderSpec = RIDERS[playerRiderId] ?? RIDERS.main;
       const criticalBike = criticalPack.bikes.dirt;
@@ -2190,6 +2265,8 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     })
     .then((pack) => {
       loadedRacePack = pack;
+      loadingStatus.textContent = "Finalizing the race world…";
+      loadingBar.style.width = "88%";
 
       const loadedPlayerBikeId = pack.bikes[playerBikeId]
         ? playerBikeId
@@ -2283,10 +2360,11 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       }
     })
     .catch((error) => {
-      // Never leave the race invisible because optional asset streaming failed.
+      // Loading is still considered complete once every asset attempt has settled.
+      // The game can safely use its project-local 3D bootstrap for anything unavailable.
       player.visible = true;
       aiRacers.forEach((ai) => { ai.group.visible = true; });
-      console.warn("Optional 3D pack upgrade failed; keeping the visible bootstrap race assets.", error);
+      console.warn("3D pack load completed with recoverable asset failures:", error);
     });
 
   let width = Math.max(parent.clientWidth, 1);
@@ -2299,7 +2377,8 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let playerSpeed = 0;
   let playerDistance = 0;
   let raceStartedAt = performance.now();
-  let countdown = 3;
+  let raceReady = false;
+  let countdown = 0;
   let finished = false;
   let finishShown = false;
   let cameraShake = 0;
@@ -2536,7 +2615,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
 
     if (!raceArmed) {
       playerSpeed = THREE.MathUtils.lerp(playerSpeed, 0, 0.18);
-      countdown = 3;
+      countdown = 0;
     } else if (countdown > 0) {
       if (mode === "multiplayer" && networkState?.status === "countdown") {
         playerSpeed = THREE.MathUtils.lerp(playerSpeed, 0, 0.12);
@@ -2911,7 +2990,19 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     requestAnimationFrame(frame);
   }
 
-  start();
+  raceModelsPromise.finally(() => {
+    if (disposed) return;
+    raceReady = true;
+    loadingBar.style.width = "100%";
+    loadingStatus.textContent = "Race ready!";
+    window.setTimeout(() => {
+      if (disposed) return;
+      renderer.domElement.style.visibility = "visible";
+      loadingOverlay.remove();
+      start();
+    }, 220);
+  });
+
   requestAnimationFrame(frame);
 
   return {
@@ -2926,6 +3017,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       void connectPromise;
       audioContext?.close().catch(() => undefined);
       hud.dispose();
+      loadingOverlay.remove();
       composer.dispose();
       renderer.dispose();
       asphaltTexture.dispose();

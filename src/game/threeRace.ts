@@ -2110,7 +2110,62 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   let activePlayer = player;
   let raceArmed = true;
 
-  const raceModelsPromise = loadRaceModelPack()
+  const critical3DPromise = (async () => {
+    const loader = new GLTFLoader();
+    const [dirtBike, maleRider, femaleRider] = await Promise.all([
+      loadOptionalAsset(loader, EXTERNAL_BIKE_ASSETS.dirt),
+      loadOptionalAsset(loader, EXTERNAL_RIDER_ASSETS.male),
+      loadOptionalAsset(loader, EXTERNAL_RIDER_ASSETS.female)
+    ]);
+
+    const criticalPack: RaceModelPack = {
+      bikes: {},
+      riders: {},
+      traffic: {} as Record<Traffic["kind"], THREE.Group>,
+      environments: {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>
+    };
+
+    if (dirtBike) criticalPack.bikes.dirt = dirtBike;
+    if (maleRider) criticalPack.riders.male = maleRider;
+    if (femaleRider) criticalPack.riders.female = femaleRider;
+    return criticalPack;
+  })();
+
+  const raceModelsPromise = critical3DPromise
+    .then((criticalPack) => {
+      loadedRacePack = criticalPack;
+
+      const riderSpec = RIDERS[playerRiderId] ?? RIDERS.main;
+      const criticalBike = criticalPack.bikes.dirt;
+      const criticalRider = criticalPack.riders[riderSpec.gender];
+
+      if (criticalBike && criticalRider) {
+        try {
+          const realPlayer = prepareLoadedRiderBike(criticalPack, "dirt", playerRiderId, true);
+          realPlayer.position.copy(player.position);
+          realPlayer.visible = true;
+          scene.remove(player);
+          scene.add(realPlayer);
+          activePlayer = realPlayer;
+
+          for (const ai of aiRacers) {
+            const aiRiderSpec = RIDERS[ai.riderId] ?? RIDERS.main;
+            if (!criticalPack.riders[aiRiderSpec.gender]) continue;
+            const next = prepareLoadedRiderBike(criticalPack, "dirt", ai.riderId, false);
+            next.position.copy(ai.group.position);
+            next.visible = true;
+            scene.remove(ai.group);
+            ai.group = next;
+            ai.bikeId = "dirt";
+            scene.add(next);
+          }
+        } catch (error) {
+          console.warn("Critical 3D rider/bike setup failed:", error);
+        }
+      }
+
+      return loadRaceModelPack();
+    })
     .then((pack) => {
       loadedRacePack = pack;
 
@@ -2124,14 +2179,16 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
         Boolean(pack.riders[playerRiderSpec.gender] ?? pack.riders.male ?? pack.riders.female);
 
       if (loadedPlayerBikeId && playerRiderReady) {
-        const realPlayer = prepareLoadedRiderBike(pack, loadedPlayerBikeId, playerRiderId, true);
-        if (scene.children.includes(player)) scene.remove(player);
-        realPlayer.position.copy(player.position);
-        realPlayer.visible = true;
-        scene.add(realPlayer);
-        activePlayer = realPlayer;
-      } else {
-        player.visible = true;
+        try {
+          const realPlayer = prepareLoadedRiderBike(pack, loadedPlayerBikeId, playerRiderId, true);
+          if (scene.children.includes(activePlayer)) scene.remove(activePlayer);
+          realPlayer.position.copy(activePlayer.position);
+          realPlayer.visible = true;
+          scene.add(realPlayer);
+          activePlayer = realPlayer;
+        } catch (error) {
+          console.warn("Player 3D upgrade failed; keeping critical 3D player:", error);
+        }
       }
 
       for (const ai of aiRacers) {
@@ -2140,28 +2197,34 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
           : pack.bikes.dirt
             ? "dirt"
             : null;
-        if (!loadedBikeId || !playerRiderReady) {
-          ai.group.visible = true;
-          continue;
+        if (!loadedBikeId || !playerRiderReady) continue;
+
+        try {
+          const next = prepareLoadedRiderBike(pack, loadedBikeId, ai.riderId, false);
+          next.position.copy(ai.group.position);
+          next.visible = true;
+          scene.remove(ai.group);
+          ai.group = next;
+          ai.bikeId = loadedBikeId;
+          scene.add(next);
+        } catch (error) {
+          console.warn("AI 3D upgrade failed:", ai.riderId, error);
         }
-        const next = prepareLoadedRiderBike(pack, loadedBikeId, ai.riderId, false);
-        next.position.copy(ai.group.position);
-        next.visible = true;
-        scene.remove(ai.group);
-        ai.group = next;
-        ai.bikeId = loadedBikeId;
-        scene.add(next);
       }
 
       for (const vehicle of traffic) {
         if (!pack.traffic[vehicle.kind]) continue;
-        const next = prepareLoadedTraffic(pack, vehicle.kind);
-        if (!next) continue;
-        next.position.copy(vehicle.group.position);
-        next.visible = true;
-        scene.remove(vehicle.group);
-        vehicle.group = next;
-        scene.add(next);
+        try {
+          const next = prepareLoadedTraffic(pack, vehicle.kind);
+          if (!next) continue;
+          next.position.copy(vehicle.group.position);
+          next.visible = true;
+          scene.remove(vehicle.group);
+          vehicle.group = next;
+          scene.add(next);
+        } catch (error) {
+          console.warn("Traffic 3D upgrade failed:", vehicle.kind, error);
+        }
       }
 
       const environmentPlacements = [
@@ -2174,14 +2237,18 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       ] as const;
 
       environmentPlacements.forEach(([kind, side, z, scale]) => {
-        const source = pack.environments[kind];
-        if (!source) return;
-        const setPiece = source.clone(true);
-        setPiece.scale.setScalar(scale);
-        setPiece.position.set(side * 19, 0, z);
-        setPiece.userData.externalEnvironment = kind;
-        scene.add(setPiece);
-        scenery.push(setPiece);
+        try {
+          const source = pack.environments[kind];
+          if (!source) return;
+          const setPiece = cloneLoadedModel(source, "environment-" + kind);
+          setPiece.scale.setScalar(scale);
+          setPiece.position.set(side * 19, 0, z);
+          setPiece.userData.externalEnvironment = kind;
+          scene.add(setPiece);
+          scenery.push(setPiece);
+        } catch (error) {
+          console.warn("Environment 3D upgrade failed:", kind, error);
+        }
       });
 
       for (const remote of remoteRacers.values()) {
@@ -2194,9 +2261,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       }
     })
     .catch((error) => {
-      console.warn("3D model pack load failed; using guaranteed project-local 3D rider/bike.", error);
-      player.visible = true;
-      aiRacers.forEach((ai) => { ai.group.visible = true; });
+      console.warn("Optional 3D pack upgrade failed; keeping the critical 3D race assets.", error);
     });
 
   let width = Math.max(parent.clientWidth, 1);

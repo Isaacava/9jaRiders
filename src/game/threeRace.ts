@@ -80,7 +80,7 @@ const RIDERS: Record<string, RiderSpec> = {
 
 type RaceModelPack = {
   bikes: Record<string, THREE.Group>;
-  riders: THREE.Group;
+  riders: Record<string, THREE.Group>;
   traffic: Record<Traffic["kind"], THREE.Group>;
   environments: Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
 };
@@ -109,7 +109,32 @@ const EXTERNAL_ENVIRONMENT_ASSETS = {
   market: "https://cdn.3dassets.dev/assets/34323/v1/model.glb"
 } as const;
 
+const RIDER_MODEL_ASSETS = {
+  main: "/assets/models/riders/main.glb",
+  ada: "/assets/models/riders/ada.glb",
+  kobby: "/assets/models/riders/kobby.glb",
+  tobi: "/assets/models/riders/tobi.glb"
+} as const;
+
+type RiderModelId = keyof typeof RIDER_MODEL_ASSETS;
 type LoadedAsset = THREE.Group | null;
+
+function resolveRiderModelId(riderId: string): RiderModelId {
+  if (riderId === "ada" || riderId === "kobby" || riderId === "tobi") return riderId;
+  if (riderId.startsWith("cpu-")) {
+    const cpuMap: Record<string, RiderModelId> = {
+      "cpu-01": "tobi",
+      "cpu-02": "kobby",
+      "cpu-03": "ada",
+      "cpu-04": "main",
+      "cpu-05": "kobby",
+      "cpu-06": "tobi",
+      "cpu-07": "main"
+    };
+    return cpuMap[riderId] ?? "main";
+  }
+  return "main";
+}
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
   return Promise.race([
@@ -143,33 +168,49 @@ async function loadOptionalAsset(loader: GLTFLoader, slugOrUrl: string): Promise
   }
 }
 
-async function loadPlayerRaceModels(playerBikeId: string) {
-  const loader = new GLTFLoader();
-
-  let rider: THREE.Group | null = null;
+async function loadLocalRiderAsset(loader: GLTFLoader, riderId: string) {
+  const modelId = resolveRiderModelId(riderId);
   try {
-    rider = (await withTimeout(loader.loadAsync("/assets/models/riders.glb"), 6500, "rider pack")).scene;
+    return (await withTimeout(
+      loader.loadAsync(RIDER_MODEL_ASSETS[modelId]),
+      6500,
+      "rider model"
+    )).scene;
   } catch (error) {
-    console.warn("Local rider pack unavailable:", error);
+    console.warn("Local rider model unavailable:", modelId, error);
+    return null;
   }
+}
+
+async function loadPlayerRaceModels(playerRiderId: string, playerBikeId: string) {
+  const loader = new GLTFLoader();
+  const riders: Record<string, THREE.Group> = {};
+  const rider = await loadLocalRiderAsset(loader, playerRiderId);
+  if (rider) riders[resolveRiderModelId(playerRiderId)] = rider;
 
   const bike = await loadOptionalAsset(
     loader,
     EXTERNAL_BIKE_ASSETS[playerBikeId] ?? EXTERNAL_BIKE_ASSETS.starter
   );
 
-  return { rider, bike };
+  return { riders, bike };
 }
 
 async function loadRaceSupportModels(
+  riders: Record<string, THREE.Group>,
   playerBikeId: string,
-  rider: THREE.Group | null,
   playerBike: THREE.Group | null
 ) {
   const loader = new GLTFLoader();
   const bikes: Record<string, THREE.Group> = {};
   const traffic = {} as Record<Traffic["kind"], THREE.Group>;
   const environments = {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>;
+
+  for (const riderId of Object.keys(RIDER_MODEL_ASSETS) as RiderModelId[]) {
+    if (riders[riderId]) continue;
+    const source = await loadLocalRiderAsset(loader, riderId);
+    if (source) riders[riderId] = source;
+  }
 
   if (playerBike) bikes[playerBikeId] = playerBike;
 
@@ -193,7 +234,7 @@ async function loadRaceSupportModels(
     if (source) environments[id] = source;
   }
 
-  return { bikes, riders: rider, traffic, environments };
+  return { bikes, riders, traffic, environments };
 }
 
 function cloneLoadedModel(source: THREE.Object3D, label: string) {
@@ -220,15 +261,19 @@ function fitBikeModel(model: THREE.Object3D, targetLength: number) {
 function prepareLoadedRiderBike(pack: RaceModelPack, bikeId: string, riderId: string, player = false) {
   const root = new THREE.Group();
   const bike = cloneLoadedModel(pack.bikes[bikeId] ?? pack.bikes.starter, "bike-" + bikeId);
-  const rider = cloneLoadedModel(pack.riders, "rider-" + riderId);
+  const riderModelId = resolveRiderModelId(riderId);
+  const rider = cloneLoadedModel(
+    pack.riders[riderModelId] ?? pack.riders.main,
+    "rider-" + riderModelId
+  );
 
   // 3DAssets.dev bikes face +Z; Aboki Riders drives toward -Z.
   bike.rotation.y = Math.PI;
 
   fitBikeModel(bike, player ? 2.55 : 2.15);
   rider.scale.setScalar(player ? 0.92 : 0.72);
-  fitModel(rider, player ? 2.45 : 1.98);
-  rider.position.y = player ? 0.48 : 0.38;
+  fitModel(rider, player ? 1.86 : 1.82);
+  rider.position.y = player ? 0.24 : 0.20;
 
   const wheels: THREE.Object3D[] = [];
   bike.traverse((object) => {
@@ -1571,7 +1616,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
       const next = prepareLoadedTraffic(
         {
           bikes: pack.bikes,
-          riders: pack.riders ?? new THREE.Group(),
+          riders: pack.riders,
           traffic: pack.traffic,
           environments: pack.environments
         },
@@ -1606,11 +1651,11 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
   const raceModelsPromise = (async () => {
     const initial = await loadPlayerRaceModels(playerBikeId);
 
-    if (initial.rider && initial.bike) {
+    if (initial.riders[resolveRiderModelId(playerRiderId)] && initial.bike) {
       const realPlayer = prepareLoadedRiderBike(
         {
           bikes: { [playerBikeId]: initial.bike },
-          riders: initial.rider,
+          riders: initial.riders,
           traffic: {} as Record<Traffic["kind"], THREE.Group>,
           environments: {} as Record<keyof typeof EXTERNAL_ENVIRONMENT_ASSETS, THREE.Group>
         },
@@ -1630,7 +1675,7 @@ export function createThreeRace(parent: HTMLElement, options: { mode?: Mode }) {
     // Load AI, traffic and environment progressively so they never block the countdown/render loop.
     window.setTimeout(async () => {
       try {
-        const support = await loadRaceSupportModels(playerBikeId, initial.rider, initial.bike);
+        const support = await loadRaceSupportModels(initial.riders, playerBikeId, initial.bike);
         applySupportModels(support);
       } catch (error) {
         console.warn("Streaming race support assets failed; keeping loaded fallback models.", error);

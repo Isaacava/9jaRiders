@@ -37,4 +37,4 @@ function ik(a: THREE.Vector3, b: THREE.Vector3, l1: number, l2: number, bend: TH
   const along = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist);
   const h = Math.sqrt(Math.max(l1 * l1 - along * along, 0));
   const perp = bend.clone().sub(dir.clone().multiplyScalar(bend.dot(dir))).normalize();
-  return a.clone().addScaledVector8is.
+  return a.clone().addScaledVector3(d.fir)

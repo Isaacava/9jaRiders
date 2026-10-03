@@ -3,42 +3,43 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function GameCanvas({
-  mode = "solo"
+  mode = "solo",
+  room,
+  player
 }: {
-  mode?: "solo" | "multiplayer";
-  route?: string;
+  mode?: "solo" | "multiplayer" | "demo";
+  room?: string;
+  player?: string;
 }) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let game: { destroy: () => void; ready?: Promise<unknown> } | undefined;
+    let game: { destroy: () => void; ready: Promise<void> } | undefined;
     let disposed = false;
 
     const boot = async () => {
       try {
         const { createThreeRace } = await import("../game/threeRace");
         if (disposed || !mountRef.current) return;
-        game = createThreeRace(mountRef.current, { mode });
+        game = createThreeRace(mountRef.current, { mode, room, player });
         await game.ready;
-        if (disposed) return;
-        setLoading(false);
+        if (!disposed) setLoading(false);
       } catch (cause) {
         if (disposed) return;
         console.error(cause);
         setLoading(false);
-        setError("The 3D race renderer could not start.");
+        setError("The 3D race could not start on this device (WebGL needed).");
       }
     };
-
     void boot();
 
     return () => {
       disposed = true;
       game?.destroy();
     };
-  }, [mode]);
+  }, [mode, room, player]);
 
   return (
     <div className="game-canvas-shell">
@@ -47,14 +48,9 @@ export default function GameCanvas({
         <div className="game-loading" role="status" aria-live="polite">
           <strong>ABOKI RIDERS</strong>
           <span>LOADING RACE WORLD</span>
-          <small>3D MODELS · LAGOS WORLD · CACHED</small>
         </div>
       )}
-      {error && !loading && (
-        <div className="game-load-notice" role="status">
-          {error}
-        </div>
-      )}
+      {error && !loading && <div className="game-load-notice" role="status">{error}</div>}
     </div>
   );
 }

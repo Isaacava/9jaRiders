@@ -1,5 +1,5 @@
 export type BikeId = "starter" | "speed" | "heavy" | "elite" | "legendary" | "cafe" | "flattrack" | "lightweight" | "dirt";
-export type RiderId = "main" | "ada" | "kobby" | "tobi";
+export type RiderId = "main" | "ada" | "kobby" | "tobi" | "ngozi" | "emeka" | "zainab" | "chidi";
 export type Difficulty = "easy" | "normal" | "hard";
 
 export type BikeDefinition = {
@@ -151,6 +151,42 @@ export const RIDERS: RiderDefinition[] = [
     personality: "Smooth opportunist",
     color: 0xf08a38,
     accent: "#172024",
+    gender: "male"
+  },
+  {
+    id: "ngozi",
+    name: "Ngozi",
+    style: "ANKARA/ORANGE",
+    personality: "Flashy lane-weaver in a gele",
+    color: 0xe8731a,
+    accent: "#f2c230",
+    gender: "female"
+  },
+  {
+    id: "emeka",
+    name: "Emeka",
+    style: "GREEN/WHITE",
+    personality: "Tall, calm and relentless",
+    color: 0x008751,
+    accent: "#ffffff",
+    gender: "male"
+  },
+  {
+    id: "zainab",
+    name: "Zainab",
+    style: "TEAL/GOLD",
+    personality: "Precise, fearless late braker",
+    color: 0x0e8f8f,
+    accent: "#d9a21b",
+    gender: "female"
+  },
+  {
+    id: "chidi",
+    name: "Chidi",
+    style: "LEATHER/LOCS",
+    personality: "Smooth showman with big locs",
+    color: 0x6b3f1e,
+    accent: "#e0a526",
     gender: "male"
   }
 ];

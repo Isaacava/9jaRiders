@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BIKES, RIDERS, DIFFICULTIES, type BikeId, type RiderId, type Difficulty } from "@/game/loadout";
-import BikePreview3D from "./BikePreview3D";
-import RiderPreview3D from "./RiderPreview3D";
+import LoadoutPreview3D from "./LoadoutPreview3D";
 
 const BIKE_KEY = "aboki:bike";
 const RIDER_KEY = "aboki:rider";
@@ -39,19 +38,14 @@ export default function Garage() {
           <div>
             <span className="brand-kicker">3D RIDER HQ</span>
             <h1>GARAGE</h1>
-            <p>Pick your actual 3D bike and rider. Your choices stay on this device.</p>
+            <p>Drag the bike to look around. Pick your ride and rider; choices stay on this device.</p>
           </div>
           <Link className="primary-action garage-ride" href="/play?mode=solo">OYÁ, RIDE!</Link>
         </header>
 
         <section className="loadout-hero">
-          <div className="garage-bike-art">
-            <div className="garage-bike-shadow" />
-            <BikePreview3D bikeId={activeBike.id} className="garage-bike-preview" />
-          </div>
-          <div className="garage-bike-art">
-            <div className="garage-bike-shadow" />
-            <RiderPreview3D riderId={activeRider.id} className="garage-rider-preview" />
+          <div className="garage-bike-art garage-bike-art--wide">
+            <LoadoutPreview3D bikeId={activeBike.id} riderId={activeRider.id} className="garage-bike-preview" />
           </div>
           <div className="loadout-copy">
             <span className="loadout-class">{activeBike.className}</span>

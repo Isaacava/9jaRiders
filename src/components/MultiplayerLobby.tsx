@@ -178,7 +178,7 @@ export default function MultiplayerLobby() {
             </div>
 
             {state.status === "countdown" && (
-              <p className="lobby-notice">Race countdown started. Phaser multiplayer rendering is the next integration layer.</p>
+              <p className="lobby-notice">Race countdown started. Get ready to ride!</p>
             )}
           </div>
         )}

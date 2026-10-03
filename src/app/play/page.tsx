@@ -1,34 +1,21 @@
 import GameCanvas from "@/components/GameCanvas";
-import {
-  DEFAULT_ROUTE_PACK_ID,
-  isAssetPackId,
-  type AssetPackId
-} from "@/game/assetPacks";
 
 type PlayPageProps = {
-  searchParams: Promise<{
-    mode?: string;
-    room?: string;
-    player?: string;
-    route?: string;
-  }>;
+  searchParams: Promise<{ mode?: string; room?: string; player?: string }>;
 };
 
 export default async function PlayPage({ searchParams }: PlayPageProps) {
   const params = await searchParams;
-  const mode =
-    params.mode === "multiplayer" && params.room && params.player
-      ? "multiplayer"
-      : "solo";
-
-  const route: AssetPackId = isAssetPackId(params.route)
-    ? params.route
-    : DEFAULT_ROUTE_PACK_ID;
+  const multiplayer = params.mode === "multiplayer" && params.room && params.player;
 
   return (
     <main className="race-page">
       <div className="race-stage">
-        <GameCanvas mode={mode} route={route} />
+        <GameCanvas
+          mode={multiplayer ? "multiplayer" : "solo"}
+          room={multiplayer ? params.room : undefined}
+          player={multiplayer ? params.player : undefined}
+        />
       </div>
     </main>
   );

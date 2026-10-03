@@ -1,134 +1,29 @@
-# Aboki Riders Build Log
+# Build log
 
-## 2026-10-01 — Foundation
+## v4 characters, hands, bars, camera
+- 8 unique African riders (main/Mazi, ada, kobby, tobi, ngozi, emeka, zainab, chidi): different builds (std/tall/stocky/slim), skin tones, hair (afro, braids, cap, fade, gele headwrap, headscarf, locs), outfits (dashiki, crop jacket, Ankara print, Super-Eagles green/white, leather).
+- CPU racers are now all different characters (shuffled, never the player's own); server allow-list updated.
+- Hands: real fingers + thumb wrap the grips and follow steering.
+- Handlebars: clip-ons (sport/cafe) or risers + bar, grips with end caps, throttle/switch housings, brake/clutch levers, mirrors, dash pod, top clamp.
+- Camera (Asphalt-style chase cam): behind/above the bike, bike in the lower part of the frame, looks far down the road so traffic ahead is visible, tracks sideways (clamped to the tarmac) so edge lanes stay framed, portrait/landscape-aware FOV.
 
-### Completed
-- Created the `Isaacava/9jaRiders` repository.
-- Added Next.js 16 + React 19 + TypeScript frontend foundation.
-- Added Phaser 4.2.1 client game renderer.
-- Added the first Lagos-inspired road prototype.
-- Added intentionally minimal traffic.
-- Added visible boost/item prototypes: Nitro, Shield and Multiplier Surge.
-- Added game-first home screen inspired by the compact Danfo-game presentation.
-- Added Render realtime-server skeleton using WebSockets.
-- Added MongoDB driver to the realtime server package.
-- Added `docs/GAME_DESIGN.md` as the current gameplay contract.
-- Added `assets.md` as the production asset bible and generation-script source of truth.
-- Added the runtime asset manifest contract at `src/game/assetManifest.ts`.
-- Added a real Render WebSocket room manager supporting 2–8 players and authoritative race simulation.
-- Added a multiplayer WebSocket client and a mobile-responsive room lobby at `/multiplayer`.
-- Added a home-screen link into the multiplayer lobby.
+## v3 smooth models
+- Riders, bikes and traffic are no longer stacks of cylinders/spheres/rounded boxes.
+- New `src/game/models/sdf.ts`: signed-distance shapes + smooth blending + surface-nets mesher (the runtime equivalent of Blender Skin + Subdivision).
+- Riders (`riderShape.ts`, `rider.ts`): ONE continuous smooth body per body type, a 17-bone armature, automatic skin weights, clothing colour zones baked into vertex colours, IK for legs/arms. `main` = afro/beard/dashiki man, `ada` = purple-afro/yellow-crop-jacket woman (from the character art); `kobby` (braids) and `tobi` (cap) share the same body system.
+- Bikes (`bikeShape.ts`, `bike.ts`): tank, tail, fairing, fenders, seat and engine are sculpted blended meshes (cached per style).
+- Traffic (`trafficShape.ts`, `traffic.ts`): danfo, sedan, SUV, keke and truck are smooth bodies with wheel arches and baked window/trim colours; wheels use rounded lathe tyres.
+- Riders slide forward up to 12 cm on the seat if the handlebars are out of reach, so hands always meet the grips.
+- Meshes are generated in the browser on first use and cached (about 0.1-0.4 s per body/bike/car type).
 
-### Current playable prototype
-The browser now contains a playable solo VS Computer race foundation. It has steering, braking, minimal traffic, collisions, a 5 KM finish target, multiplier growth, near-miss bonuses, four collectible power-ups, responsive touch/keyboard controls, seven CPU riders, live race position, CPU lane changes, overtaking behavior, traffic reactions and CPU item usage.
+## v2 rebuild
+- Replaced the broken 3dassets.dev / GLB / Phaser pipeline with fully procedural 3D (bikes, riders, traffic, world).
+- New race engine, chase camera rig, CPU AI, traffic, nitro pickups, results screen.
+- New garage preview (bike + rider together, drag to rotate).
+- Removed dead code: asset cache, manifest, packs, service worker, SVG assets, old Phaser game.
 
-### Responsive work completed
-- Portrait mode uses a 9:16 game composition.
-- Landscape mode uses a 16:9 game composition.
-- Phaser now resizes its game viewport to the available screen.
-- Desktop/tablet layouts place the game beside compact controls when space allows.
-- The road, rider, traffic and item positions recalculate when orientation changes.
-
-### Not built yet
-- Dedicated animation atlases and frame-by-frame polish
-- Phaser multiplayer rendering and client interpolation against the room state
-- Server-side item spawning/collision simulation
-- Production asset atlas optimization
-- Player authentication/profile identity
-- MongoDB persistence
-- Leaderboards
-- Authentication/profile system
-- Render deployment
-- Vercel deployment
-- Production assets/audio
-
-## Next milestone
-
-Expand the animation atlases with frame-by-frame variants, add route variants and VFX, then continue the realtime architecture and first 2–8 player room loop:
-
-`start → steer → collect item → avoid traffic → race CPU riders → build multiplier → finish → result screen`
-
-Then finish server-authoritative item/traffic simulation and replace the gameplay placeholders with the production asset packs.
-
-### Verification note
-The repository changes were committed successfully. A local frontend build could not be run in this environment because outbound DNS access to GitHub is unavailable.
-
-## Visual milestone — Lagos route world kit
-
-The race scene now uses a layered Lagos visual stack: sky, skyline silhouette, procedural shoulder/road geometry, asphalt texture, roadside shops/market/sign/pole props, six traffic vehicle variants, and dedicated power-up icons. Production bike/rider art and these route assets remain modular and cached through the core asset pack.
-
-The environment upgrade does not change race rules or network state. The existing placeholders remain safe fallbacks where an individual production texture is unavailable.
-
-
-## Visual milestone — racer motion
-
-The Phaser race scene now has a procedural player animation state system for idle, lean, brake, nitro, pickup, crash, airborne and finish states. CPU racers receive lightweight motion and lane-change lean. This keeps the current core pack small while leaving a clean path to sprite atlases later.
-
-## 2026-10-02 — Runtime asset pipeline
-
-### Completed
-- Made the runtime asset manifest the authoritative source for shipped asset paths.
-- Added ready/planned asset validation helpers so packs cannot silently point at non-ready runtime files.
-- Rebuilt the shipped asset packs around files that currently exist in `public/assets`.
-- Split the current runtime into a small `core` pack and a Lagos Route 01 pack.
-- Added versioned Cache Storage namespaces per pack.
-- Added a service worker for serving cached `/assets/*` requests on subsequent visits.
-- Added pack preparation before Phaser boots on the race page.
-- Added a small race loading state that explains the first-use cache behavior.
-- Added route selection through `/play?route=...` with Lagos Route 01 as the default.
-- Updated Phaser preload calls to resolve asset paths through the manifest rather than duplicating file paths.
-- Removed stale planned pack URLs from the active pack registry.
-
-### Current pack contract
-
-`core`
-- 5 bikes
-- 4 riders
-- 6 traffic vehicles
-- 4 power-ups
-
-`route-lagos-01`
-- Lagos sky and skyline
-- asphalt texture
-- shop, market stall, palm, utility pole and barrier props
-- route sign
-
-Future routes/cosmetic packs can be added to the same versioned contract without changing the multiplayer state model.
-
-### Caching behavior
-
-First race:
-`prepare core + route → cache assets → start Phaser`
-
-Later races:
-`service worker → cached asset → Phaser`
-
-The realtime server continues to send race state only; artwork remains client-side.
-
-
-## 2026-10-02 — Production racer + Lagos identity pass
-
-### Completed
-- Upgraded the hero starter motorcycle vector with richer body panels, materials, cockpit details, lighting and rear geometry.
-- Upgraded the Mazi production rider vector with a more readable helmet, suit structure and accent treatment.
-- Added seven distinct CPU rider identities: Tega, Chidi, Zina, Emeka, Bisi, Femi and Yemi.
-- Added reusable Lagos roadside assets for fuel station, mechanic workshop, danfo stop, billboard, drainage and concrete wall.
-- Integrated the new CPU riders into the seven-rider solo roster instead of recycling the four selectable garage riders.
-- Integrated the new roadside assets into the Route 01 scenery template with runtime-image fallbacks.
-- Expanded the core and Lagos route packs and bumped the runtime asset-cache version to 3.
-
-### Art pipeline direction
-The runtime still uses lightweight SVG assets for this pass so gameplay remains fast and cache-friendly. These files are the stable runtime targets that can later be replaced by rendered multi-angle 3D source outputs without changing loadout, race, or multiplayer state code.
-
-
-## 2026-10-02 — Multiplayer loadout sync
-
-### Completed
-- Room players now carry validated bike and rider IDs.
-- The lobby sends the current Garage loadout when creating or joining a room.
-- Room snapshots return bike/rider identities to every client.
-- Multiplayer Phaser rendering uses each remote player's synced loadout instead of cycling local placeholder identities.
-- Realtime server version advanced to 0.3.0.
-
-### Render verification
-The repository-side multiplayer changes are ready to deploy, but the connected Render account requires an explicit workspace selection before service/deploy inspection or mutation. The available workspace is My Workspace (tea-dafeo6tbedkc738utnmg).
+## Known limits / next steps
+- Multiplayer renders server state (lane + distance); server does not simulate traffic or items yet.
+- Road is straight; curves/hills are the next big realism step.
+- For hero-quality characters, sculpt in Blender (see build_characters.py from the design chat) and load the glTF with GLTFLoader in `src/game/models/racer.ts`.
+- Add MongoDB persistence and leaderboards on the server.

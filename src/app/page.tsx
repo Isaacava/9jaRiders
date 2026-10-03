@@ -12,7 +12,7 @@ export default function Home() {
         </header>
 
         <div className="game-preview">
-          <GameCanvas />
+          <GameCanvas mode="demo" />
           <div className="preview-hud">
             <div>
               <span>ROUTE</span>

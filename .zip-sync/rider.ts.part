@@ -1,0 +1,40 @@
+import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import type { BikeRig } from "./bike";
+import { placeRod, rod, std } from "./util";
+
+export type RiderLook = {
+  skin: number;
+  hair: number;
+  hairStyle: "afro" | "fade" | "braids" | "cap";
+  jacket: number;
+  trim: number;
+  pants: number;
+  shorts: boolean;
+  boots: number;
+  female: boolean;
+};
+
+// Nigerian-inspired riders; "ada" matches the purple-afro / yellow-jacket / white-shorts / purple-boots reference.
+export const RIDER_LOOKS: Record<string, RiderLook> = {
+  main: { skin: 0x4a2c1c, hair: 0x0d0b0a, hairStyle: "fade", jacket: 0x0c7b72, trim: 0xf2c94c, pants: 0x1f2a44, shorts: false, boots: 0x1a1a1a, female: false },
+  ada: { skin: 0x6a412c, hair: 0x8d4fe0, hairStyle: "afro", jacket: 0xf5c518, trim: 0xffffff, pants: 0xf4f4f4, shorts: true, boots: 0x7a3fd0, female: true },
+  kobby: { skin: 0x34201a, hair: 0x120d0b, hairStyle: "braids", jacket: 0xd8392f, trim: 0x15161a, pants: 0x15161a, shorts: false, boots: 0x2b2b2b, female: false },
+  tobi: { skin: 0x7a5236, hair: 0x15110f, hairStyle: "cap", jacket: 0xf08a38, trim: 0x15161a, pants: 0x2d3a2f, shorts: false, boots: 0x3b2a1c, female: false }
+};
+
+export type RiderRig = {
+  group: THREE.Group;
+  update: (steerAngle: number, tuck: number) => void;
+};
+
+function ik(a: THREE.Vector3, b: THREE.Vector3, l1: number, l2: number, bend: THREE.Vector3) {
+  const d = b.clone().sub(a);
+  let dist = d.length();
+  const max = l1 + l2 - 0.005;
+  if (dist > max) { d.setLength(max); dist = max; }
+  const dir = d.clone().normalize();
+  const along = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist);
+  const h = Math.sqrt(Math.max(l1 * l1 - along * along, 0));
+  const perp = bend.clone().sub(dir.clone().multiplyScalar(bend.dot(dir))).normalize();
+  return a.clone().addScaledVector8is.

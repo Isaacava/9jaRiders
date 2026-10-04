@@ -6,6 +6,7 @@ import { buildTraffic, TRAFFIC_SIZE, type TrafficKind } from "./models/traffic";
 import { mulberry32 } from "./models/util";
 import { getSharedRealtimeClient, type RealtimeState } from "./multiplayer";
 import { buildWorld, GOAL, ROAD_HALF, laneX } from "./world";
+import { GameAudio } from "./audio";
 
 export type RaceMode = "solo" | "multiplayer" | "demo";
 export type RaceOptions = { mode: RaceMode; room?: string; player?: string };
@@ -19,11 +20,12 @@ type Racer = {
   finished: boolean; place: number; finishT: number;
   roll: number; steerAng: number; pitch: number; mult: number; bestMult: number;
   braking: boolean; ahead: boolean; color: string; lastDist: number;
+  padT: number; padCool: number;
 };
 
 type TrafficCar = {
   kind: TrafficKind; x: number; dist: number; v: number; w: number; l: number;
-  mesh: THREE.Group | null; variant: number; passed: boolean; minDx: number; hitFlag: boolean;
+  mesh: THREE.Group | null; variant: number; passed: boolean; minDx: number; hitFlag: boolean; hornCool: number;
 };
 
 type Pickup = { x: number; dist: number; taken: boolean; mesh: THREE.Group };
@@ -65,7 +67,10 @@ const CSS = `
 .rr-card a.alt{background:#fff}
 .rr-wait{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;letter-spacing:.2em}
 .rr-flash{position:absolute;inset:0;background:radial-gradient(transparent 40%,rgba(255,40,40,.55));opacity:0;transition:opacity .35s}
-.rr-boost{position:absolute;inset:0;background:radial-gradient(transparent 45%,rgba(90,150,255,.4));opacity:0;transition:opacity .25s}
+.rr-boost{position:absolute;inset:0;background:radial-gradient(transparent 40%,rgba(255,170,60,.45));opacity:0;transition:opacity .25s}
+.rr-lines{position:absolute;inset:0;opacity:0;transition:opacity .2s;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 60%,rgba(255,255,255,0) 0deg 5deg,rgba(255,255,255,.16) 5deg 5.8deg);-webkit-mask:radial-gradient(circle at 50% 60%,transparent 26%,#000 72%);mask:radial-gradient(circle at 50% 60%,transparent 26%,#000 72%);animation:rrspin 1.1s linear infinite}
+@keyframes rrspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.rr-mute{position:absolute;left:12px;top:calc(max(10px,env(safe-area-inset-top)) + 78px);pointer-events:auto;width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(10,14,18,.6);color:#fff;font-size:18px;display:grid;place-items:center}
 `;
 
 const ordinal = (n: number) => `${n}${["TH", "ST", "ND", "RD"][n % 100 > 10 && n % 100 < 14 ? 0 : Math.min(n % 10, 4) % 4] ?? "TH"}`;
@@ -91,7 +96,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   renderer.domElement.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xd8dfe0, 70, 420);
+  scene.fog = new THREE.Fog(0xe9cfa8, 60, 390);
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = envTex;
@@ -107,7 +112,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   hud.className = "rr-hud";
   hud.style.display = demo ? "none" : "block";
   hud.innerHTML = `
-    <div class="rr-flash"></div><div class="rr-boost"></div>
+    <div class="rr-flash"></div><div class="rr-boost"></div><div class="rr-lines"></div>
+    <button class="rr-mute" data-k="mute" aria-label="sound">🔊</button>
     <div class="rr-top">
       <div class="rr-chip"><small>TIME</small><b data-k="time">0:00.0</b></div>
       <div class="rr-chip rr-pos"><small>POSITION</small><b data-k="pos">1</b>/<span data-k="total">8</span></div>
@@ -130,6 +136,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   if (isTouch) { $("ctl").classList.add("touch"); $("hint").style.display = "none"; }
   const flash = hud.querySelector(".rr-flash") as HTMLElement;
   const boostFx = hud.querySelector(".rr-boost") as HTMLElement;
+  const linesFx = hud.querySelector(".rr-lines") as HTMLElement;
 
   let popTimer = 0;
   const popup = (text: string, color = "#7dffb2") => {
@@ -171,20 +178,14 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   const endDrag = (e: PointerEvent) => { if (e.pointerId === dragId) { dragId = -1; input.left = input.right = false; } };
   cv.addEventListener("pointerup", endDrag); cv.addEventListener("pointercancel", endDrag);
 
-  // ---------- audio (engine synth) ----------
-  let actx: AudioContext | null = null, osc1: OscillatorNode | null = null, osc2: OscillatorNode | null = null, gain: GainNode | null = null;
-  function startAudio() {
-    if (demo || actx) return;
-    try {
-      actx = new AudioContext();
-      osc1 = actx.createOscillator(); osc1.type = "sawtooth";
-      osc2 = actx.createOscillator(); osc2.type = "square";
-      const lp = actx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520;
-      gain = actx.createGain(); gain.gain.value = 0;
-      osc1.connect(lp); osc2.connect(lp); lp.connect(gain); gain.connect(actx.destination);
-      osc1.start(); osc2.start();
-    } catch { actx = null; }
-  }
+  // ---------- audio (Afrobeats groove, engine, horns, Lagos ambience; see audio.ts) ----------
+  const audio = new GameAudio();
+  function startAudio() { if (!demo) audio.start(); }
+  const unlockAudio = () => startAudio();
+  window.addEventListener("pointerdown", unlockAudio); window.addEventListener("keydown", unlockAudio);
+  const muteBtn = hud.querySelector(".rr-mute") as HTMLButtonElement;
+  muteBtn.textContent = audio.isMuted() ? "🔇" : "🔊";
+  muteBtn.addEventListener("click", () => { audio.start(); audio.setMuted(!audio.isMuted()); muteBtn.textContent = audio.isMuted() ? "🔇" : "🔊"; });
 
   // ---------- racers ----------
   const racers: Racer[] = [];
@@ -202,9 +203,9 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     return {
       id, name, human, remote, model, x: 0, dist: 0, v: 0, vx: 0,
       vmax: def.topSpeed / 3.6, accel: def.acceleration, handling: def.handling,
-      nitro: 0.5, boosting: false, skill: human ? 1 : 0.9 + rnd() * 0.1,
+      nitro: 0.6, boosting: false, skill: human ? 1 : 0.9 + rnd() * 0.1,
       laneT: 0, laneTimer: rnd() * 2, hit: 0, hitCool: 0, finished: false, place: 0, finishT: 0,
-      roll: 0, steerAng: 0, pitch: 0, mult: 1, bestMult: 1, braking: false, ahead: false, color, lastDist: 0
+      roll: 0, steerAng: 0, pitch: 0, mult: 1, bestMult: 1, braking: false, ahead: false, color, lastDist: 0, padT: 0, padCool: 0
     };
   };
 
@@ -244,7 +245,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       const kind = kinds[Math.floor(rnd() * kinds.length)];
       const size = TRAFFIC_SIZE[kind];
       const speedBase = { danfo: 13, sedan: 15, keke: 9, suv: 15, truck: 10.5 }[kind];
-      traffic.push({ kind, x: laneX(Math.floor(rnd() * 5)), dist: d, v: speedBase + rnd() * 3, w: size.w, l: size.l, mesh: null, variant: Math.floor(rnd() * 5), passed: false, minDx: 99, hitFlag: false });
+      traffic.push({ kind, x: laneX(Math.floor(rnd() * 5)), dist: d, v: speedBase + rnd() * 3, w: size.w, l: size.l, mesh: null, variant: Math.floor(rnd() * 5), passed: false, minDx: 99, hitFlag: false, hornCool: 0 });
     }
     const padGeo = new THREE.TorusGeometry(0.55, 0.1, 12, 28);
     const padMat = new THREE.MeshStandardMaterial({ color: 0x59a8ff, emissive: 0x2a7bff, emissiveIntensity: 2.2, roughness: 0.3 });
@@ -257,6 +258,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       pickups.push({ x, dist: d, taken: false, mesh: g });
     }
   }
+
+  let draftT = 0;
 
   // ---------- state ----------
   type Phase = "wait" | "countdown" | "racing";
@@ -355,13 +358,16 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   };
 
   const drive = (r: Racer, dt: number, steerCmd: number, brake: boolean) => {
-    const boost = r.boosting && r.nitro > 0;
-    if (boost) { r.nitro -= dt * 0.26; if (r.nitro <= 0) { r.nitro = 0; r.boosting = false; } }
-    else r.nitro = Math.min(1, r.nitro + dt * 0.02);
-    let vm = r.vmax * (boost ? 1.22 : 1);
+    // boost: a boost pad gives a free burst (padT); nitro drains slower, refills faster and hits harder than before
+    const padOn = r.padT > 0;
+    if (padOn) { r.padT = Math.max(0, r.padT - dt); r.boosting = true; }
+    const boost = r.boosting && (r.nitro > 0 || padOn);
+    if (boost && !padOn) { r.nitro -= dt * 0.2; if (r.nitro <= 0) { r.nitro = 0; r.boosting = false; } }
+    else if (!boost) r.nitro = Math.min(1, r.nitro + dt * 0.05);
+    let vm = r.vmax * (boost ? 1.32 : 1);
     if (r.hit > 0) vm *= 0.6;
     if (r.finished) vm = 12;
-    const acc = (4 + r.accel * 0.9) * (boost ? 1.8 : 1);
+    const acc = (4 + r.accel * 0.9) * (boost ? 2.4 : 1);
     let a = acc * Math.max(0, 1 - Math.pow(r.v / vm, 1.6));
     if (r.v > vm) a = -(r.v - vm) * 1.6;
     if (brake || r.finished) a = brake ? -26 : Math.min(a, -3);
@@ -378,11 +384,12 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
 
   const crash = (r: Racer, pushDir: number, v: number) => {
     if (r.hitCool > 0) return;
-    r.hit = 1; r.hitCool = 1.1; r.v = Math.min(r.v, v * 0.7); r.vx += pushDir * 4; r.boosting = false;
+    r.hit = 1; r.hitCool = 1.1; r.v = Math.min(r.v, v * 0.7); r.vx += pushDir * 4; r.boosting = false; r.padT = 0;
     if (r.human) {
       shake = 1; r.mult = Math.max(1, r.mult * 0.6);
       flash.style.opacity = "1"; setTimeout(() => (flash.style.opacity = "0"), 120);
       popup("CRASH!", "#ff7b7b");
+      audio.crash();
     }
   };
 
@@ -450,9 +457,10 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     if (phase === "countdown") {
       const prev = Math.ceil(countdown);
       countdown -= dt;
-      if (mode !== "multiplayer" && countdown <= 0) { phase = "racing"; raceT = 0; $("center").innerHTML = `<div class="rr-count">GO!</div>`; setTimeout(() => { $("center").innerHTML = ""; }, 700); }
+      if (mode !== "multiplayer" && countdown <= 0) { phase = "racing"; raceT = 0; audio.go(); $("center").innerHTML = `<div class="rr-count">GO!</div>`; setTimeout(() => { $("center").innerHTML = ""; }, 700); }
       else if (Math.ceil(countdown) !== prev || !$("center").firstChild) {
         const n = Math.max(1, Math.ceil(countdown));
+        if (!demo && n <= 3) audio.beep(n);
         if (!demo) $("center").innerHTML = `<div class="rr-count">${n > 3 ? 3 : n}</div>`;
       }
       if (mode === "multiplayer" && remoteState?.status === "racing") { phase = "racing"; $("center").innerHTML = `<div class="rr-count">GO!</div>`; setTimeout(() => { $("center").innerHTML = ""; }, 700); }
@@ -499,12 +507,13 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       if (!racing) { r.v = 0; r.braking = false; r.boosting = false; continue; }
       if (r.human) {
         const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-        if (input.nitro && r.nitro > 0.04 && !r.finished) r.boosting = true; else if (!input.nitro) r.boosting = false;
+        if (input.nitro && r.nitro > 0.04 && !r.finished) r.boosting = true; else if (!input.nitro && r.padT <= 0) r.boosting = false;
         drive(r, dt, r.finished ? clamp(-r.x * 0.5, -1, 1) : steer, input.brake && !r.finished);
       } else driveCPU(r, dt, obs);
 
       if (!r.finished && r.dist >= GOAL) {
-        r.finished = true; r.place = ++finishedCount; r.finishT = raceT; r.boosting = false;
+        r.finished = true; r.place = ++finishedCount; r.finishT = raceT; r.boosting = false; r.padT = 0;
+        if (r.human) audio.finish();
       }
     }
     // demo: the "player" is driven by the CPU brain
@@ -535,8 +544,16 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
         for (const p of pickups) {
           if (p.taken) continue;
           if (Math.abs(p.dist - r.dist) < 1.6 && Math.abs(p.x - r.x) < 1.3) {
-            p.taken = true; p.mesh.visible = false; r.nitro = Math.min(1, r.nitro + 0.35);
-            if (r.human) popup("+NITRO", "#8fc2ff");
+            p.taken = true; p.mesh.visible = false; r.nitro = Math.min(1, r.nitro + 0.5);
+            if (r.human) { popup("+NITRO", "#8fc2ff"); audio.pickup(); }
+          }
+        }
+        r.padCool = Math.max(0, r.padCool - dt);
+        for (const pd of world.pads) {
+          if (r.padCool > 0) break;
+          if (Math.abs(pd.dist - r.dist) < 2.8 && Math.abs(pd.x - r.x) < 1.25) {
+            r.padT = 1.7; r.padCool = 1.0; r.nitro = Math.min(1, r.nitro + 0.15);
+            if (r.human) { popup("BOOST PAD!", "#ffd24d"); audio.pad(); shake = Math.max(shake, 0.3); }
           }
         }
       }
@@ -544,15 +561,31 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
         for (const t of traffic) {
           if (!t.passed && player.dist > t.dist + t.l / 2 + 1) {
             t.passed = true;
-            if (!t.hitFlag && t.minDx < 1.0) { player.mult += 0.05; player.nitro = Math.min(1, player.nitro + 0.04); popup("CLOSE CALL +0.05×", "#7dffb2"); }
+            if (!t.hitFlag && t.minDx < 1.0) {
+              player.mult += 0.05; player.nitro = Math.min(1, player.nitro + 0.1); popup("CLOSE CALL +0.05×", "#7dffb2");
+              audio.closeCall(); if (t.kind === "danfo") audio.voice();
+            }
           }
         }
         for (const o of racers) {
           if (o === player) continue;
           const ahead = o.dist > player.dist;
-          if (o.ahead && !ahead && racing) { player.mult += 0.03; popup("OVERTAKE +0.03×", "#ffd24d"); }
+          if (o.ahead && !ahead && racing) { player.mult += 0.03; player.nitro = Math.min(1, player.nitro + 0.05); popup("OVERTAKE +0.03×", "#ffd24d"); audio.overtake(); }
           o.ahead = ahead;
         }
+        // traffic honks when you tailgate it; slipstream behind traffic refills nitro
+        let drafting = false;
+        for (const t of traffic) {
+          t.hornCool = Math.max(0, t.hornCool - dt);
+          const dz = t.dist - player.dist, adx = Math.abs(t.x - player.x);
+          if (!racing || dz < 3 || dz > 22 || adx > 1.4) continue;
+          if (dz < 16 && adx < 1.1 && player.v > player.vmax * 0.55) drafting = true;
+          if (t.hornCool <= 0 && player.v > t.v + 1 && rnd() < dt * 0.8) { audio.horn(t.kind, clamp((t.x - player.x) / 5, -1, 1), 0.9); t.hornCool = 3 + rnd() * 3; }
+        }
+        if (drafting) {
+          player.nitro = Math.min(1, player.nitro + dt * 0.08); draftT += dt;
+          if (draftT > 1.4) { popup("SLIPSTREAM +NITRO", "#8fc2ff"); draftT = -3; }
+        } else draftT = Math.max(0, draftT - dt);
         player.bestMult = Math.max(player.bestMult, player.mult);
       }
     }
@@ -569,11 +602,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     updateCamera(dt, lead, W, H);
 
     // audio
-    if (actx && osc1 && osc2 && gain) {
-      const f = 55 + (lead.v / lead.vmax) * 120 + (lead.boosting ? 40 : 0);
-      osc1.frequency.setTargetAtTime(f, actx.currentTime, 0.05); osc2.frequency.setTargetAtTime(f * 0.5, actx.currentTime, 0.05);
-      gain.gain.setTargetAtTime(phase === "racing" || phase === "countdown" ? 0.035 + (lead.v / lead.vmax) * 0.03 : 0, actx.currentTime, 0.1);
-    }
+    if (!demo) audio.update(lead.v / lead.vmax, lead.boosting, phase === "racing");
+    world.tick(dt, time);
 
     // HUD
     if (!demo) {
@@ -584,6 +614,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       $("mult").textContent = `${(player?.mult ?? 1).toFixed(2)}×`;
       ($("nitro") as HTMLElement).style.width = `${Math.round((player?.nitro ?? 0) * 100)}%`;
       boostFx.style.opacity = lead.boosting ? "1" : "0";
+      linesFx.style.opacity = lead.boosting ? "1" : "0";
       for (const r of racers) { ensureDot(r); dotEls.get(r.id)!.style.left = `${clamp(r.dist / GOAL, 0, 1) * 100}%`; }
       if (player && player.finished && !resultShown && (mode === "multiplayer" || raceT - player.finishT > 1.2)) {
         resultShown = true;
@@ -627,7 +658,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     unsub?.();
     ro.disconnect();
     window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku);
-    try { osc1?.stop(); osc2?.stop(); void actx?.close(); } catch { /* ignore */ }
+    window.removeEventListener("pointerdown", unlockAudio); window.removeEventListener("keydown", unlockAudio);
+    audio.dispose();
     scene.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh || (o as THREE.InstancedMesh).isInstancedMesh) {

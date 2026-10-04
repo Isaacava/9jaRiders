@@ -1,5 +1,13 @@
 # Build log
 
+## v6 fixes + boost + Lagos
+- FIX: arms/head were computed in world space, so they missed the grips whenever the bike root was moved/rotated (garage drag, every race frame). All rider maths is now in the rider group's local space; the rider also slides on the seat / leans in to keep both hands on the grips while steering.
+- FIX: faces: real eyes (sclera + iris), brows, nose, lips, chin, ears. Hair caps/headwrap/headscarf now leave the face open (the old headscarf covered it).
+- Shoes: boots or sneakers with sole, toe box, tongue, laces and side stripe on the foot bones.
+- Boost: nitro hits harder (x1.32 top speed, x2.4 accel), drains slower, refills faster; BOOST PADS on the road (free 1.7 s burst), slipstream behind traffic refills nitro, bigger close-call / overtake / pickup rewards, speed-line overlay.
+- Lagos: warm golden-hour sky + fog, yellow/black kerbs, pedestrian footbridges, danfo bus stops (Oshodi, Yaba, Ikeja...), kiosks (pure water, POS, suya, agege bread...), people on the pavements, green-white-green bunting + flags, lagoon bridge stretch (z -1800..-3000) with stilt houses, canoes and a cable-stayed pylon, Victoria Island glass towers, Lagos billboards.
+- Sound (src/game/audio.ts, all synthesized): original Afrobeats groove that opens up with nitro, engine with gear shifts, wind, turbo, danfo/keke/truck horns, city ambience, conductor shouts via speech synthesis, countdown beeps, pickup/pad/crash/finish sfx. Mute button on the HUD (remembered).
+
 ## v4 characters, hands, bars, camera
 - 8 unique African riders (main/Mazi, ada, kobby, tobi, ngozi, emeka, zainab, chidi): different builds (std/tall/stocky/slim), skin tones, hair (afro, braids, cap, fade, gele headwrap, headscarf, locs), outfits (dashiki, crop jacket, Ankara print, Super-Eagles green/white, leather).
 - CPU racers are now all different characters (shuffled, never the player's own); server allow-list updated.

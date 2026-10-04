@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mulberry32, std } from "./models/util";
+import { buildBoostPads, buildLagos, inBridge, type BoostPad } from "./lagos";
 
 export const GOAL = 5000;
 export const LANE_W = 2.4;
@@ -79,7 +80,7 @@ function windowTexture() {
 function skyTexture() {
   const [c, g] = canvas(32, 512);
   const gr = g.createLinearGradient(0, 0, 0, 512);
-  gr.addColorStop(0, "#2d6fb8"); gr.addColorStop(0.45, "#7fb3dd"); gr.addColorStop(0.5, "#d8e4ea"); gr.addColorStop(0.56, "#e9dcc2"); gr.addColorStop(1, "#c8b79a");
+  gr.addColorStop(0, "#3a6aa8"); gr.addColorStop(0.4, "#8fb0d0"); gr.addColorStop(0.49, "#f4d9ae"); gr.addColorStop(0.53, "#f2b97a"); gr.addColorStop(0.6, "#e6c9a0"); gr.addColorStop(1, "#c9a67a");
   g.fillStyle = gr; g.fillRect(0, 0, 32, 512);
   return tex(c);
 }
@@ -99,6 +100,8 @@ export type World = {
   sun: THREE.DirectionalLight;
   sky: THREE.Object3D;
   followPlayer: (x: number, z: number) => void;
+  pads: BoostPad[];
+  tick: (dt: number, time: number) => void;
 };
 
 export function buildWorld(scene: THREE.Scene): World {
@@ -109,9 +112,9 @@ export function buildWorld(scene: THREE.Scene): World {
   const zMid = 60 - L / 2;
 
   // lights
-  const hemi = new THREE.HemisphereLight(0xcfe6ff, 0x8a7352, 0.9);
+  const hemi = new THREE.HemisphereLight(0xffe6c4, 0x8a6b4c, 0.95);
   group.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfff0d6, 3.0);
+  const sun = new THREE.DirectionalLight(0xffd29a, 3.3);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   const sc = sun.shadow.camera as THREE.OrthographicCamera;
@@ -177,6 +180,7 @@ export function buildWorld(scene: THREE.Scene): World {
   const placements: { cls: number; x: number; z: number; c: number }[] = [];
   for (const sx of [-1, 1]) {
     for (let z = 20; z > -L + 40; z -= 10 + rnd() * 6) {
+      if (inBridge(z, 14)) continue; // lagoon: no buildings
       const r = rnd();
       const cls = r < 0.45 ? 0 : r < 0.85 ? 1 : 2;
       const gap = 11.8 + rnd() * (cls === 0 ? 4 : 9);
@@ -241,7 +245,7 @@ export function buildWorld(scene: THREE.Scene): World {
 
   const trunkGeo = new THREE.CylinderGeometry(0.16, 0.26, 7, 8); trunkGeo.translate(0, 3.5, 0);
   const frond = new THREE.ConeGeometry(0.4, 3.4, 4); frond.rotateZ(Math.PI / 2); frond.translate(1.8, 0, 0);
-  const palmZ: number[] = []; for (let z = -20; z > -L + 40; z -= 55 + rnd() * 40) palmZ.push(z);
+  const palmZ: number[] = []; for (let z = -20; z > -L + 40; z -= 55 + rnd() * 40) if (!inBridge(z, 14)) palmZ.push(z);
   const trunks = new THREE.InstancedMesh(trunkGeo, std(0x6b5a45, 0.95), palmZ.length);
   const fronds = new THREE.InstancedMesh(frond, std(0x2f7a37, 0.85), palmZ.length * 7);
   const q = new THREE.Quaternion(); const e = new THREE.Euler(); const sc3 = new THREE.Vector3(1, 1, 1);
@@ -259,9 +263,11 @@ export function buildWorld(scene: THREE.Scene): World {
   group.add(trunks, fronds);
 
   // billboards
-  const ads = [["OBI'S SPARES", "#f5b800", "#15161a"], ["MAMA NKECHI BUKA", "#1f7a3a", "#fff"], ["FRESH FADES", "#15161a", "#f08a38"], ["9JA SPEED", "#d8392f", "#fff"], ["ZOBO AND CHILL", "#8d2fa0", "#fff"]];
+  const ads = [["EKO FOR SHO", "#0c7b72", "#fff"], ["LAGOS NO DEY SLEEP", "#15161a", "#f5b800"], ["JOLLOF PARTY", "#d8392f", "#fff"], ["MAMA NKECHI BUKA", "#1f7a3a", "#fff"],
+    ["OBI'S SPARES", "#f5b800", "#15161a"], ["GO-SLOW? NOT US", "#2756a8", "#fff"], ["ZOBO AND CHILL", "#8d2fa0", "#fff"], ["9JA SPEED", "#f08a38", "#15161a"]];
   const adMats = ads.map(([t, bg, fg]) => new THREE.MeshBasicMaterial({ map: billboardTexture(t, bg, fg) }));
-  for (let z = -120, i = 0; z > -L + 80; z -= 210 + rnd() * 90, i++) {
+  for (let z = -120, i = 0; z > -L + 80; z -= 150 + rnd() * 70, i++) {
+    if (inBridge(z, 14)) continue;
     const sx = i % 2 ? 1 : -1;
     const g = new THREE.Group();
     const panel = new THREE.Mesh(new THREE.BoxGeometry(8, 4, 0.3), adMats[i % adMats.length]);
@@ -275,7 +281,7 @@ export function buildWorld(scene: THREE.Scene): World {
   // market umbrellas
   const umbPole = new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6); umbPole.translate(0, 1.1, 0);
   const umbTop = new THREE.ConeGeometry(1.4, 0.5, 10); umbTop.translate(0, 2.3, 0);
-  const umbZ: number[] = []; for (let z = -30; z > -L + 40; z -= 28 + rnd() * 30) umbZ.push(z);
+  const umbZ: number[] = []; for (let z = -30; z > -L + 40; z -= 28 + rnd() * 30) if (!inBridge(z, 14)) umbZ.push(z);
   const um = new THREE.InstancedMesh(umbTop, std(0xffffff, 0.8), umbZ.length);
   const up = new THREE.InstancedMesh(umbPole, steel, umbZ.length);
   umbZ.forEach((z, i) => {
@@ -293,10 +299,14 @@ export function buildWorld(scene: THREE.Scene): World {
   }
   group.add(far);
 
+  const lagos = buildLagos(group, L, rnd, ROAD_HALF);
+  const padObj = buildBoostPads(group, L, rnd, laneX);
+
   const followPlayer = (x: number, z: number) => {
-    sun.position.set(x + 22, 36, z + 14);
+    sun.position.set(x + 28, 28, z + 18);
     sun.target.position.set(x, 0, z - 6);
     sun.target.updateMatrixWorld();
   };
-  return { group, sun, sky, followPlayer };
+  const tick = (dt: number, time: number) => { lagos.tick(dt, time); padObj.tick(dt, time); };
+  return { group, sun, sky, followPlayer, pads: padObj.pads, tick };
 }

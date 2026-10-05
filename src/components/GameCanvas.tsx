@@ -21,7 +21,8 @@ export default function GameCanvas({
 
     const boot = async () => {
       try {
-        const { createThreeRace } = await import("../game/threeRace");
+        // download the baked model pack in parallel with the game code (falls back to generating meshes if it fails)
+        const [{ createThreeRace }] = await Promise.all([import("../game/threeRace"), import("../game/models/loadPack").then((m) => m.loadModelPack())]);
         if (disposed || !mountRef.current) return;
         game = createThreeRace(mountRef.current, { mode, room, player });
         await game.ready;

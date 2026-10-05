@@ -18,6 +18,7 @@ const GLASS = rgb(0x0b1620), TRIM = rgb(0x121316), WHITE: RGB = [1, 1, 1];
 export type CarShape = { mesh: MeshData; colors: Float32Array; tintable: boolean };
 type Zone = (x: number, y: number, z: number, nx: number, ny: number, nz: number) => RGB;
 const CACHE = new Map<TrafficKind, CarShape>();
+export const primeCarShape = (kind: TrafficKind, shape: CarShape) => { CACHE.set(kind, shape); };
 
 function wells(xs: number[], zs: number[], y: number, r: number, hw: number): SDF {
   const fs: SDF[] = [];
@@ -30,7 +31,7 @@ export function buildCarShape(kind: TrafficKind): CarShape {
   if (hit) return hit;
   const { w, l } = TRAFFIC_SIZE[kind];
   const hw = w / 2, hl = l / 2;
-  let sdf: SDF, zone: Zone, tintable = false, h = 0.05;
+  let sdf: SDF, zone: Zone, tintable = false, h = 0.07;
   let min: V3, max: V3;
 
   if (kind === "danfo") {
@@ -58,7 +59,7 @@ export function buildCarShape(kind: TrafficKind): CarShape {
     };
     tintable = true;
     min = [-hw - 0.2, 0.15, -hl - 0.2]; max = [hw + 0.2, tall ? 2.2 : 1.6, hl + 0.2];
-    h = 0.045;
+    h = 0.065;
   } else if (kind === "keke") {
     const sun = rgb(0xf5b800), green = rgb(0x1f7a3a);
     const parts: SDF[] = [
@@ -77,7 +78,7 @@ export function buildCarShape(kind: TrafficKind): CarShape {
       return sun;
     };
     min = [-hw - 0.1, 0.2, -hl - 0.1]; max = [hw + 0.1, 1.95, hl + 0.1];
-    h = 0.035;
+    h = 0.05;
   } else {
     const blue = rgb(0x2756a8), cream = rgb(0xe9e6df);
     const cab = rbox([0, 1.5, -hl + 1.0], [hw, 0.75, 0.95], 0.2);
@@ -93,6 +94,7 @@ export function buildCarShape(kind: TrafficKind): CarShape {
       return cream;
     };
     min = [-hw - 0.2, 0.2, -hl - 0.2]; max = [hw + 0.2, 3.1, hl + 0.2];
+    h = 0.09;
   }
 
   const mesh = surfaceNets(sdf, min, max, h);

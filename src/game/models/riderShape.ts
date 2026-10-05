@@ -121,6 +121,12 @@ function segDist(px: number, py: number, pz: number, a: V3, b: V3) {
 
 const CACHE = new Map<string, RiderShape>();
 
+/** Install a pre-baked shape (see pack.ts) so the browser never has to run the slow SDF mesher. */
+export function primeRiderShape(female: boolean, build: Build, mesh: MeshData, skinIndex: Uint16Array, skinWeight: Float32Array) {
+  const P = profile(female, build);
+  CACHE.set(`${female}-${build}`, { female, build, s: P.s, sw: P.sw, mesh, joints: restJoints(female, build), skinIndex, skinWeight });
+}
+
 export function buildRiderShape(female: boolean, build: Build = "std"): RiderShape {
   const ck = `${female}-${build}`;
   const hit = CACHE.get(ck);
@@ -138,7 +144,7 @@ export function buildRiderShape(female: boolean, build: Build = "std"): RiderSha
   fs.push(ellipsoid([hc[0], hc[1] + 0.055 * P.s, hc[2]], 0.088 * P.s, 1, 1.22, 1.1));
   fs.push(capsule([hc[0], hc[1] + 0.0, hc[2] - 0.012 * P.s], [hc[0], hc[1] + 0.03 * P.s, hc[2] - 0.012 * P.s], 0.07 * P.s, 0.08 * P.s, 1, 1, 1.05));
   const body = union(fs, 0.035);
-  const mesh = surfaceNets(body, [-0.86, -0.02, -0.3], [0.86, 1.9, 0.3], 0.018);
+  const mesh = surfaceNets(body, [-0.86, -0.02, -0.3], [0.86, 1.9, 0.3], 0.021);
 
   const segs = weightSegments();
   const vc = mesh.pos.length / 3;

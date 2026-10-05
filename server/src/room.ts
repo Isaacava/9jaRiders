@@ -260,8 +260,29 @@ export class RoomManager {
   broadcast(room: RaceRoom, message: unknown) {
     const encoded = JSON.stringify(message);
     for (const player of room.players.values()) {
-      if (player.socket.readyState === 1) player.socket.send(encoded);
+      if (player.socket.readyState === 1) player.socket.send(encoded, { compress: false });
     }
+  }
+
+  /**
+   * Compact per-tick update for racing rooms: only the numbers that change, in the same player order as the last
+   * full "room:state". Roughly 10x smaller than the full snapshot, which matters on mobile data.
+   */
+  compactSnapshot(room: RaceRoom) {
+    const code = { lobby: 0, countdown: 1, racing: 2, finished: 3 }[room.status];
+    return {
+      type: "room:snap",
+      t: Date.now(),
+      s: code,
+      c: room.status === "countdown" && room.countdownEndsAt ? Math.max(0, room.countdownEndsAt - Date.now()) : null,
+      p: [...room.players.values()].map((p) => [
+        Math.round(p.lane * 1000) / 1000,
+        Math.round(p.speed * 100) / 100,
+        Math.round(p.distance * 10) / 10,
+        Math.round(p.multiplier * 1000) / 1000,
+        p.finishPosition ?? 0
+      ])
+    };
   }
 
   broadcastSnapshot(room: RaceRoom) {

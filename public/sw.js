@@ -1,60 +1,113 @@
-const CACHE_NAMESPACE = "aboki-riders-assets-v12";
-const CACHE_PREFIX = `${CACHE_NAMESPACE}-`;
-const RUNTIME_CACHE = `${CACHE_NAMESPACE}-runtime`;
-const EXTERNAL_CDN_ORIGIN = "https://cdn.3dassets.dev";
-const EXTERNAL_RIDER_URLS = new Set([
-  "https://cdn.jsdelivr.net/gh/kunalkushwaha/vsim@3f97faf85e46d2f9a122b0a8b8d3ccc0af598f91/packages/assets/library/human.glb"
-]);
-const EXTERNAL_BIKE_URLS = new Set([
-  "https://cdn.3dassets.dev/assets/15423/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/15424/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/15428/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/15416/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/15415/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/34194/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/34283/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/32490/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/32500/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/18680/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/34231/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/32529/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/32487/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/34221/v1/model.glb",
-  "https://cdn.3dassets.dev/assets/34323/v1/model.glb"
-]);
+/* Aboki Riders service worker: offline play + fast loads.
+   - /_next/static/*, model pack, icons: cache-first (immutable, content-hashed)
+   - pages: network-first with a short timeout, so a slow connection falls back to the cached copy instantly
+   - everything else same-origin: stale-while-revalidate
+   Bump VERSION to force clients to drop old caches. */
+const VERSION = "aboki-v7";
+const SHELL = VERSION + "-shell";
+const RUNTIME = VERSION + "-runtime";
+const ROUTES = ["/", "/play", "/garage", "/multiplayer"];
+const CORE = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/models/pack.json"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil((async () => {
+    const cache = await caches.open(SHELL);
+    await Promise.allSettled([...ROUTES, ...CORE].map((u) => cache.add(new Request(u, { cache: "reload" }))));
+    try {
+      const man = await (await fetch("/models/pack.json", { cache: "no-cache" })).json();
+      await cache.add(new Request("/models/" + man.file, { cache: "reload" }));
+    } catch (e) { /* offline install: the pack is picked up later by WARM */ }
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    (async () => {
-      const cacheNames = await caches.keys();
-      await Promise.all(cacheNames.filter((name) => name.startsWith("aboki-riders-assets-v") && !name.startsWith(CACHE_PREFIX)).map((name) => caches.delete(name)));
-      await self.clients.claim();
-    })()
-  );
+  event.waitUntil((async () => {
+    for (const k of await caches.keys()) if (!k.startsWith(VERSION)) await caches.delete(k);
+    await self.clients.claim();
+  })());
 });
 
-self.addEventListener("fetch", (event) => {
-  const request = event.request;
-  const url = new URL(request.url);
-  const sameOriginAsset = url.origin === self.location.origin && url.pathname.startsWith("/assets/");
-  const sameOriginAssetApi = url.origin === self.location.origin && url.pathname === "/api/3dassets";
-  const externalBikeAsset = EXTERNAL_BIKE_URLS.has(request.url);
-  const externalCdnAsset = url.origin === EXTERNAL_CDN_ORIGIN && url.pathname.startsWith("/assets/");
-  const externalRiderAsset = EXTERNAL_RIDER_URLS.has(request.url);
-  if (request.method !== "GET" || (!sameOriginAsset && !sameOriginAssetApi && !externalBikeAsset && !externalCdnAsset && !externalRiderAsset)) return;
-  event.respondWith((async () => {
-    const runtimeCache = await caches.open(RUNTIME_CACHE);
-    const cached = await runtimeCache.match(request);
-    if (cached) return cached;
+const putSafe = async (cacheName, req, res) => {
+  if (!res || !res.ok || res.type === "opaque") return;
+  try { await (await caches.open(cacheName)).put(req, res.clone()); } catch (e) { /* quota */ }
+};
+const lookup = (req, ignoreSearch) => caches.match(req, { ignoreSearch: !!ignoreSearch, ignoreVary: true });
 
-    const response = await fetch(request);
-    if (response.ok || response.type === "opaque") {
-      await runtimeCache.put(request, response.clone());
-    }
-    return response;
-  })());
+async function cacheFirst(req) {
+  const hit = await lookup(req);
+  if (hit) return hit;
+  const res = await fetch(req);
+  putSafe(RUNTIME, req, res);
+  return res;
+}
+
+async function networkFirst(req, ms, ignoreSearch) {
+  const net = fetch(req).then((res) => { putSafe(RUNTIME, req, res); return res; });
+  net.catch(() => {});
+  const hit = await lookup(req, ignoreSearch);
+  if (!hit) return net.catch(async () => (await lookup(new Request("/"))) || Response.error());
+  try {
+    const res = await Promise.race([net, new Promise((r) => setTimeout(() => r(null), ms))]);
+    return res || hit;
+  } catch (e) { return hit; }
+}
+
+async function staleWhileRevalidate(req) {
+  const hit = await lookup(req);
+  const net = fetch(req).then((res) => { putSafe(RUNTIME, req, res); return res; }).catch(() => null);
+  return hit || (await net) || Response.error();
+}
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  const p = url.pathname;
+  if (p.startsWith("/_next/static/") || p.startsWith("/icons/") || /^\/models\/pack\..+\.bin$/.test(p)) { event.respondWith(cacheFirst(req)); return; }
+  if (p === "/models/pack.json" || p === "/manifest.webmanifest") { event.respondWith(networkFirst(req, 2500, false)); return; }
+  if (req.mode === "navigate") { event.respondWith(networkFirst(req, 3000, true)); return; }
+  event.respondWith(staleWhileRevalidate(req));
+});
+
+// The page asks us to pre-download everything the game needs for offline play.
+async function warm(urls, client) {
+  const cache = await caches.open(RUNTIME);
+  const all = new Set(urls);
+  // expand page routes: discover the script/style/font chunks their HTML references
+  for (const u of urls) {
+    if (!ROUTES.includes(u)) continue;
+    try {
+      const html = await (await fetch(u, { cache: "reload" })).text();
+      for (const m of html.matchAll(/(?:\/_next\/)?static\/[A-Za-z0-9_\-./%~]+\.(?:js|css|woff2?|png|svg|webp)/g)) {
+        all.add(m[0].startsWith("/_next/") ? m[0] : "/_next/" + m[0]);
+      }
+    } catch (e) { /* ignore */ }
+  }
+  try {
+    const man = await (await fetch("/models/pack.json", { cache: "no-cache" })).json();
+    all.add("/models/pack.json"); all.add("/models/" + man.file);
+  } catch (e) { /* ignore */ }
+  const list = [...all];
+  let done = 0, fail = 0;
+  const post = (type) => client && client.postMessage({ type, done, fail, total: list.length });
+  for (let i = 0; i < list.length; i += 5) {
+    await Promise.all(list.slice(i, i + 5).map(async (u) => {
+      try {
+        const req = new Request(u, { cache: "reload" });
+        if (await caches.match(req, { ignoreVary: true }) && /^\/(_next\/static|models\/pack\..+\.bin)/.test(u)) { done++; return; }
+        const res = await fetch(req);
+        if (res.ok) { await cache.put(req, res.clone()); done++; } else fail++;
+      } catch (e) { fail++; }
+    }));
+    post("WARM_PROGRESS");
+  }
+  post("WARM_DONE");
+}
+
+self.addEventListener("message", (event) => {
+  const d = event.data || {};
+  if (d.type === "SKIP_WAITING") self.skipWaiting();
+  if (d.type === "WARM") event.waitUntil(warm(Array.isArray(d.urls) ? d.urls : ROUTES, event.source));
 });

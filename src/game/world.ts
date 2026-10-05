@@ -104,7 +104,10 @@ export type World = {
   tick: (dt: number, time: number) => void;
 };
 
-export function buildWorld(scene: THREE.Scene): World {
+export type WorldOpts = { crowd?: number; shadows?: boolean; shadowSize?: number };
+
+export function buildWorld(scene: THREE.Scene, opts: WorldOpts = {}): World {
+  const crowd = Math.max(0.25, Math.min(1, opts.crowd ?? 1)); // scenery density (low-end devices get less)
   const rnd = mulberry32(9);
   const group = new THREE.Group();
   scene.add(group);
@@ -115,8 +118,9 @@ export function buildWorld(scene: THREE.Scene): World {
   const hemi = new THREE.HemisphereLight(0xffe6c4, 0x8a6b4c, 0.95);
   group.add(hemi);
   const sun = new THREE.DirectionalLight(0xffd29a, 3.3);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.castShadow = opts.shadows ?? true;
+  const sm = opts.shadowSize ?? 2048;
+  sun.shadow.mapSize.set(sm, sm);
   const sc = sun.shadow.camera as THREE.OrthographicCamera;
   sc.left = -18; sc.right = 18; sc.top = 24; sc.bottom = -24; sc.near = 1; sc.far = 90;
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
@@ -179,7 +183,7 @@ export function buildWorld(scene: THREE.Scene): World {
   const per = [0, 0, 0];
   const placements: { cls: number; x: number; z: number; c: number }[] = [];
   for (const sx of [-1, 1]) {
-    for (let z = 20; z > -L + 40; z -= 10 + rnd() * 6) {
+    for (let z = 20; z > -L + 40; z -= (10 + rnd() * 6) / (0.4 + 0.6 * crowd)) {
       if (inBridge(z, 14)) continue; // lagoon: no buildings
       const r = rnd();
       const cls = r < 0.45 ? 0 : r < 0.85 ? 1 : 2;
@@ -245,7 +249,7 @@ export function buildWorld(scene: THREE.Scene): World {
 
   const trunkGeo = new THREE.CylinderGeometry(0.16, 0.26, 7, 8); trunkGeo.translate(0, 3.5, 0);
   const frond = new THREE.ConeGeometry(0.4, 3.4, 4); frond.rotateZ(Math.PI / 2); frond.translate(1.8, 0, 0);
-  const palmZ: number[] = []; for (let z = -20; z > -L + 40; z -= 55 + rnd() * 40) if (!inBridge(z, 14)) palmZ.push(z);
+  const palmZ: number[] = []; for (let z = -20; z > -L + 40; z -= (55 + rnd() * 40) / crowd) if (!inBridge(z, 14)) palmZ.push(z);
   const trunks = new THREE.InstancedMesh(trunkGeo, std(0x6b5a45, 0.95), palmZ.length);
   const fronds = new THREE.InstancedMesh(frond, std(0x2f7a37, 0.85), palmZ.length * 7);
   const q = new THREE.Quaternion(); const e = new THREE.Euler(); const sc3 = new THREE.Vector3(1, 1, 1);
@@ -281,7 +285,7 @@ export function buildWorld(scene: THREE.Scene): World {
   // market umbrellas
   const umbPole = new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6); umbPole.translate(0, 1.1, 0);
   const umbTop = new THREE.ConeGeometry(1.4, 0.5, 10); umbTop.translate(0, 2.3, 0);
-  const umbZ: number[] = []; for (let z = -30; z > -L + 40; z -= 28 + rnd() * 30) if (!inBridge(z, 14)) umbZ.push(z);
+  const umbZ: number[] = []; for (let z = -30; z > -L + 40; z -= (28 + rnd() * 30) / crowd) if (!inBridge(z, 14)) umbZ.push(z);
   const um = new THREE.InstancedMesh(umbTop, std(0xffffff, 0.8), umbZ.length);
   const up = new THREE.InstancedMesh(umbPole, steel, umbZ.length);
   umbZ.forEach((z, i) => {
@@ -299,7 +303,7 @@ export function buildWorld(scene: THREE.Scene): World {
   }
   group.add(far);
 
-  const lagos = buildLagos(group, L, rnd, ROAD_HALF);
+  const lagos = buildLagos(group, L, rnd, ROAD_HALF, crowd);
   const padObj = buildBoostPads(group, L, rnd, laneX);
 
   const followPlayer = (x: number, z: number) => {

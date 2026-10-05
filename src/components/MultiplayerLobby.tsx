@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSharedRealtimeClient, type RealtimeState } from "@/game/multiplayer";
 
@@ -15,6 +16,13 @@ export default function MultiplayerLobby() {
   const [hostId, setHostId] = useState("");
   const [status, setStatus] = useState("CONNECTING");
   const [error, setError] = useState("");
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const sync = () => setOffline(!navigator.onLine);
+    sync();
+    window.addEventListener("online", sync); window.addEventListener("offline", sync);
+    return () => { window.removeEventListener("online", sync); window.removeEventListener("offline", sync); };
+  }, []);
 
   useEffect(() => {
     const client = getSharedRealtimeClient();
@@ -183,6 +191,7 @@ export default function MultiplayerLobby() {
           </div>
         )}
 
+        {offline && <p className="lobby-error">You are offline. Multiplayer needs internet, but solo races work offline. <Link href="/play">Race solo</Link></p>}
         {error && <p className="lobby-error">{error}</p>}
       </div>
     </section>

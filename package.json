@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "bake": "tsc -p scripts/tsconfig.bake.json && node .bake/scripts/bake-models.js"
   },
   "engines": {
     "node": "22.x"

@@ -7,6 +7,7 @@ import { mulberry32 } from "./models/util";
 import { getSharedRealtimeClient, type RealtimeState } from "./multiplayer";
 import { buildWorld, GOAL, ROAD_HALF, laneX } from "./world";
 import { GameAudio } from "./audio";
+import { DynamicRes, qualityFor, resolveTier, setGfxSetting, type GfxSetting } from "./quality";
 
 export type RaceMode = "solo" | "multiplayer" | "demo";
 export type RaceOptions = { mode: RaceMode; room?: string; player?: string };
@@ -68,8 +69,10 @@ const CSS = `
 .rr-wait{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;letter-spacing:.2em}
 .rr-flash{position:absolute;inset:0;background:radial-gradient(transparent 40%,rgba(255,40,40,.55));opacity:0;transition:opacity .35s}
 .rr-boost{position:absolute;inset:0;background:radial-gradient(transparent 40%,rgba(255,170,60,.45));opacity:0;transition:opacity .25s}
+.rr-ping{position:absolute;right:12px;top:calc(max(10px,env(safe-area-inset-top)) + 78px);font:700 11px/1 system-ui,sans-serif;letter-spacing:.05em;color:#7dffb2;text-shadow:0 1px 2px #000;pointer-events:none}
 .rr-lines{position:absolute;inset:0;opacity:0;transition:opacity .2s;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 60%,rgba(255,255,255,0) 0deg 5deg,rgba(255,255,255,.16) 5deg 5.8deg);-webkit-mask:radial-gradient(circle at 50% 60%,transparent 26%,#000 72%);mask:radial-gradient(circle at 50% 60%,transparent 26%,#000 72%);animation:rrspin 1.1s linear infinite}
 @keyframes rrspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.rr-gfx{left:62px;font-size:11px;letter-spacing:.04em;width:auto;padding:0 10px;border-radius:21px}
 .rr-mute{position:absolute;left:12px;top:calc(max(10px,env(safe-area-inset-top)) + 78px);pointer-events:auto;width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(10,14,18,.6);color:#fff;font-size:18px;display:grid;place-items:center}
 `;
 
@@ -86,9 +89,13 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   const ready = new Promise<void>((r) => { resolveReady = r; });
 
   // ---------- renderer / scene ----------
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.shadowMap.enabled = true;
+  // graphics tier is detected from the device (or chosen by the player) and adapted live by a resolution governor
+  const { tier: gfxTier, setting: gfxSetting } = resolveTier();
+  const Q = qualityFor(gfxTier, demo);
+  const dyn = new DynamicRes(Q.minDpr, Q.maxDpr, Q.startDpr, Q.targetMs);
+  const renderer = new THREE.WebGLRenderer({ antialias: Q.msaa, powerPreference: "high-performance" });
+  renderer.setPixelRatio(dyn.dpr);
+  renderer.shadowMap.enabled = Q.shadows;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -96,13 +103,13 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   renderer.domElement.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xe9cfa8, 60, 390);
+  scene.fog = new THREE.Fog(0xe9cfa8, 50, Q.fogFar);
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = envTex;
   scene.environmentIntensity = 0.6;
-  const camera = new THREE.PerspectiveCamera(62, 1, 0.3, 1600);
-  const world = buildWorld(scene);
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.3, Q.fogFar + 80);
+  const world = buildWorld(scene, { crowd: Q.crowd, shadows: Q.shadows, shadowSize: Q.shadowSize });
 
   // ---------- HUD ----------
   const style = document.createElement("style");
@@ -113,7 +120,9 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   hud.style.display = demo ? "none" : "block";
   hud.innerHTML = `
     <div class="rr-flash"></div><div class="rr-boost"></div><div class="rr-lines"></div>
+    <div class="rr-ping"></div>
     <button class="rr-mute" data-k="mute" aria-label="sound">🔊</button>
+    <button class="rr-mute rr-gfx" data-k="gfx" aria-label="graphics quality">GFX</button>
     <div class="rr-top">
       <div class="rr-chip"><small>TIME</small><b data-k="time">0:00.0</b></div>
       <div class="rr-chip rr-pos"><small>POSITION</small><b data-k="pos">1</b>/<span data-k="total">8</span></div>
@@ -137,6 +146,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   const flash = hud.querySelector(".rr-flash") as HTMLElement;
   const boostFx = hud.querySelector(".rr-boost") as HTMLElement;
   const linesFx = hud.querySelector(".rr-lines") as HTMLElement;
+  const pingEl = hud.querySelector(".rr-ping") as HTMLElement;
 
   let popTimer = 0;
   const popup = (text: string, color = "#7dffb2") => {
@@ -185,6 +195,13 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   window.addEventListener("pointerdown", unlockAudio); window.addEventListener("keydown", unlockAudio);
   const muteBtn = hud.querySelector(".rr-mute") as HTMLButtonElement;
   muteBtn.textContent = audio.isMuted() ? "🔇" : "🔊";
+  const gfxBtn = hud.querySelector(".rr-gfx") as HTMLButtonElement;
+  gfxBtn.textContent = `GFX ${gfxSetting === "auto" ? "AUTO·" + gfxTier.toUpperCase().slice(0, 1) : gfxSetting.toUpperCase()}`;
+  gfxBtn.addEventListener("click", () => {
+    const order: GfxSetting[] = ["auto", "low", "medium", "high"];
+    setGfxSetting(order[(order.indexOf(gfxSetting) + 1) % order.length]);
+    window.location.reload();
+  });
   muteBtn.addEventListener("click", () => { audio.start(); audio.setMuted(!audio.isMuted()); muteBtn.textContent = audio.isMuted() ? "🔇" : "🔊"; });
 
   // ---------- racers ----------
@@ -226,7 +243,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     const cpuPool = RIDERS.map((r) => r.id).filter((id) => id !== pdef.id);
     for (let i = cpuPool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [cpuPool[i], cpuPool[j]] = [cpuPool[j], cpuPool[i]]; }
     racers.push(player);
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < (demo ? 3 : 7); i++) { // the home-screen demo only needs a small pack
       const cb = BIKES[Math.floor(rnd() * BIKES.length)].id;
       const cr = cpuPool[i % cpuPool.length];
       const c = makeRacer(`cpu${i}`, `CPU ${i + 1}`, cb, cr, false, false, COLORS[i + 1]);
@@ -259,7 +276,17 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     }
   }
 
-  let draftT = 0;
+  let draftT = 0, frameN = 0;
+
+  // traffic cars are pooled (no geometry / material churn while racing)
+  const trafficPool = new Map<string, THREE.Group[]>();
+  const poolKey = (kind: TrafficKind, variant: number) => `${kind}:${variant % 5}`;
+  const acquireTraffic = (kind: TrafficKind, variant: number) => trafficPool.get(poolKey(kind, variant))?.pop() ?? buildTraffic(kind, variant);
+  const releaseTraffic = (kind: TrafficKind, variant: number, m: THREE.Group) => {
+    const k = poolKey(kind, variant);
+    const a = trafficPool.get(k);
+    if (a) a.push(m); else trafficPool.set(k, [m]);
+  };
 
   // ---------- state ----------
   type Phase = "wait" | "countdown" | "racing";
@@ -271,6 +298,9 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   let camInit = false, camRoll = 0, fovCur = 62;
   let remoteState: RealtimeState | null = null;
   let lastSend = 0;
+  let sent = { steer: 0, brake: false, nitro: false };
+  const pred = { init: false, lane: 0.5, speed: 5.4, dist: 0 };
+  const NET_BASE = 5.4; // keep in sync with BASE_SPEED in server/src/room.ts
   const client = mode === "multiplayer" ? getSharedRealtimeClient() : null;
   const localId = options.player ?? "";
 
@@ -311,7 +341,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     m.pivot.position.y = bob + (r.boosting ? 0.02 : 0);
     const spin = (r.v / m.bike.wheelR) * dt;
     m.bike.frontWheel.rotation.x -= spin; m.bike.rearWheel.rotation.x -= spin;
-    m.rider.update(r.steerAng, r.boosting ? 1 : 0);
+    const focus = player ?? racers[0];
+    if (r.human || !focus || Math.abs(r.dist - focus.dist) < 40 || (frameN + r.id.length) % 3 === 0) m.rider.update(r.steerAng, r.boosting ? 1 : 0);
     m.bike.brakeLight.emissiveIntensity = r.braking ? 3.2 : 0.45;
     const fm = m.bike.flame.material as THREE.MeshBasicMaterial;
     fm.opacity = r.boosting ? 0.75 + Math.random() * 0.25 : 0;
@@ -450,7 +481,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   // ---------- main step ----------
   const fmt = (t: number) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, "0")}`;
   const step = (dt: number) => {
-    time += dt;
+    time += dt; frameN++;
     const lead = player ?? racers[0];
     if (!lead) return;
 
@@ -475,8 +506,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     for (const t of traffic) {
       if (racing) t.dist += t.v * dt;
       const near = t.dist - lead.dist > -40 && t.dist - lead.dist < 300;
-      if (near && !t.mesh) { t.mesh = buildTraffic(t.kind, t.variant); scene.add(t.mesh); }
-      if (!near && t.mesh) { scene.remove(t.mesh); disposeTree(t.mesh); t.mesh = null; }
+      if (near && !t.mesh) { t.mesh = acquireTraffic(t.kind, t.variant); scene.add(t.mesh); }
+      if (!near && t.mesh) { scene.remove(t.mesh); releaseTraffic(t.kind, t.variant, t.mesh); t.mesh = null; }
       if (t.mesh) t.mesh.position.set(t.x, 0, -t.dist);
     }
 
@@ -495,10 +526,34 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       if (mode === "multiplayer") {
         const p = remoteState?.players.find((q) => q.id === r.id);
         if (p) {
-          const tx = (p.lane - 0.5) * ROAD_HALF * 2.3;
-          const nd = damp(r.dist, p.distance, 10, dt);
-          r.v = Math.max(0, (nd - r.dist) / Math.max(dt, 1e-3)); r.dist = nd;
-          const px = r.x; r.x = damp(r.x, tx, 10, dt); r.vx = (r.x - px) / Math.max(dt, 1e-3);
+          const age = Math.min(0.3, Math.max(0, (performance.now() - (remoteState?.at ?? performance.now())) / 1000));
+          const px = r.x;
+          if (r.human && racing && p.finishPosition === null) {
+            // CLIENT-SIDE PREDICTION: run the same simple model as the server locally, so steering/braking respond
+            // instantly instead of after a network round trip; then reconcile gently with the authoritative state.
+            const rtt = (client?.getRtt() ?? 0) / 1000;
+            if (!pred.init) { pred.init = true; pred.lane = p.lane; pred.speed = p.speed; pred.dist = p.distance; }
+            const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+            pred.speed += ((input.brake ? NET_BASE * 0.56 : NET_BASE) - pred.speed) * Math.min(1, dt * 5);
+            pred.lane = clamp(pred.lane + steer * dt * 0.9, 0.17, 0.83);
+            pred.dist = Math.min(GOAL, pred.dist + pred.speed * dt * 9);
+            const sd = p.distance + p.speed * 9 * (age + rtt / 2); // server state extrapolated to "now"
+            const e = sd - pred.dist;
+            if (Math.abs(e) > 25) pred.dist = sd; else pred.dist += e * Math.min(1, dt * 4);
+            const le = p.lane - pred.lane; // server lane lags our steering by ~RTT: only correct real drift
+            pred.lane += le * Math.min(1, dt * (Math.abs(le) > 0.12 ? 6 : 0.6));
+            pred.speed += (p.speed - pred.speed) * Math.min(1, dt * 1.5);
+            r.dist = pred.dist; r.v = pred.speed * 9;
+            r.x = damp(r.x, (pred.lane - 0.5) * ROAD_HALF * 2.3, 24, dt);
+          } else {
+            // other riders: dead-reckon from the last update (position + speed * age) and smooth, so 20 Hz updates look fluid
+            const tx = (p.lane - 0.5) * ROAD_HALF * 2.3;
+            r.dist = damp(r.dist, Math.min(GOAL, p.distance + p.speed * 9 * age), 14, dt);
+            r.v = p.speed * 9;
+            r.x = damp(r.x, tx, 12, dt);
+            if (r.human) pred.init = false;
+          }
+          r.vx = (r.x - px) / Math.max(dt, 1e-3);
           r.mult = p.multiplier; r.finished = p.finishPosition !== null; r.place = p.finishPosition ?? 0;
           r.boosting = input.nitro; r.braking = input.brake;
         }
@@ -615,6 +670,11 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       ($("nitro") as HTMLElement).style.width = `${Math.round((player?.nitro ?? 0) * 100)}%`;
       boostFx.style.opacity = lead.boosting ? "1" : "0";
       linesFx.style.opacity = lead.boosting ? "1" : "0";
+      if (client && frameN % 30 === 0) {
+        const ms = Math.round(client.getRtt());
+        pingEl.textContent = ms ? `PING ${ms}ms` : "";
+        pingEl.style.color = ms < 90 ? "#7dffb2" : ms < 180 ? "#ffd24d" : "#ff7b7b";
+      }
       for (const r of racers) { ensureDot(r); dotEls.get(r.id)!.style.left = `${clamp(r.dist / GOAL, 0, 1) * 100}%`; }
       if (player && player.finished && !resultShown && (mode === "multiplayer" || raceT - player.finishT > 1.2)) {
         resultShown = true;
@@ -631,11 +691,16 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     if (popTimer > 0) popTimer -= dt;
 
     // multiplayer input
-    if (client && player && remoteState && time - lastSend > 0.05) {
-      lastSend = time;
-      try {
-        client.sendInput(remoteState.roomId, localId, { steering: (input.right ? 1 : 0) - (input.left ? 1 : 0), braking: input.brake, useItem: input.nitro });
-      } catch { /* socket closed */ }
+    if (client && player && remoteState) {
+      const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      const changed = steer !== sent.steer || input.brake !== sent.brake || input.nitro !== sent.nitro;
+      // only talk when something changed (plus a slow heartbeat): far less upstream traffic on mobile data
+      if ((changed && time - lastSend > 0.03) || time - lastSend > 0.4) {
+        lastSend = time; sent = { steer, brake: input.brake, nitro: input.nitro };
+        try {
+          client.sendInput(remoteState.roomId, localId, { steering: steer, braking: input.brake, useItem: input.nitro });
+        } catch { /* socket closed */ }
+      }
     }
   };
 
@@ -644,12 +709,31 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   const loop = () => {
     if (disposed) return;
     const now = performance.now();
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const raw = (now - last) / 1000;
+    if (Q.fpsCap && raw < 1 / Q.fpsCap - 0.004) return; // weak devices: steady 30 fps beats a stuttery 45
+    last = now;
+    const dt = Math.min(0.05, raw);
+    const np = dyn.sample(raw);
+    if (np !== null) { renderer.setPixelRatio(np); renderer.setSize(W, H, false); }
     const sub = (window as unknown as { __RR_SUB?: number }).__RR_SUB ?? 1;
     for (let i = 0; i < sub; i++) step(dt);
     renderer.render(scene, camera);
     if (first) { first = false; resolveReady(); }
   };
+  // pre-build the traffic the first seconds will need and compile every shader now, so nothing hitches mid-race
+  {
+    const seenK = new Set<string>();
+    for (const t of traffic) {
+      if (t.dist > 800) break;
+      const k = poolKey(t.kind, t.variant);
+      if (seenK.has(k)) continue;
+      seenK.add(k); releaseTraffic(t.kind, t.variant, buildTraffic(t.kind, t.variant));
+    }
+    const tmp: THREE.Object3D[] = [];
+    for (const arr of trafficPool.values()) for (const m of arr) { scene.add(m); tmp.push(m); }
+    try { renderer.compile(scene, camera); } catch { /* older drivers: compile lazily */ }
+    for (const m of tmp) scene.remove(m);
+  }
   renderer.setAnimationLoop(loop);
 
   const destroy = () => {
@@ -671,8 +755,10 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
         });
       }
     });
+    for (const arr of trafficPool.values()) for (const m of arr) disposeTree(m);
     envTex.dispose(); pmrem.dispose();
     renderer.dispose();
+    renderer.forceContextLoss(); // browsers cap live WebGL contexts; free ours immediately
     renderer.domElement.remove(); hud.remove(); style.remove();
   };
 

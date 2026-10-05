@@ -1080,3 +1080,8 @@ a {
 .garage-bike-art--wide { grid-column: 1 / -1; min-height: 300px; height: 46vh; max-height: 420px; position: relative; background: linear-gradient(180deg,#bcd6ea 0%,#e8e1cf 62%,#cdbd9f 100%); border: 3px solid #14181c; border-radius: 14px; overflow: hidden; }
 .garage-bike-art--wide .garage-bike-shadow { display: none; }
 .garage-bike-preview { position: absolute; inset: 0; }
+
+/* offline / install status */
+.pwa-banner{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;transform:translateX(-50%);z-index:60;background:#15161a;color:#ffd24d;border:2px solid #ffd24d;border-radius:20px;padding:4px 14px;font:700 12px/1.4 system-ui,sans-serif;letter-spacing:.06em}
+.pwa-pill{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);transform:translateX(-50%);z-index:50;display:flex;gap:10px;align-items:center;background:rgba(21,22,26,.9);color:#fff;border:2px solid rgba(255,255,255,.3);border-radius:22px;padding:6px 14px;font:700 12px/1.4 system-ui,sans-serif;letter-spacing:.06em}
+.pwa-pill button{background:#f28c28;color:#15161a;border:0;border-radius:14px;padding:5px 12px;font:800 12px system-ui,sans-serif;letter-spacing:.05em}

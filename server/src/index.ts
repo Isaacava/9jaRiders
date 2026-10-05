@@ -21,10 +21,21 @@ const httpServer = createServer((request, response) => {
   response.end();
 });
 
-const server = new WebSocketServer({ server: httpServer });
+// No per-message compression (adds latency + CPU for tiny frames); small payload cap protects the server.
+const server = new WebSocketServer({ server: httpServer, perMessageDeflate: false, maxPayload: 4096 });
+
+// Drop half-open connections (very common on mobile networks) so dead players don't stall rooms.
+const alive = new WeakMap<WebSocket, boolean>();
+setInterval(() => {
+  for (const client of server.clients) {
+    if (alive.get(client) === false) { client.terminate(); continue; }
+    alive.set(client, false);
+    try { client.ping(); } catch { /* ignore */ }
+  }
+}, 15000);
 
 type ClientMessage =
-  | { type: "ping" }
+  | { type: "ping"; t?: number }
   | { type: "room:create"; name?: string; loadout?: { bikeId?: string; riderId?: string } }
   | { type: "room:join"; roomId?: string; name?: string; loadout?: { bikeId?: string; riderId?: string } }
   | { type: "room:ready"; roomId?: string; playerId?: string; ready?: boolean }
@@ -36,6 +47,9 @@ const send = (socket: WebSocket, payload: unknown) => {
 };
 
 server.on("connection", (socket) => {
+  alive.set(socket, true);
+  socket.on("pong", () => alive.set(socket, true));
+  socket.on("error", () => { /* handled by close */ });
   send(socket, {
     type: "server:ready",
     game: "aboki-riders",
@@ -48,7 +62,8 @@ server.on("connection", (socket) => {
       const message = JSON.parse(raw.toString()) as ClientMessage;
 
       if (message.type === "ping") {
-        send(socket, { type: "pong", at: Date.now() });
+        alive.set(socket, true);
+        send(socket, { type: "pong", at: Date.now(), t: message.t });
         return;
       }
 
@@ -124,12 +139,21 @@ server.on("connection", (socket) => {
   });
 });
 
+// 20 Hz simulation. Racing/countdown rooms get the compact delta every tick and a full state once a second
+// (resync); lobby/finished rooms only need a slow heartbeat (state changes are broadcast by the handlers above).
+let tickN = 0;
 setInterval(() => {
   rooms.tick();
-
+  tickN++;
   for (const roomId of rooms.listRoomIds()) {
     const room = rooms.getRoom(roomId);
-    if (room) rooms.broadcastSnapshot(room);
+    if (!room) continue;
+    if (room.status === "racing" || room.status === "countdown") {
+      if (tickN % 20 === 0) rooms.broadcastSnapshot(room);
+      else rooms.broadcast(room, rooms.compactSnapshot(room));
+    } else if (tickN % 40 === 0) {
+      rooms.broadcastSnapshot(room);
+    }
   }
 }, 50);
 

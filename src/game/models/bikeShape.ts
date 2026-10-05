@@ -19,6 +19,7 @@ export const SPEC: Record<BikeStyle, Spec> = {
 
 export type BikeParts = { body: MeshData; seat: MeshData; engine: MeshData };
 const CACHE = new Map<BikeStyle, BikeParts>();
+export const primeBikeParts = (style: BikeStyle, parts: BikeParts) => { CACHE.set(style, parts); };
 
 function arc(cx: number, cy: number, cz: number, R: number, a0: number, a1: number, dirZ: 1 | -1, n = 9): V3[] {
   const pts: V3[] = [];
@@ -73,9 +74,9 @@ export function buildBikeParts(style: BikeStyle): BikeParts {
 
   const min: V3 = [-0.5, 0.05, zF - 0.05], max: V3 = [0.5, sy + 0.5, zR + 0.2];
   const parts: BikeParts = {
-    body: surfaceNets(bodySDF, min, max, 0.02),
-    seat: surfaceNets(seatSDF, min, max, 0.016),
-    engine: surfaceNets(engineSDF, [-0.3, r, -0.3], [0.3, r + 0.6, 0.5], 0.018)
+    body: surfaceNets(bodySDF, min, max, 0.026),
+    seat: surfaceNets(seatSDF, min, max, 0.02),
+    engine: surfaceNets(engineSDF, [-0.3, r, -0.3], [0.3, r + 0.6, 0.5], 0.024)
   };
   CACHE.set(style, parts);
   return parts;

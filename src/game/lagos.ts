@@ -76,7 +76,7 @@ type Rnd = () => number;
 const PEOPLE = [0xd8392f, 0x1f7a3a, 0xf5b800, 0x2756a8, 0xf08a38, 0x8d2fa0, 0xffffff, 0x0e8f8f, 0xe8731a, 0x15161a];
 const SKINS = [0x2f1c14, 0x3e261c, 0x5b3a24, 0x6b4226, 0x7a5236, 0x8a5a33];
 
-export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: number) {
+export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: number, crowd = 1) {
   const m4 = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const e = new THREE.Euler();
@@ -134,7 +134,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
   }
 
   // ---------------------------------------------------------------- pedestrians (instanced)
-  const N = 420;
+  const N = Math.floor(420 * crowd);
   for (let i = 0; i < N; i++) {
     const z = 20 - rnd() * (L - 40);
     if (inBridge(z, 10)) continue;
@@ -163,7 +163,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
     [["SUYA SPOT"], "#15161a", "#f08a38"], [["FRESH FADES", "& BRAIDS"], "#8d2fa0", "#ffffff"]
   ];
   const kz: Array<{ x: number; z: number; t: number; sx: number }> = [];
-  for (let z = -20; z > zFar; z -= 30 + rnd() * 26) {
+  for (let z = -20; z > zFar; z -= (30 + rnd() * 26) / crowd) {
     if (inBridge(z, 20)) continue;
     const sx = rnd() > 0.5 ? 1 : -1;
     kz.push({ x: sx * (ROAD_HALF + 3.9), z, t: Math.floor(rnd() * signs.length), sx });
@@ -233,7 +233,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
     cap.position.set(sx * (ROAD_HALF + 2.9), 1.35, zc); group.add(cap);
   }
   // stilt houses on the water (zinc roofs) and canoes
-  const shackN = 90;
+  const shackN = Math.max(12, Math.floor(90 * crowd));
   const shacks = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, 2.2, 3.4), std(0x7a5a3a, 0.95), shackN);
   const shackRoofs = new THREE.InstancedMesh(new THREE.BoxGeometry(4.1, 0.2, 4.1), std(0x9aa0a6, 0.45, 0.7), shackN);
   const stilts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.12, 2.4, 6), std(0x4b3826, 1), shackN);
@@ -271,7 +271,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
   }
 
   // ---------------------------------------------------------------- Victoria Island glass towers
-  const glassN = 46;
+  const glassN = Math.max(14, Math.floor(46 * (0.4 + 0.6 * crowd)));
   const glass = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x6f9bb5, roughness: 0.18, metalness: 0.65, emissive: 0x16303f, emissiveIntensity: 0.6 }), glassN);
   for (let i = 0; i < glassN; i++) {
     const sx = i % 2 ? 1 : -1, h = 70 + rnd() * 90, w = 18 + rnd() * 16;

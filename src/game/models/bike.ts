@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { paint, rod, std } from "./util";
 import { buildBikeParts, SPEC, type BikeStyle } from "./bikeShape";
 import { toGeometry } from "./geo";
+import { mergeStatic } from "./merge";
 
 export { type BikeStyle } from "./bikeShape";
 
@@ -274,6 +275,12 @@ export function buildBike(style: BikeStyle, color: number, accent = 0x15181c): B
   const pegY = r + 0.2;
   const pegs: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(-0.23, pegY, 0.25), new THREE.Vector3(0.23, pegY, 0.25)];
   for (const p of pegs) root.add(rod(new THREE.Vector3(p.x * 0.4, p.y, p.z), p, 0.012, chrome));
+
+  // collapse ~80 tiny meshes into a handful of draw calls (steering and wheels keep moving as groups)
+  mergeStatic(steer);
+  mergeStatic(front);
+  mergeStatic(rear);
+  mergeStatic(root, (o) => o === steer || o === front || o === rear || o === flame || o === tl);
 
   root.traverse((o) => { if ((o as THREE.Mesh).isMesh && !(o as THREE.Mesh).castShadow && o !== flame) o.castShadow = true; });
   flame.castShadow = false;

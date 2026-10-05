@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { buildRacer, disposeTree } from "@/game/models/racer";
+import { loadModelPack } from "@/game/models/loadPack";
+import { qualityFor, resolveTier } from "@/game/quality";
 
 export default function LoadoutPreview3D({
   bikeId,
@@ -19,10 +21,14 @@ export default function LoadoutPreview3D({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    let cancelled = false;
+    let cleanup: () => void = () => {};
+    const start = () => {
+    const Q = qualityFor(resolveTier().tier, false);
+    const renderer = new THREE.WebGLRenderer({ antialias: Q.tier !== "low", alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.maxDpr));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = Q.shadows;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     el.appendChild(renderer.domElement);
     renderer.domElement.style.cssText = "width:100%;height:100%;display:block;touch-action:pan-y";
@@ -33,7 +39,7 @@ export default function LoadoutPreview3D({
     scene.environment = env;
     scene.environmentIntensity = 0.9;
     const key = new THREE.DirectionalLight(0xfff0d6, 2.4);
-    key.position.set(3, 5, 3); key.castShadow = true;
+    key.position.set(3, 5, 3); key.castShadow = Q.shadows;
     key.shadow.mapSize.set(1024, 1024);
     const sc = key.shadow.camera as THREE.OrthographicCamera;
     sc.left = -3; sc.right = 3; sc.top = 3; sc.bottom = -3;
@@ -67,7 +73,9 @@ export default function LoadoutPreview3D({
 
     let last = performance.now();
     renderer.setAnimationLoop(() => {
-      const now = performance.now(); const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const now = performance.now();
+      if (Q.fpsCap && now - last < 1000 / Q.fpsCap - 4) return; // weak devices: steady 30 fps
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
       if (!drag) racer.root.rotation.y += dt * 0.5;
       racer.bike.frontWheel.rotation.x -= dt * 2; racer.bike.rearWheel.rotation.x -= dt * 2;
       racer.rider.update(0, 0);
@@ -79,8 +87,13 @@ export default function LoadoutPreview3D({
       ro.disconnect();
       window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
       disposeTree(racer.root); env.dispose(); pmrem.dispose(); renderer.dispose();
+      renderer.forceContextLoss(); // free the GL context right away (browsers cap how many can be alive)
       renderer.domElement.remove();
     };
+    };
+    // wait for the pre-baked model pack so the garage never freezes while meshes are generated
+    void loadModelPack().then(() => { if (!cancelled) cleanup = start(); });
+    return () => { cancelled = true; cleanup(); };
   }, [bikeId, riderId]);
 
   return <div ref={ref} className={className} style={{ width: "100%", height: "100%" }} />;

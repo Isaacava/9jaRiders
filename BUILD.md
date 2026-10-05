@@ -1,5 +1,12 @@
 # Build log
 
+## v7 performance, offline, netcode
+- Draw calls: static parts of riders/bikes/cars merged per material (about 1,400 -> 400 draw calls for 8 racers).
+- Baked model pack (`npm run bake` -> public/models/pack.<hash>.bin, loaded by `loadPack.ts`): no mesh generation on the player's device.
+- Graphics tiers + dynamic resolution + 30 fps cap on weak devices (`quality.ts`, HUD GFX button), cheaper home demo, pooled traffic, shader pre-compile, zero-allocation rider IK.
+- Offline/PWA: service worker, manifest, icons, install + offline status, offline notice in the multiplayer lobby.
+- Online: client-side prediction, interpolation/dead-reckoning, compact server snapshots, change-only inputs, ping HUD, heartbeat, server pre-wake. See docs/PERFORMANCE.md.
+
 ## v6 fixes + boost + Lagos
 - FIX: arms/head were computed in world space, so they missed the grips whenever the bike root was moved/rotated (garage drag, every race frame). All rider maths is now in the rider group's local space; the rider also slides on the seat / leans in to keep both hands on the grips while steering.
 - FIX: faces: real eyes (sclera + iris), brows, nose, lips, chin, ears. Hair caps/headwrap/headscarf now leave the face open (the old headscarf covered it).

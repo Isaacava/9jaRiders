@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { std } from "./util";
 import { buildCarShape, TRAFFIC_SIZE, type TrafficKind } from "./trafficShape";
 import { toGeometry } from "./geo";
+import { mergeStatic } from "./merge";
+
+const BODY_GEO = new Map<TrafficKind, THREE.BufferGeometry>(); // one shared body geometry per kind
 
 export { TRAFFIC_SIZE };
 export type { TrafficKind };
@@ -36,7 +39,9 @@ export function buildTraffic(kind: TrafficKind, variant = 0): THREE.Group {
     color: shape.tintable ? colors[variant % colors.length] : 0xffffff,
     metalness: 0.2, roughness: 0.38, clearcoat: 0.8, clearcoatRoughness: 0.12
   });
-  const body = new THREE.Mesh(toGeometry(shape.mesh, shape.colors), mat);
+  let bg = BODY_GEO.get(kind);
+  if (!bg) { bg = toGeometry(shape.mesh, shape.colors); BODY_GEO.set(kind, bg); }
+  const body = new THREE.Mesh(bg, mat);
   body.castShadow = true;
   g.add(body);
 
@@ -67,5 +72,6 @@ export function buildTraffic(kind: TrafficKind, variant = 0): THREE.Group {
     for (const sx of [-1, 1]) box(0.3, 0.14, 0.05, lights, sx * (w / 2 - 0.25), 0.85, l / 2 + 0.01);
     wheelsAt(0.48, 0.3, [-w / 2 + 0.1, w / 2 - 0.1], [-l / 2 + 1.2, l / 2 - 1.8, l / 2 - 0.8]);
   }
+  mergeStatic(g, (o) => o === body); // wheels + lights: ~20 meshes -> a few
   return g;
 }

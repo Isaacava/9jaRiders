@@ -209,10 +209,10 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   function startAudio() { if (!demo) audio.start(); }
   const unlockAudio = () => startAudio();
   window.addEventListener("pointerdown", unlockAudio); window.addEventListener("keydown", unlockAudio);
-  const storyCutscene = story ? hud.querySelector("[data-k="storyCutscene"]") as HTMLElement : null;
-  const storySpeaker = story ? hud.querySelector("[data-k="storySpeaker"]") as HTMLElement : null;
-  const storyCopy = story ? hud.querySelector("[data-k="storyCopy"]") as HTMLElement : null;
-  const storyNext = story ? hud.querySelector("[data-a="storyNext"]") as HTMLButtonElement : null;
+  const storyCutscene = story ? hud.querySelector('[data-k="storyCutscene"]') as HTMLElement : null;
+  const storySpeaker = story ? hud.querySelector('[data-k="storySpeaker"]') as HTMLElement : null;
+  const storyCopy = story ? hud.querySelector('[data-k="storyCopy"]') as HTMLElement : null;
+  const storyNext = story ? hud.querySelector('[data-a="storyNext"]') as HTMLButtonElement : null;
   const storyLines = [
     { speaker: "ABOKI", text: "Thirty thousand for one delivery? Omo, today fit finally smile." },
     { speaker: "UNKNOWN CALLER", text: "Pick the black bag. Drop am for Yaba. No stop. No questions." },
@@ -755,6 +755,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
             <p>CHAPTER 1 · MISSION 1</p><p>REWARD ₦${STORY_REWARD.toLocaleString()}</p><p>TIME ${fmt(player.finishT || raceT)}</p>
             <button data-a="continue">CONTINUE</button><button data-a="again">PLAY AGAIN</button><a class="alt" href="/story">STORY MODE</a></div>`;
           res.querySelector("[data-a=continue]")!.addEventListener("click", () => { window.location.href = "/story"; });
+          res.querySelector("[data-a=again]")!.addEventListener("click", () => { window.location.reload(); });
         } else {
           const score = Math.round(10000 * player.bestMult / Math.max(1, player.place));
           res.innerHTML = `<div class="rr-card"><h2>${ordinal(player.place)} PLACE</h2>
@@ -837,7 +838,6 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       }
     });
     for (const arr of trafficPool.values()) for (const m of arr) disposeTree(m);
-    if (storyMarker) disposeTree(storyMarker);
     envTex.dispose(); pmrem.dispose();
     renderer.dispose();
     renderer.forceContextLoss(); // browsers cap live WebGL contexts; free ours immediately

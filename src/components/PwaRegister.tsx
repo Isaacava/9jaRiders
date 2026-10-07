@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { prewarmServer } from "@/game/multiplayer";
 
 const FLAG = "aboki:offline-ready";
-const VERSION = "aboki-v8";
-const ROUTES = ["/", "/play", "/garage", "/multiplayer", "/story", "/story/mission1"];
+const VERSION = "aboki-v7";
+const ROUTES = ["/", "/play", "/garage", "/multiplayer"];
 
 type InstallEvent = Event & { prompt: () => Promise<void> };
 

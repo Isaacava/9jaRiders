@@ -31,14 +31,15 @@ export default function Home() {
           </Link>
 
           <div className="secondary-actions">
+            <Link className="secondary-link story-link" href="/story">STORY MODE</Link>
             <Link className="secondary-link" href="/garage">GARAGE</Link>
             <Link className="secondary-link" href="/multiplayer">MULTIPLAYER</Link>
           </div>
         </div>
 
         <p className="home-note">
-          Multiplayer street racing for 2–8 riders. Minimal traffic, risky
-          overtakes and special items.
+          Story Mode is a single-player Lagos adventure you can download once
+          and play offline. Multiplayer still needs internet.
         </p>
       </section>
     </main>

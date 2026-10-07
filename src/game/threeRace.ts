@@ -9,7 +9,7 @@ import { buildWorld, GOAL, ROAD_HALF, laneX } from "./world";
 import { GameAudio } from "./audio";
 import { DynamicRes, qualityFor, resolveTier, setGfxSetting, type GfxSetting } from "./quality";
 
-export type RaceMode = "solo" | "multiplayer" | "demo" | "story";
+export type RaceMode = "solo" | "multiplayer" | "demo";
 export type RaceOptions = { mode: RaceMode; room?: string; player?: string };
 
 type Racer = {
@@ -33,8 +33,6 @@ type Pickup = { x: number; dist: number; taken: boolean; mesh: THREE.Group };
 
 const COLORS = ["#2fd1c0", "#ff5d73", "#ffd24d", "#7aa7ff", "#c58bff", "#ff9a52", "#7be08a", "#ffffff"];
 const ROAD_LIMIT = ROAD_HALF - 0.75;
-const STORY_GOAL = 3200;
-const STORY_REWARD = 30000;
 
 const CSS = `
 .rr-hud{position:absolute;inset:0;pointer-events:none;color:#fff;font-family:Impact,"Arial Black",system-ui,sans-serif;text-transform:uppercase;user-select:none;-webkit-user-select:none;text-shadow:0 2px 6px rgba(0,0,0,.55)}
@@ -75,16 +73,6 @@ const CSS = `
 .rr-lines{position:absolute;inset:0;opacity:0;transition:opacity .2s;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 60%,rgba(255,255,255,0) 0deg 5deg,rgba(255,255,255,.16) 5deg 5.8deg);-webkit-mask:radial-gradient(circle at 50% 60%,transparent 26%,#000 72%);mask:radial-gradient(circle at 50% 60%,transparent 26%,#000 72%);animation:rrspin 1.1s linear infinite}
 @keyframes rrspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .rr-gfx{left:62px;font-size:11px;letter-spacing:.04em;width:auto;padding:0 10px;border-radius:21px}
-.rr-story-cutscene{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;padding:clamp(18px,5vw,46px);background:linear-gradient(180deg,rgba(0,0,0,.08) 28%,rgba(5,8,12,.78) 100%);pointer-events:auto;z-index:20}
-.rr-story-card{width:min(92%,720px);border:3px solid #14181c;background:#fff6e4;color:#14181c;box-shadow:8px 8px 0 #14181c;border-radius:16px;padding:18px 20px;text-shadow:none}
-.rr-story-kicker{font:900 10px/1 system-ui,sans-serif;letter-spacing:.16em;opacity:.58}
-.rr-story-card h2{margin:7px 0 4px;font-size:clamp(28px,6vw,54px);line-height:.9;letter-spacing:-.04em}
-.rr-story-speaker{font:900 11px/1.2 system-ui,sans-serif;letter-spacing:.12em;color:#0c7b72}
-.rr-story-copy{margin:10px 0 14px;font:800 clamp(15px,2.8vw,22px)/1.35 system-ui,sans-serif}
-.rr-story-next{width:100%;min-height:48px;border:3px solid #14181c;border-radius:10px;background:#f28c28;color:#14181c;font:950 15px/1 system-ui,sans-serif;cursor:pointer;box-shadow:4px 4px 0 #14181c}
-.rr-story-objective{position:absolute;left:50%;transform:translateX(-50%);top:calc(max(10px,env(safe-area-inset-top)) + 78px);max-width:min(86%,560px);padding:7px 12px;background:rgba(10,14,18,.72);border:1px solid rgba(255,255,255,.22);border-radius:999px;font:900 11px/1.2 system-ui,sans-serif;letter-spacing:.08em;text-align:center}
-.rr-story-objective b{color:#ffd24d}
-.rr-story-destination{position:absolute;left:50%;bottom:calc(70px + env(safe-area-inset-bottom));transform:translateX(-50%);font:950 12px/1 system-ui,sans-serif;letter-spacing:.15em;color:#ffd24d;text-shadow:0 2px 8px #000;white-space:nowrap;pointer-events:none}
 .rr-mute{position:absolute;left:12px;top:calc(max(10px,env(safe-area-inset-top)) + 78px);pointer-events:auto;width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(10,14,18,.6);color:#fff;font-size:18px;display:grid;place-items:center}
 `;
 
@@ -95,8 +83,6 @@ const damp = (cur: number, target: number, lambda: number, dt: number) => cur + 
 export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   const mode = options.mode;
   const demo = mode === "demo";
-  const story = mode === "story";
-  const missionGoal = story ? STORY_GOAL : GOAL;
   const rnd = mulberry32(1337 + Math.floor(Math.random() * 1000));
   let disposed = false;
   let resolveReady: () => void = () => {};
@@ -135,7 +121,6 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   hud.innerHTML = `
     <div class="rr-flash"></div><div class="rr-boost"></div><div class="rr-lines"></div>
     <div class="rr-ping"></div>
-    ${story ? `<div class="rr-story-objective"><b>MISSION 1</b> · DELIVER THE BLACK BAG · +₦${STORY_REWARD.toLocaleString()}</div><div class="rr-story-destination">DROP-OFF AHEAD</div><div class="rr-story-cutscene" data-k="storyCutscene"><div class="rr-story-card"><div class="rr-story-kicker">CHAPTER 1 · NO SHINE</div><h2>₦30,000</h2><div class="rr-story-speaker" data-k="storySpeaker"></div><div class="rr-story-copy" data-k="storyCopy"></div><button class="rr-story-next" data-a="storyNext">NEXT</button></div></div>` : ""}
     <button class="rr-mute" data-k="mute" aria-label="sound">🔊</button>
     <button class="rr-mute rr-gfx" data-k="gfx" aria-label="graphics quality">GFX</button>
     <div class="rr-top">
@@ -158,7 +143,6 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   const btn = (b: string) => hud.querySelector(`[data-b="${b}"]`) as HTMLElement;
   const isTouch = window.matchMedia("(pointer: coarse)").matches;
   if (isTouch) { $("ctl").classList.add("touch"); $("hint").style.display = "none"; }
-  if (story) { $("pos").parentElement!.style.display = "none"; $("mult").style.display = "none"; }
   const flash = hud.querySelector(".rr-flash") as HTMLElement;
   const boostFx = hud.querySelector(".rr-boost") as HTMLElement;
   const linesFx = hud.querySelector(".rr-lines") as HTMLElement;
@@ -209,34 +193,6 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   function startAudio() { if (!demo) audio.start(); }
   const unlockAudio = () => startAudio();
   window.addEventListener("pointerdown", unlockAudio); window.addEventListener("keydown", unlockAudio);
-  const storyCutscene = story ? hud.querySelector('[data-k="storyCutscene"]') as HTMLElement : null;
-  const storySpeaker = story ? hud.querySelector('[data-k="storySpeaker"]') as HTMLElement : null;
-  const storyCopy = story ? hud.querySelector('[data-k="storyCopy"]') as HTMLElement : null;
-  const storyNext = story ? hud.querySelector('[data-a="storyNext"]') as HTMLButtonElement : null;
-  const storyLines = [
-    { speaker: "ABOKI", text: "Thirty thousand for one delivery? Omo, today fit finally smile." },
-    { speaker: "UNKNOWN CALLER", text: "Pick the black bag. Drop am for Yaba. No stop. No questions." },
-    { speaker: "ABOKI", text: "No wahala. I dey go." }
-  ];
-  let storyLine = 0;
-  let storyIntroDone = !story;
-  const paintStoryLine = () => {
-    if (!story || !storySpeaker || !storyCopy) return;
-    const line = storyLines[Math.min(storyLine, storyLines.length - 1)];
-    storySpeaker.textContent = line.speaker;
-    storyCopy.textContent = line.text;
-    if (storyNext) storyNext.textContent = storyLine >= storyLines.length - 1 ? "START MISSION" : "NEXT";
-  };
-  paintStoryLine();
-  storyNext?.addEventListener("click", () => {
-    if (!story) return;
-    if (storyLine < storyLines.length - 1) { storyLine++; paintStoryLine(); return; }
-    storyIntroDone = true;
-    storyCutscene?.remove();
-    countdown = 3.2;
-    startAudio();
-  });
-
   const muteBtn = hud.querySelector(".rr-mute") as HTMLButtonElement;
   muteBtn.textContent = audio.isMuted() ? "🔇" : "🔊";
   const gfxBtn = hud.querySelector(".rr-gfx") as HTMLButtonElement;
@@ -287,7 +243,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     const cpuPool = RIDERS.map((r) => r.id).filter((id) => id !== pdef.id);
     for (let i = cpuPool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [cpuPool[i], cpuPool[j]] = [cpuPool[j], cpuPool[i]]; }
     racers.push(player);
-    for (let i = 0; i < (story ? 0 : (demo ? 3 : 7)); i++) { // story mode is a single-rider mission
+    for (let i = 0; i < (demo ? 3 : 7); i++) { // the home-screen demo only needs a small pack
       const cb = BIKES[Math.floor(rnd() * BIKES.length)].id;
       const cr = cpuPool[i % cpuPool.length];
       const c = makeRacer(`cpu${i}`, `CPU ${i + 1}`, cb, cr, false, false, COLORS[i + 1]);
@@ -322,28 +278,6 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
 
   let draftT = 0, frameN = 0;
 
-  // Story destination marker: a lightweight local 3D goal so the delivery has a visible destination.
-  let storyMarker: THREE.Group | null = null;
-  if (story) {
-    storyMarker = new THREE.Group();
-    const glow = new THREE.MeshStandardMaterial({ color: 0xf2c94c, emissive: 0xd08a00, emissiveIntensity: 2.3, roughness: 0.35 });
-    const dark = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.75 });
-    for (const sx of [-1, 1]) {
-      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.45, 5.5, 0.45), dark);
-      pillar.position.set(sx * (ROAD_HALF + 0.7), 2.75, 0);
-      storyMarker.add(pillar);
-    }
-    const banner = new THREE.Mesh(new THREE.BoxGeometry(ROAD_HALF * 2 + 1.5, 1.5, 0.22), glow);
-    banner.position.y = 5.1;
-    storyMarker.add(banner);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.12, 12, 48), glow);
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = 0.05;
-    storyMarker.add(ring);
-    storyMarker.position.z = -STORY_GOAL;
-    scene.add(storyMarker);
-  }
-
   // traffic cars are pooled (no geometry / material churn while racing)
   const trafficPool = new Map<string, THREE.Group[]>();
   const poolKey = (kind: TrafficKind, variant: number) => `${kind}:${variant % 5}`;
@@ -358,7 +292,6 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   type Phase = "wait" | "countdown" | "racing";
   let phase: Phase = mode === "multiplayer" ? "wait" : "countdown";
   let countdown = demo ? 0 : 3.2;
-  if (story) countdown = 3.2;
   if (demo) phase = "racing";
   let raceT = 0, finishedCount = 0, shake = 0, resultShown = false, time = 0, camPull = 0;
   const camPos = new THREE.Vector3(0, 3, 8);
@@ -552,9 +485,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     const lead = player ?? racers[0];
     if (!lead) return;
 
-    if (story && !storyIntroDone) {
-      lead.v = 0; lead.vx = 0; lead.boosting = false; lead.braking = false;
-    } else if (phase === "countdown") {
+    if (phase === "countdown") {
       const prev = Math.ceil(countdown);
       countdown -= dt;
       if (mode !== "multiplayer" && countdown <= 0) { phase = "racing"; raceT = 0; audio.go(); $("center").innerHTML = `<div class="rr-count">GO!</div>`; setTimeout(() => { $("center").innerHTML = ""; }, 700); }
@@ -635,7 +566,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
         drive(r, dt, r.finished ? clamp(-r.x * 0.5, -1, 1) : steer, input.brake && !r.finished);
       } else driveCPU(r, dt, obs);
 
-      if (!r.finished && r.dist >= missionGoal) {
+      if (!r.finished && r.dist >= GOAL) {
         r.finished = true; r.place = ++finishedCount; r.finishT = raceT; r.boosting = false; r.padT = 0;
         if (r.human) audio.finish();
       }
@@ -744,31 +675,18 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
         pingEl.textContent = ms ? `PING ${ms}ms` : "";
         pingEl.style.color = ms < 90 ? "#7dffb2" : ms < 180 ? "#ffd24d" : "#ff7b7b";
       }
-      for (const r of racers) { ensureDot(r); dotEls.get(r.id)!.style.left = `${clamp(r.dist / missionGoal, 0, 1) * 100}%`; }
+      for (const r of racers) { ensureDot(r); dotEls.get(r.id)!.style.left = `${clamp(r.dist / GOAL, 0, 1) * 100}%`; }
       if (player && player.finished && !resultShown && (mode === "multiplayer" || raceT - player.finishT > 1.2)) {
         resultShown = true;
+        const score = Math.round(10000 * player.bestMult / Math.max(1, player.place));
         const res = document.createElement("div");
         res.className = "rr-result";
-        if (story) {
-          try { window.localStorage.setItem("aboki:story:chapter1:mission1", "complete"); } catch { /* ignore */ }
-          res.innerHTML = `<div class="rr-card"><h2>DELIVERY COMPLETE</h2>
-            <p>CHAPTER 1 · MISSION 1</p><p>REWARD ₦${STORY_REWARD.toLocaleString()}</p><p>TIME ${fmt(player.finishT || raceT)}</p>
-            <button data-a="continue">CONTINUE</button><button data-a="again">PLAY AGAIN</button><a class="alt" href="/story">STORY MODE</a></div>`;
-          res.querySelector("[data-a=continue]")!.addEventListener("click", () => { window.location.href = "/story"; });
-          res.querySelector("[data-a=again]")!.addEventListener("click", () => { window.location.reload(); });
-        } else {
-          const score = Math.round(10000 * player.bestMult / Math.max(1, player.place));
-          res.innerHTML = `<div class="rr-card"><h2>${ordinal(player.place)} PLACE</h2>
-            <p>TIME ${fmt(player.finishT || raceT)}</p><p>BEST MULTIPLIER ${player.bestMult.toFixed(2)}×</p><p>SCORE ${score.toLocaleString()}</p>
-            <button data-a="again">RACE AGAIN</button><a class="alt" href="/garage">GARAGE</a><a class="alt" href="/">HOME</a></div>`;
-          res.querySelector("[data-a=again]")!.addEventListener("click", () => window.location.reload());
-        }
+        res.innerHTML = `<div class="rr-card"><h2>${ordinal(player.place)} PLACE</h2>
+          <p>TIME ${fmt(player.finishT || raceT)}</p><p>BEST MULTIPLIER ${player.bestMult.toFixed(2)}×</p><p>SCORE ${score.toLocaleString()}</p>
+          <button data-a="again">RACE AGAIN</button><a class="alt" href="/garage">GARAGE</a><a class="alt" href="/">HOME</a></div>`;
+        res.querySelector("[data-a=again]")!.addEventListener("click", () => window.location.reload());
         hud.appendChild(res);
       }
-    }
-    if (story && phase === "racing" && player && !player.finished && player.dist > 1500 && player.dist < 1500 + player.v * dt + 1.5 && storyLine !== 99) {
-      popup("DON’T STOP. JUST DELIVER IT.", "#ffd24d");
-      storyLine = 99;
     }
     if (popTimer > 0) popTimer -= dt;
 

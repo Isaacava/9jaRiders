@@ -7,7 +7,7 @@ export default function GameCanvas({
   room,
   player
 }: {
-  mode?: "solo" | "multiplayer" | "demo";
+  mode?: "solo" | "multiplayer" | "demo" | "story";
   room?: string;
   player?: string;
 }) {

@@ -1,3 +1,5 @@
+> **Start here:** `docs/PROJECT_STATE.md` has the full project state (features, architecture, file inventory, verification status, next steps).
+
 # Aboki Riders (9ja Riders)
 
 Mobile-first 3D Nigerian street-racing game. Next.js + React + TypeScript + Three.js, with a WebSocket multiplayer server (`server/`).

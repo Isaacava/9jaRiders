@@ -2,15 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import type { Env } from "../game/weather";
+import type { MissionCfg } from "../game/story/types";
+import type { MissionOutcome } from "../game/threeRace";
+
 export default function GameCanvas({
   mode = "solo",
   room,
-  player
+  player,
+  map,
+  env,
+  mission,
+  attempt,
+  onMissionEnd
 }: {
   mode?: "solo" | "multiplayer" | "demo";
   room?: string;
   player?: string;
+  map?: string;
+  env?: Env;
+  mission?: MissionCfg;
+  attempt?: number;
+  onMissionEnd?: (o: MissionOutcome) => void;
 }) {
+  const endRef = useRef(onMissionEnd);
+  endRef.current = onMissionEnd;
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +40,7 @@ export default function GameCanvas({
         // download the baked model pack in parallel with the game code (falls back to generating meshes if it fails)
         const [{ createThreeRace }] = await Promise.all([import("../game/threeRace"), import("../game/models/loadPack").then((m) => m.loadModelPack())]);
         if (disposed || !mountRef.current) return;
-        game = createThreeRace(mountRef.current, { mode, room, player });
+        game = createThreeRace(mountRef.current, { mode, room, player, map, env, mission, attempt, onMissionEnd: (o) => endRef.current?.(o) });
         await game.ready;
         if (!disposed) setLoading(false);
       } catch (cause) {
@@ -40,7 +56,7 @@ export default function GameCanvas({
       disposed = true;
       game?.destroy();
     };
-  }, [mode, room, player]);
+  }, [mode, room, player, map, mission?.id, attempt]);
 
   return (
     <div className="game-canvas-shell">

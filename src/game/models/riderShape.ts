@@ -4,9 +4,9 @@
 import { capsule, ellipsoid, surfaceNets, union, type MeshData, type SDF, type V3 } from "./sdf";
 
 export type RiderLook = {
-  outfit: "dashiki" | "crop" | "jacket" | "ankara";
+  outfit: "dashiki" | "crop" | "jacket" | "ankara" | "kaftan";
   build: "std" | "tall" | "stocky" | "slim";
-  skin: number; hair: number; hairStyle: "afro" | "fade" | "braids" | "cap" | "gele" | "headscarf" | "locs";
+  skin: number; hair: number; hairStyle: "afro" | "fade" | "braids" | "cap" | "gele" | "headscarf" | "locs" | "helmet" | "fila";
   jacket: number; trim: number; pants: number; boots: number;
   shorts: boolean; female: boolean; beard: boolean; hoops: boolean; glasses: boolean; lens: number; tee: boolean;
 };
@@ -23,6 +23,34 @@ export const RIDER_LOOKS: Record<string, RiderLook> = {
   emeka: { outfit: "jacket", build: "tall", skin: 0x2f1c14, hair: 0x0a0a0a, hairStyle: "fade", jacket: 0x008751, trim: 0xffffff, pants: 0x101214, boots: 0xf2f2f2, shorts: false, female: false, beard: true, hoops: false, glasses: false, lens: 0x111111, tee: false },
   // teal jacket with gold trim, headscarf
   zainab: { outfit: "jacket", build: "std", skin: 0x6e4630, hair: 0xf3efe6, hairStyle: "headscarf", jacket: 0x0e8f8f, trim: 0xd9a21b, pants: 0x1f2a44, boots: 0x3a2a1c, shorts: false, female: true, beard: false, hoops: false, glasses: false, lens: 0x111111, tee: false },
+  // ------------------------------------------------------------- STORY CAST (The Last Delivery)
+  // Aboki: broke Lagos rider in a faded danfo-yellow jacket
+  aboki: { outfit: "jacket", build: "std", skin: 0x5b3a24, hair: 0x0c0907, hairStyle: "fade", jacket: 0xe6b422, trim: 0x15161a, pants: 0x2a3340, boots: 0x3a2a1c, shorts: false, female: false, beard: false, hoops: false, glasses: false, lens: 0x111111, tee: false },
+  // Kelechi: stocky mechanic in blue overalls and a cap
+  kelechi: { outfit: "jacket", build: "stocky", skin: 0x4a2f20, hair: 0x15110f, hairStyle: "cap", jacket: 0x2b4a73, trim: 0x15161a, pants: 0x2b4a73, boots: 0x2b2b2b, shorts: false, female: false, beard: true, hoops: false, glasses: false, lens: 0x111111, tee: false },
+  // Seyi: slim, flashy, white-and-red, round shades
+  seyi: { outfit: "jacket", build: "slim", skin: 0x6b4226, hair: 0x0a0a0a, hairStyle: "fade", jacket: 0xf4f4f4, trim: 0xd8392f, pants: 0x1a1d24, boots: 0xf2f2f2, shorts: false, female: false, beard: false, hoops: false, glasses: true, lens: 0x1a1208, tee: false },
+  // Bisi: street-smart, magenta crop jacket, long braids, hoops
+  bisi: { outfit: "crop", build: "std", skin: 0x7a4a2b, hair: 0x120d0b, hairStyle: "braids", jacket: 0xd62f86, trim: 0xffffff, pants: 0x1a1a1a, boots: 0xf2f2f2, shorts: true, female: true, beard: false, hoops: true, glasses: false, lens: 0x111111, tee: false },
+  // Zara: the blue-helmet rider (helmet on / off)
+  zara_helmet: { outfit: "jacket", build: "slim", skin: 0x5a3522, hair: 0x1f56d8, hairStyle: "helmet", jacket: 0x16306e, trim: 0xffffff, pants: 0x101214, boots: 0x15161a, shorts: false, female: true, beard: false, hoops: false, glasses: false, lens: 0x111111, tee: false },
+  zara: { outfit: "jacket", build: "slim", skin: 0x5a3522, hair: 0x120d0b, hairStyle: "braids", jacket: 0x16306e, trim: 0xffffff, pants: 0x101214, boots: 0x15161a, shorts: false, female: true, beard: false, hoops: true, glasses: false, lens: 0x111111, tee: false },
+  // Boss: calm, grey beard, deep-green kaftan, fila cap
+  boss: { outfit: "kaftan", build: "stocky", skin: 0x3e261c, hair: 0xb9b9b9, hairStyle: "fila", jacket: 0x1b4d3e, trim: 0xd9a21b, pants: 0x1a1a1a, boots: 0x14100c, shorts: false, female: false, beard: true, hoops: false, glasses: false, lens: 0x111111, tee: false },
+  // Circuit enforcer / the rider who tails Aboki: black helmet, black gear
+  shadow: { outfit: "jacket", build: "tall", skin: 0x3e261c, hair: 0x0b0b0e, hairStyle: "helmet", jacket: 0x16171b, trim: 0xff3d6e, pants: 0x0e0f12, boots: 0x0e0f12, shorts: false, female: false, beard: false, hoops: false, glasses: false, lens: 0x111111, tee: false },
+  // the man who receives the bag
+  baba: { outfit: "kaftan", build: "std", skin: 0x4a2f20, hair: 0x9a9a9a, hairStyle: "fila", jacket: 0x6a5a3a, trim: 0xe0c060, pants: 0x222222, boots: 0x1a1410, shorts: false, female: false, beard: true, hoops: false, glasses: true, lens: 0x222222, tee: false },
+  // Mama Put (roadside food) with a bright headscarf
+  mama: { outfit: "ankara", build: "stocky", skin: 0x4e3022, hair: 0xe8731a, hairStyle: "headscarf", jacket: 0x1a7a5a, trim: 0xf2c230, pants: 0x2b2b3a, boots: 0x3a2a1c, shorts: false, female: true, beard: false, hoops: true, glasses: false, lens: 0x111111, tee: false },
+  // police officer at the checkpoint
+  officer: { outfit: "jacket", build: "tall", skin: 0x3a2418, hair: 0x14213d, hairStyle: "cap", jacket: 0x2f3b4a, trim: 0x14213d, pants: 0x232b36, boots: 0x111111, shorts: false, female: false, beard: false, hoops: false, glasses: true, lens: 0x0d0d0d, tee: false },
+  // OS girl / nightlife informant
+  mimi: { outfit: "crop", build: "slim", skin: 0x6e4630, hair: 0x2a1a3a, hairStyle: "afro", jacket: 0xcfd6e4, trim: 0xffffff, pants: 0x101010, boots: 0xcfd6e4, shorts: true, female: true, beard: false, hoops: true, glasses: true, lens: 0x2a1a3a, tee: false },
+  // mechanic crew member
+  mech: { outfit: "jacket", build: "std", skin: 0x5a3a28, hair: 0x15110f, hairStyle: "fade", jacket: 0x6a6f74, trim: 0x15161a, pants: 0x3a4048, boots: 0x2b2b2b, shorts: false, female: false, beard: false, hoops: false, glasses: false, lens: 0x111111, tee: false },
+  // the Circuit's man in the club / security
+  guard: { outfit: "jacket", build: "tall", skin: 0x2f1c14, hair: 0x0a0a0a, hairStyle: "fade", jacket: 0x16171b, trim: 0x16171b, pants: 0x16171b, boots: 0x0e0f12, shorts: false, female: false, beard: true, hoops: false, glasses: true, lens: 0x050505, tee: true },
   // locs in a bun, leather jacket, aviator-dark lenses, tall
   chidi: { outfit: "jacket", build: "tall", skin: 0x5b3a24, hair: 0x1a120d, hairStyle: "locs", jacket: 0x6b3f1e, trim: 0xe0a526, pants: 0x20242b, boots: 0x14100c, shorts: false, female: false, beard: true, hoops: false, glasses: true, lens: 0x0d0d0d, tee: false }
 };
@@ -193,6 +221,11 @@ export function riderVertexColors(shape: RiderShape, look: RiderLook): Float32Ar
       else if (h < 1.0) c = belt;
       else if (h < 1.14) c = skin;
       else if (h > 1.52 || ax > hand) c = skin;
+      else c = jacket;
+    } else if (look.outfit === "kaftan") {
+      if (h < 0.5) c = pants;
+      else if (h > 1.52 || ax > hand) c = skin;
+      else if (ax > cuff || (h > 0.5 && h < 0.57) || (h > 1.32 && h < 1.37) || (ax < 0.04 && h > 1.0)) c = trim;
       else c = jacket;
     } else if (h < 0.97) c = h < 0.26 ? cuffJean : pants;
     else if (h > 1.52 || ax > hand) c = skin;

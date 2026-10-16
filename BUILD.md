@@ -1,5 +1,13 @@
 # Build log
 
+## v8 sky, controls, Lagos routes, weather, STORY MODE
+- Sky fix (dome scaled inside the camera far plane). Split-screen wide touch steering (instant response), brake/nitro buttons, snappier steering physics.
+- Winding Lagos routes: `track.ts`, `maps.ts`, `trackMesh.ts` (ribbons + bend pass), 7 maps with themes (mainland, market, island, nightlife, port), flyovers, lagoon bridges.
+- Weather + time of day (`weather.ts`): night, rain, storm, haze, overcast; lit windows, lamp glow, headlight beams, lightning, rain/thunder audio.
+- Story mode "The Last Delivery": `story/` (script, mission rules, cutscene director, stages, save), `StoryApp.tsx`, `/story`. 21 cutscenes, 12 missions, standing characters (`character.ts`), 15 new looks, helmet/fila/kaftan.
+- Offline: `/story` precached, cache version v8, model pack re-baked (new stocky female body).
+- See docs/PROJECT_STATE.md for the full state, verification status and next steps.
+
 ## v7 performance, offline, netcode
 - Draw calls: static parts of riders/bikes/cars merged per material (about 1,400 -> 400 draw calls for 8 racers).
 - Baked model pack (`npm run bake` -> public/models/pack.<hash>.bin, loaded by `loadPack.ts`): no mesh generation on the player's device.

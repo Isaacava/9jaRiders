@@ -39,6 +39,11 @@ export class GameAudio {
   private wasBoosting = false;
   private muted = false;
   private racing = false;
+  private rainG: GainNode | null = null;
+  private sirenT = 0;
+  private sirenOn = false;
+  private mode: "groove" | "tense" | "calm" | "off" = "groove";
+  private stepLen = STEP;
 
   constructor() {
     try { this.muted = window.localStorage.getItem("aboki:muted") === "1"; } catch { /* ignore */ }
@@ -95,6 +100,7 @@ export class GameAudio {
         return { g: gg, bp: bq };
       };
       this.wind = mkLoop("bandpass", 900);
+      const rainBed = mkLoop("highpass", 1400); rainBed.g.gain.value = 0; this.rainG = rainBed.g;
       const city = mkLoop("lowpass", 380); city.g.gain.value = 0.035;
 
       // echo for the lead
@@ -124,10 +130,31 @@ export class GameAudio {
     this.turbo.g.gain.setTargetAtTime(boosting ? 0.018 : 0, t, 0.08);
     this.wind.g.gain.setTargetAtTime(racing ? sp * sp * 0.09 + (boosting ? 0.04 : 0) : 0, t, 0.15);
     this.wind.bp.frequency.setTargetAtTime(600 + sp * 1600, t, 0.2);
+    if (this.sirenOn && t > this.sirenT) {
+      this.tone("sine", 720, 960, t, 0.55, 0.045, this.sfxBus); this.tone("sine", 960, 720, t + 0.55, 0.55, 0.045, this.sfxBus);
+      this.sirenT = t + 1.1;
+    }
     if (boosting && !this.wasBoosting) this.whoosh();
     this.wasBoosting = boosting;
     this.intensityT = boosting ? 1 : racing ? 0.35 : 0;
     this.intensity += (this.intensityT - this.intensity) * 0.04;
+  }
+
+  /** 0 = dry ... 1.6 = thunderstorm: filtered-noise rain bed. */
+  setRain(level: number) { if (this.ctx && this.rainG) this.rainG.gain.setTargetAtTime(Math.min(0.16, level * 0.07), this.ctx.currentTime, 0.4); }
+  thunder(delay = 0.5) {
+    const ctx = this.ctx; if (!ctx) return;
+    const t = ctx.currentTime + delay;
+    this.burst(t, 2.4, 0.9, "lowpass", 260, 0.7, this.sfxBus);
+    this.tone("sine", 70, 28, t, 1.8, 0.7, this.sfxBus);
+    this.burst(t + 0.35, 1.6, 0.5, "lowpass", 160, 0.7, this.sfxBus);
+  }
+  /** police / pursuit siren (two-tone wail) */
+  siren(on: boolean) { this.sirenOn = on; }
+  /** story music: "groove" (race), "tense" (slow pulse + drone), "calm" (soft pads), "off" */
+  setMusicMode(m: "groove" | "tense" | "calm" | "off") {
+    this.mode = m;
+    this.stepLen = m === "tense" ? 60 / 78 / 4 : m === "calm" ? 60 / 70 / 4 : STEP;
   }
 
   // ------------------------------------------------------------------ music sequencer
@@ -135,8 +162,8 @@ export class GameAudio {
     const ctx = this.ctx;
     if (!ctx) return;
     while (this.nextT < ctx.currentTime + 0.14) {
-      if (this.racing || this.step % 4 === 0) this.playStep(this.step, this.nextT);
-      this.nextT += STEP;
+      if (this.racing || this.mode !== "groove" || this.step % 4 === 0) this.playStep(this.step, this.nextT);
+      this.nextT += this.stepLen;
       this.step = (this.step + 1) % 16;
       if (this.step === 0) this.bar = (this.bar + 1) % 4;
     }
@@ -148,6 +175,8 @@ export class GameAudio {
   }
 
   private playStep(s: number, t: number) {
+    if (this.mode === "off") return;
+    if (this.mode === "tense" || this.mode === "calm") { this.playMood(s, t); return; }
     const inten = this.intensity;
     const bar = this.bar;
     const chord = CHORDS[bar], root = ROOTS[bar];
@@ -169,6 +198,20 @@ export class GameAudio {
     if (s === 0 && bar % 2 === 1 || (inten > 0.6 && s === 8)) {
       let at = t;
       for (let i = 0; i < 3; i++) { this.lead(at, LEAD[Math.floor(Math.random() * LEAD.length)], 0.05 + inten * 0.02); at += STEP * (2 + Math.floor(Math.random() * 2)); }
+    }
+  }
+
+  /** cinematic backing for cutscenes: no drums in calm, a heartbeat + low drone in tense */
+  private playMood(s: number, t: number) {
+    const bar = this.bar, chord = CHORDS[bar], root = ROOTS[bar];
+    if (this.mode === "tense") {
+      if (s === 0) { this.tone("sine", m2f(root + 12), m2f(root + 12), t, 2.4, 0.07, this.musicBus); this.kick(t, 0.5); }
+      if (s === 6) this.kick(t, 0.28);
+      if (s % 4 === 2) this.hat(t, false, 0.025);
+      if (s === 8 && bar % 2 === 1) this.pluck(t, chord[1] + 12, 0.04, 1.1);
+    } else {
+      if (s === 0) for (const n of chord) this.pluck(t, n, 0.035, 2.2);
+      if (s === 8) this.pluck(t, LEAD[(bar * 3) % LEAD.length], 0.03, 1.6);
     }
   }
 
@@ -263,6 +306,17 @@ export class GameAudio {
     this.tone("sawtooth", 120, 520, t, 0.5, 0.12, this.sfxBus);
   }
 
+  /** a phone ringing (two quick double-rings) */
+  phone() {
+    const t = this.ctx?.currentTime; if (t === undefined) return;
+    for (let i = 0; i < 4; i++) { const at = t + (i % 2 ? 0.2 : 0) + Math.floor(i / 2) * 0.55; this.tone("square", 1180, 1180, at, 0.09, 0.05, this.sfxBus); this.tone("square", 940, 940, at + 0.09, 0.09, 0.05, this.sfxBus); }
+  }
+  /** the whistled tune Aboki's father used to ride to (a short rising-then-falling line) */
+  motif() {
+    const ctx = this.ctx; if (!ctx) return;
+    const notes = [69, 72, 74, 76, 74, 72, 69];
+    notes.forEach((n, i) => this.lead(ctx.currentTime + 0.05 + i * 0.26, n, 0.09));
+  }
   pickup() { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("sine", 880, 880, t, 0.14, 0.2, this.sfxBus); this.tone("sine", 1318, 1318, t + 0.08, 0.22, 0.2, this.sfxBus); }
   pad() { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("sawtooth", 180, 900, t, 0.45, 0.15, this.sfxBus); this.tone("sine", 600, 1800, t + 0.05, 0.4, 0.18, this.sfxBus); this.whoosh(); }
   closeCall() { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("square", 700, 1500, t, 0.1, 0.06, this.sfxBus); this.tone("square", 1100, 1900, t + 0.07, 0.12, 0.06, this.sfxBus); }

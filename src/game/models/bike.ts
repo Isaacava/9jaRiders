@@ -31,6 +31,8 @@ export type BikeRig = {
   wheelR: number;
   brakeLight: THREE.MeshStandardMaterial;
   flame: THREE.Mesh;
+  /** additive light cone in front of the headlamp (shown at night / in rain by the weather system) */
+  beam: THREE.Mesh;
   style: BikeStyle;
 };
 
@@ -265,6 +267,13 @@ export function buildBike(style: BikeStyle, color: number, accent = 0x15181c): B
       steer.add(lamp);
     }
   }
+  // headlight beam: cheap additive cone (no real light), fades out along its length
+  const bc = document.createElement("canvas"); bc.width = 4; bc.height = 64;
+  { const bg = bc.getContext("2d")!; const gr = bg.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.35, "rgba(255,255,255,0.35)"); gr.addColorStop(1, "rgba(255,255,255,0)"); bg.fillStyle = gr; bg.fillRect(0, 0, 4, 64); }
+  const beamGeo = new THREE.ConeGeometry(1.7, 16, 24, 1, true); beamGeo.translate(0, -8, 0); beamGeo.rotateX(Math.PI / 2);
+  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(bc), color: 0xfff1c9, transparent: true, opacity: 0.26, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  beam.position.set(0, -0.02, -0.22); beam.rotation.x = -0.06; beam.visible = false; beam.frustumCulled = false;
+  steer.add(beam);
   if (s.highFender) {
     const pl = new THREE.Mesh(rb(0.24, 0.2, 0.02, 0.03), std(0xf2f2f2, 0.5));
     pl.position.set(0, 0.0, -0.3);
@@ -277,17 +286,17 @@ export function buildBike(style: BikeStyle, color: number, accent = 0x15181c): B
   for (const p of pegs) root.add(rod(new THREE.Vector3(p.x * 0.4, p.y, p.z), p, 0.012, chrome));
 
   // collapse ~80 tiny meshes into a handful of draw calls (steering and wheels keep moving as groups)
-  mergeStatic(steer);
+  mergeStatic(steer, (o) => o === beam);
   mergeStatic(front);
   mergeStatic(rear);
   mergeStatic(root, (o) => o === steer || o === front || o === rear || o === flame || o === tl);
 
-  root.traverse((o) => { if ((o as THREE.Mesh).isMesh && !(o as THREE.Mesh).castShadow && o !== flame) o.castShadow = true; });
+  root.traverse((o) => { if ((o as THREE.Mesh).isMesh && !(o as THREE.Mesh).castShadow && o !== flame && o !== beam) o.castShadow = true; });
   flame.castShadow = false;
 
   return {
     root, steer, frontWheel: front, rearWheel: rear,
     seat: new THREE.Vector3(0, s.seatY, zR - 0.52),
-    pegs, grips: [gL, gR], riderLean: s.lean, wheelR: r, brakeLight, flame, style
+    pegs, grips: [gL, gR], riderLean: s.lean, wheelR: r, brakeLight, flame, beam, style
   };
 }

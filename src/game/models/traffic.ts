@@ -33,7 +33,7 @@ export function buildTraffic(kind: TrafficKind, variant = 0): THREE.Group {
   const { w, l } = TRAFFIC_SIZE[kind];
   const lights = tail();
   const shape = buildCarShape(kind);
-  const colors = [0xd9d9d9, 0x1d2b4a, 0x9a1f1f, 0x2b2f33, 0x1d6a46];
+  const colors = [0xd9d9d9, 0x1d2b4a, 0x9a1f1f, 0x2b2f33, 0x1d6a46, 0x1d3a8a, 0xf2f2f2];
   const mat = new THREE.MeshPhysicalMaterial({
     vertexColors: true,
     color: shape.tintable ? colors[variant % colors.length] : 0xffffff,
@@ -54,6 +54,10 @@ export function buildTraffic(kind: TrafficKind, variant = 0): THREE.Group {
   const wheelsAt = (r: number, ww: number, xs: number[], zs: number[]) =>
     xs.forEach((x) => zs.forEach((z) => { const wh = wheel(r, ww); wh.position.set(x, r, z); g.add(wh); }));
 
+  if (kind === "suv" && variant === 5) { // police car: roof light bar
+    box(0.55, 0.12, 0.3, new THREE.MeshStandardMaterial({ color: 0x220000, emissive: 0xff1a1a, emissiveIntensity: 2.4 }), -0.32, 2.02, -0.2);
+    box(0.55, 0.12, 0.3, new THREE.MeshStandardMaterial({ color: 0x000022, emissive: 0x2a5aff, emissiveIntensity: 2.4 }), 0.32, 2.02, -0.2);
+  }
   if (kind === "danfo") {
     for (const sx of [-1, 1]) box(0.28, 0.12, 0.05, lights, sx * (w / 2 - 0.25), 0.95, l / 2 + 0.01);
     box(0.6, 0.15, 0.03, plate, 0, 0.7, l / 2 + 0.02);

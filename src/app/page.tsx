@@ -26,6 +26,10 @@ export default function Home() {
         </div>
 
         <div className="home-actions">
+          <Link className="story-action" href="/story">
+            <small>NEW · CINEMATIC</small>
+            STORY MODE: THE LAST DELIVERY
+          </Link>
           <Link className="primary-action" href="/play">
             OYÁ, RIDE!
           </Link>

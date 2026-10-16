@@ -1,14 +1,21 @@
 import * as THREE from "three";
 import { std } from "./models/util";
+import type { Track } from "./track";
+import { inWater, themeAt, type MapDef, type Theme } from "./maps";
+import { ribbon, wall } from "./trackMesh";
 
 // Lagos flavour: yellow/black kerbs, pedestrian footbridges, danfo bus stops, kiosks with local signs,
 // green-white-green bunting + flags, people on the pavements, a lagoon bridge stretch with stilt houses and a
 // cable-stayed pylon, Victoria Island glass towers, and glowing boost pads.
 
-export const BRIDGE_A = -1800; // lagoon bridge starts (z, negative = forward)
-export const BRIDGE_B = -3000; // ...and ends
-export const inBridge = (z: number, pad = 0) => z <= BRIDGE_A + pad && z >= BRIDGE_B - pad;
-
+// how much of each kind of street life every district gets
+const LIFE: Record<Theme, { peds: number; kiosk: number; stops: number; bunt: number; bridges: number }> = {
+  mainland: { peds: 1, kiosk: 1, stops: 1, bunt: 1, bridges: 1 },
+  market: { peds: 1, kiosk: 1, stops: 0.8, bunt: 0.7, bridges: 0.6 },
+  island: { peds: 0.3, kiosk: 0, stops: 0.4, bunt: 0.35, bridges: 0.7 },
+  nightlife: { peds: 1, kiosk: 0, stops: 0.3, bunt: 0, bridges: 0 },
+  port: { peds: 0.08, kiosk: 0, stops: 0, bunt: 0, bridges: 0 }
+};
 function canvas(w: number, h: number) {
   const c = document.createElement("canvas");
   c.width = w; c.height = h;
@@ -76,7 +83,9 @@ type Rnd = () => number;
 const PEOPLE = [0xd8392f, 0x1f7a3a, 0xf5b800, 0x2756a8, 0xf08a38, 0x8d2fa0, 0xffffff, 0x0e8f8f, 0xe8731a, 0x15161a];
 const SKINS = [0x2f1c14, 0x3e261c, 0x5b3a24, 0x6b4226, 0x7a5236, 0x8a5a33];
 
-export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: number, crowd = 1) {
+export function buildLagos(group: THREE.Group, track: Track, map: MapDef, L: number, rnd: Rnd, ROAD_HALF: number, crowd = 1) {
+  const inBridge = (z: number, pad = 0) => inWater(map, -z, pad);
+  const life = (z: number) => LIFE[themeAt(map, -z)];
   const m4 = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const e = new THREE.Euler();
@@ -85,19 +94,19 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
   const yellow = std(0xf2b705, 0.55);
   const zFar = -L + 60;
 
-  // ---------------------------------------------------------------- yellow/black kerbs
-  const kt = kerbTexture(); kt.wrapS = kt.wrapT = THREE.RepeatWrapping; kt.repeat.set(1, L / 1.2);
+  // ---------------------------------------------------------------- yellow/black kerbs (ribbons that follow the route)
+  const kt = kerbTexture(); kt.wrapS = kt.wrapT = THREE.RepeatWrapping;
+  const kerbMat = new THREE.MeshBasicMaterial({ map: kt });
   for (const sx of [-1, 1]) {
-    const k = new THREE.Mesh(new THREE.PlaneGeometry(0.24, L), new THREE.MeshBasicMaterial({ map: kt }));
-    k.rotation.x = -Math.PI / 2; k.position.set(sx * (ROAD_HALF + 0.14), 0.205, 60 - L / 2);
-    group.add(k);
+    const a2 = sx * (ROAD_HALF + 0.02), b2 = sx * (ROAD_HALF + 0.26);
+    group.add(ribbon(track, Math.min(a2, b2), Math.max(a2, b2), 0.205, -40, L, kerbMat, 1.2));
   }
 
   // ---------------------------------------------------------------- pedestrian footbridges
   const bridgeSign = new THREE.MeshBasicMaterial({ map: signTexture(["LAGOS STATE", "PEDESTRIAN BRIDGE"], "#0b5d3b", "#ffffff", "#f2b705") });
   const green = std(0x0f6b46, 0.6, 0.3);
   for (let z = -240; z > zFar; z -= 430 + rnd() * 70) {
-    if (inBridge(z, 40)) continue;
+    if (inBridge(z, 40) || rnd() > life(z).bridges) continue;
     const g = new THREE.Group();
     const half = ROAD_HALF + 1.7;
     for (const sx of [-1, 1]) {
@@ -120,7 +129,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
   const people = { x: [] as number[], z: [] as number[] };
   let si = 0;
   for (let z = -150; z > zFar; z -= 240 + rnd() * 80) {
-    if (inBridge(z, 30)) continue;
+    if (inBridge(z, 30) || rnd() > life(z).stops) continue;
     const sx = rnd() > 0.5 ? 1 : -1;
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.2, 8), steel); pole.position.y = 1.7; g.add(pole);
@@ -137,7 +146,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
   const N = Math.floor(420 * crowd);
   for (let i = 0; i < N; i++) {
     const z = 20 - rnd() * (L - 40);
-    if (inBridge(z, 10)) continue;
+    if (inBridge(z, 10) || rnd() > life(z).peds) continue;
     const sx = rnd() > 0.5 ? 1 : -1;
     people.x.push(sx * (ROAD_HALF + 0.7 + rnd() * 1.7)); people.z.push(z);
   }
@@ -164,7 +173,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
   ];
   const kz: Array<{ x: number; z: number; t: number; sx: number }> = [];
   for (let z = -20; z > zFar; z -= (30 + rnd() * 26) / crowd) {
-    if (inBridge(z, 20)) continue;
+    if (inBridge(z, 20) || rnd() > life(z).kiosk) continue;
     const sx = rnd() > 0.5 ? 1 : -1;
     kz.push({ x: sx * (ROAD_HALF + 3.9), z, t: Math.floor(rnd() * signs.length), sx });
   }
@@ -190,7 +199,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
 
   // ---------------------------------------------------------------- Nigerian bunting across the road + flags on poles
   const flagTri = new THREE.ConeGeometry(0.24, 0.5, 3); flagTri.rotateX(Math.PI); flagTri.scale(1, 1, 0.12);
-  const buntZ: number[] = []; for (let z = -90; z > zFar; z -= 150 + rnd() * 40) if (!inBridge(z, 20)) buntZ.push(z);
+  const buntZ: number[] = []; for (let z = -90; z > zFar; z -= 150 + rnd() * 40) if (!inBridge(z, 20) && rnd() < life(z).bunt) buntZ.push(z);
   const per = 21;
   const flags = new THREE.InstancedMesh(flagTri, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, side: THREE.DoubleSide }), buntZ.length * per);
   const linePts: THREE.Vector3[] = [];
@@ -212,7 +221,7 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
   group.add(flags, bPoles, new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(linePts), new THREE.LineBasicMaterial({ color: 0x222222 })));
   const flagMat = new THREE.MeshBasicMaterial({ map: flagTexture(), side: THREE.DoubleSide });
   for (let z = -60; z > zFar; z -= 310 + rnd() * 90) {
-    if (inBridge(z, 20)) continue;
+    if (inBridge(z, 20) || rnd() > life(z).bunt) continue;
     const sx = rnd() > 0.5 ? 1 : -1;
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 9, 8), steel); pole.position.y = 4.5; g.add(pole);
@@ -220,85 +229,89 @@ export function buildLagos(group: THREE.Group, L: number, rnd: Rnd, ROAD_HALF: n
     g.position.set(sx * (ROAD_HALF + 2.6), 0, z); group.add(g);
   }
 
-  // ---------------------------------------------------------------- lagoon + bridge stretch
-  const zc = (BRIDGE_A + BRIDGE_B) / 2, len = Math.abs(BRIDGE_A - BRIDGE_B);
+  // ---------------------------------------------------------------- lagoon + bridge stretches (any map water range)
   const wt = waterTexture();
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(900, len + 400), new THREE.MeshStandardMaterial({ map: wt, roughness: 0.22, metalness: 0.15 }));
-  water.rotation.x = -Math.PI / 2; water.position.set(0, -0.06, zc); group.add(water);
+  const waterMat = new THREE.MeshStandardMaterial({ map: wt, roughness: 0.22, metalness: 0.15 });
   const concrete = std(0xc9c4b8, 0.9);
-  for (const sx of [-1, 1]) {
-    const barrier = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.3, len + 6), concrete);
-    barrier.position.set(sx * (ROAD_HALF + 2.9), 0.65, zc); group.add(barrier);
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.12, len + 6), yellow);
-    cap.position.set(sx * (ROAD_HALF + 2.9), 1.35, zc); group.add(cap);
-  }
-  // stilt houses on the water (zinc roofs) and canoes
-  const shackN = Math.max(12, Math.floor(90 * crowd));
-  const shacks = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, 2.2, 3.4), std(0x7a5a3a, 0.95), shackN);
-  const shackRoofs = new THREE.InstancedMesh(new THREE.BoxGeometry(4.1, 0.2, 4.1), std(0x9aa0a6, 0.45, 0.7), shackN);
-  const stilts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.12, 2.4, 6), std(0x4b3826, 1), shackN);
-  for (let i = 0; i < shackN; i++) {
-    const sx = i % 2 ? 1 : -1, x = sx * (22 + rnd() * 70), z = BRIDGE_A - 40 - rnd() * (len - 80), y = 0.9;
-    e.set(0, rnd() * 0.6, 0); q.setFromEuler(e);
-    m4.compose(new THREE.Vector3(x, y + 1.1, z), q, new THREE.Vector3(1, 0.8 + rnd() * 0.5, 1)); shacks.setMatrixAt(i, m4);
-    m4.compose(new THREE.Vector3(x, y + 2.35, z), q, new THREE.Vector3(1, 1, 1)); shackRoofs.setMatrixAt(i, m4);
-    m4.makeTranslation(x, 0, z); stilts.setMatrixAt(i, m4);
-  }
-  group.add(shacks, shackRoofs, stilts);
-  const canoeG = new THREE.BoxGeometry(0.9, 0.35, 5); canoeG.translate(0, 0.1, 0);
-  const canoes = new THREE.InstancedMesh(canoeG, std(0x8a5a33, 0.9), 40);
-  for (let i = 0; i < 40; i++) {
-    e.set(0, rnd() * Math.PI, 0); q.setFromEuler(e);
-    m4.compose(new THREE.Vector3((i % 2 ? 1 : -1) * (14 + rnd() * 60), -0.02, BRIDGE_A - 20 - rnd() * (len - 40)), q, new THREE.Vector3(1, 1, 1));
-    canoes.setMatrixAt(i, m4); canoes.setColorAt(i, col.set([0x8a5a33, 0x2756a8, 0xd8392f, 0xf5b800][i % 4]));
-  }
-  group.add(canoes);
-  // cable-stayed pylon in the distance (Lekki-Ikoyi style)
-  {
-    const px = -52, pz = zc, deck = new THREE.Mesh(new THREE.BoxGeometry(14, 1.2, len * 0.8), std(0xcfcac0, 0.8));
-    deck.position.set(px, 7, pz); group.add(deck);
-    const legMat = std(0xe9e6df, 0.7);
-    for (const s of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(2.2, 74, 2.2), legMat);
-      leg.position.set(px + s * 3.4, 37, pz); leg.rotation.z = -s * 0.07; group.add(leg);
+  let firstRange = true;
+  for (const [wa, wb] of map.water) {
+    const len = wb - wa, zc = -(wa + wb) / 2;
+    group.add(ribbon(track, -450, 450, -0.06, wa - 60, wb + 60, waterMat, 60, false));
+    for (const sx of [-1, 1]) {
+      group.add(wall(track, sx * (ROAD_HALF + 2.9), 0, 1.3, wa, wb, concrete, -sx as 1 | -1));
+      group.add(ribbon(track, sx * (ROAD_HALF + 2.62), sx * (ROAD_HALF + 3.18), 1.33, wa, wb, yellow, 8));
     }
-    const top = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 2.2), legMat); top.position.set(px, 72, pz); group.add(top);
-    const cp: THREE.Vector3[] = [];
-    for (let i = 1; i <= 16; i++) for (const s of [-1, 1]) {
-      cp.push(new THREE.Vector3(px, 66, pz), new THREE.Vector3(px + (i % 2 ? 5 : -5), 7.6, pz + s * i * 7.5));
+    // stilt houses on the water (zinc roofs), canoes
+    const shackN = Math.max(10, Math.floor((len / 1200) * 90 * crowd));
+    const shacks = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, 2.2, 3.4), std(0x7a5a3a, 0.95), shackN);
+    const shackRoofs = new THREE.InstancedMesh(new THREE.BoxGeometry(4.1, 0.2, 4.1), std(0x9aa0a6, 0.45, 0.7), shackN);
+    const stilts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.12, 2.4, 6), std(0x4b3826, 1), shackN);
+    for (let i = 0; i < shackN; i++) {
+      const sx = i % 2 ? 1 : -1, x = sx * (22 + rnd() * 70), z = -(wa + 30 + rnd() * (len - 60)), y = 0.9;
+      e.set(0, rnd() * 0.6, 0); q.setFromEuler(e);
+      m4.compose(new THREE.Vector3(x, y + 1.1, z), q, new THREE.Vector3(1, 0.8 + rnd() * 0.5, 1)); shacks.setMatrixAt(i, m4);
+      m4.compose(new THREE.Vector3(x, y + 2.35, z), q, new THREE.Vector3(1, 1, 1)); shackRoofs.setMatrixAt(i, m4);
+      m4.makeTranslation(x, 0, z); stilts.setMatrixAt(i, m4);
     }
-    group.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cp), new THREE.LineBasicMaterial({ color: 0xf6f3ea })));
+    group.add(shacks, shackRoofs, stilts);
+    const canoeG = new THREE.BoxGeometry(0.9, 0.35, 5); canoeG.translate(0, 0.1, 0);
+    const nC = Math.max(6, Math.floor(shackN * 0.45));
+    const canoes = new THREE.InstancedMesh(canoeG, std(0x8a5a33, 0.9), nC);
+    for (let i = 0; i < nC; i++) {
+      e.set(0, rnd() * Math.PI, 0); q.setFromEuler(e);
+      m4.compose(new THREE.Vector3((i % 2 ? 1 : -1) * (14 + rnd() * 60), -0.02, -(wa + 20 + rnd() * (len - 40))), q, new THREE.Vector3(1, 1, 1));
+      canoes.setMatrixAt(i, m4); canoes.setColorAt(i, col.set([0x8a5a33, 0x2756a8, 0xd8392f, 0xf5b800][i % 4]));
+    }
+    group.add(canoes);
+    // cable-stayed pylon beside the first lagoon crossing of island-style maps (Lekki-Ikoyi look)
+    if (firstRange && map.themes.some(([, t]) => t === "island")) {
+      const px = -52;
+      const deck = ribbon(track, px - 7, px + 7, 7, wa + len * 0.1, wb - len * 0.1, std(0xcfcac0, 0.8), 12);
+      group.add(deck);
+      const legMat = std(0xe9e6df, 0.7);
+      for (const s2 of [-1, 1]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(2.2, 74, 2.2), legMat);
+        leg.position.set(px + s2 * 3.4, 37, zc); leg.rotation.z = -s2 * 0.07; group.add(leg);
+      }
+      const top = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 2.2), legMat); top.position.set(px, 72, zc); group.add(top);
+      const cp: THREE.Vector3[] = [];
+      for (let i = 1; i <= 16; i++) for (const s2 of [-1, 1]) cp.push(new THREE.Vector3(px, 66, zc), new THREE.Vector3(px + (i % 2 ? 5 : -5), 7.6, zc + s2 * i * 7.5));
+      group.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cp), new THREE.LineBasicMaterial({ color: 0xf6f3ea })));
+    }
+    firstRange = false;
   }
 
   // ---------------------------------------------------------------- Victoria Island glass towers
-  const glassN = Math.max(14, Math.floor(46 * (0.4 + 0.6 * crowd)));
+  const towerD: number[] = [];
+  for (let d = 40; d < L - 60; d += 90 / (0.4 + 0.6 * crowd)) { const th = themeAt(map, d); if (th === "island" || th === "nightlife") towerD.push(d); }
+  const glassN = Math.max(1, towerD.length * 2);
   const glass = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x6f9bb5, roughness: 0.18, metalness: 0.65, emissive: 0x16303f, emissiveIntensity: 0.6 }), glassN);
-  for (let i = 0; i < glassN; i++) {
+  glass.count = towerD.length * 2;
+  for (let i = 0; i < glass.count; i++) {
     const sx = i % 2 ? 1 : -1, h = 70 + rnd() * 90, w = 18 + rnd() * 16;
-    m4.compose(new THREE.Vector3(sx * (105 + rnd() * 120), h / 2, 90 - (i / glassN) * (L + 120)), q.identity(), new THREE.Vector3(w, h, w));
+    m4.compose(new THREE.Vector3(sx * (70 + rnd() * 60), h / 2, -towerD[i >> 1]), q.identity(), new THREE.Vector3(w, h, w));
     glass.setMatrixAt(i, m4);
   }
   group.add(glass);
 
   const tick = (_dt: number, time: number) => { wt.offset.y = (time * 0.012) % 1; wt.offset.x = Math.sin(time * 0.15) * 0.02; };
-  return { tick };
+  return { tick, waterMat: map.water.length ? waterMat : null };
 }
 
 // ------------------------------------------------------------------ boost pads
-export function buildBoostPads(group: THREE.Group, L: number, rnd: Rnd, laneX: (i: number) => number) {
+export function buildBoostPads(group: THREE.Group, goal: number, rnd: Rnd, laneX: (i: number) => number) {
   const ct = chevronTexture();
   const geo = new THREE.PlaneGeometry(2.0, 5.2);
   const pads: BoostPad[] = [];
-  for (let d = 230; d < 4900; d += 170 + rnd() * 90) {
-    if (inBridge(-d, 0) && rnd() < 0.3) continue;
+  for (let d = 230; d < goal - 120; d += 170 + rnd() * 90) {
     const mat = new THREE.MeshBasicMaterial({ map: ct, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     const m = new THREE.Mesh(geo, mat);
     const x = laneX(Math.floor(rnd() * 5));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.03, -d);
+    m.userData.onRoad = true; // sits on the road surface, so it follows flyover height
     group.add(m);
     pads.push({ x, dist: d, mesh: m });
   }
-  void L;
   const tick = (_dt: number, time: number) => {
     ct.offset.y = -((time * 0.9) % 1);
     for (const p of pads) (p.mesh.material as THREE.MeshBasicMaterial).opacity = 0.75 + Math.sin(time * 6 + p.dist) * 0.25;

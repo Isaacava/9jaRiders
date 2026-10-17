@@ -3,7 +3,7 @@
    - pages: network-first with a short timeout, so a slow connection falls back to the cached copy instantly
    - everything else same-origin: stale-while-revalidate
    Bump VERSION to force clients to drop old caches. */
-const VERSION = "aboki-v9";
+const VERSION = "aboki-v10";
 const SHELL = VERSION + "-shell";
 const RUNTIME = VERSION + "-runtime";
 const ROUTES = ["/", "/play", "/garage", "/multiplayer", "/story"];

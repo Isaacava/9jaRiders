@@ -1,5 +1,12 @@
 # Build log
 
+## v10 bridge/road fix, GTA-style story destinations, faces
+- FIX (the bridge bug): `trackMesh.ts` wound every ribbon/wall with ONE fixed triangle order, so road, sidewalks and kerbs faced DOWN and were back-face culled from above (and flyover walls only showed from one side / lit from below). Winding is now chosen per surface (up / down / left / right).
+- Story missions (everything except proper races) no longer end on a finish line: `marker.ts` builds a GTA-style destination (glowing ring on the road, tall beam, floating diamond), the HUD shows a pin with metres to go, the bike rolls to a stop inside the ring, the screen fades and the cutscene starts (no result card on success; failures still get RETRY). `world.ts` takes `finishLine:false` to drop the banner/chequered line.
+- Characters: head reshaped (narrower cranium, real jaw/chin, no moon-face), cheek blobs removed, eyelids, calmer brows tinted to the hair, smaller nose tip and lips; cutscene camera fill light so dark skin tones stay readable. Model pack re-baked (`pack.aed9f034.bin`), service worker cache `aboki-v10`.
+- Story missions that shared a district now use route variants (`ojuelegba~m`, `apapa~r`, `vi_strip~rm`, `oshodi~r`): mirrored or driven the other way.
+- NOT verified in a browser (no three.js / GPU in the build sandbox): look of the marker, face proportions, flyover shading.
+
 ## v9 finish pass: road, controls, voices, languages, sound, characters, new districts
 - Road: kerb/bridge walls follow road height; `structure.ts` builds flyover retaining walls, piers, parapets, underside and ground shade; interpolated height + wheelbase grounding; blob contact shadows on every vehicle (all tiers).
 - Controls: brake/nitro buttons were covered by the steering zone (fixed with z-index); steering ramp (55% instantly, full lock in ~0.1 s, fast recentre).

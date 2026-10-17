@@ -74,6 +74,10 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
   const sc = sun.shadow.camera as THREE.OrthographicCamera; sc.left = -16; sc.right = 16; sc.top = 14; sc.bottom = -14; sc.near = 1; sc.far = 80;
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
   three.add(hemi, sun, sun.target);
+  // soft "camera" fill light: lifts the shadow side of faces (dark skin tones were going black in close-ups) without flattening the scene
+  const fill = new THREE.DirectionalLight(0xfff1de, L.night ? 0.55 : 0.75);
+  fill.castShadow = false;
+  three.add(fill, fill.target);
   const stage: Stage = buildStage(scene.stage, scene.env);
   three.add(stage.group);
   // keep the stage's own lights from drowning the look: day scenes dim them
@@ -296,6 +300,7 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
     shake = Math.max(0, shake - dt * 1.4);
     camera.position.set(camPos.x + (Math.random() - 0.5) * shake * 0.12, camPos.y + (Math.random() - 0.5) * shake * 0.12, camPos.z);
     camera.lookAt(camLook);
+    fill.position.copy(camera.position).add(tmp.set(1.2, 1.4, 0)); fill.target.position.copy(camLook);
     camera.updateProjectionMatrix();
     skyMesh.position.copy(camera.position);
     sun.target.position.set(camLook.x, 0, camLook.z); sun.position.set(camLook.x + L.sunOffset[0], L.sunOffset[1], camLook.z + L.sunOffset[2]); sun.target.updateMatrixWorld();

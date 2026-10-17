@@ -91,4 +91,29 @@ export const themeAt = (m: MapDef, d: number): Theme => {
   return t;
 };
 export const inWater = (m: MapDef, d: number, pad = 0) => m.water.some(([a, b]) => d >= a - pad && d <= b + pad);
-export const getMap = (id: string): MapDef => MAPS[id] ?? MAPS.ojuelegba;
+/**
+ * Route variants so story missions that share a district do not feel like the same road:
+ *   "apapa~r" = driven the other way (corners swap sides, climbs become descents, scenery sections reversed)
+ *   "ojuelegba~m" = mirrored (every corner flips)    "vi_strip~rm" = both
+ */
+function variant(base: MapDef, flags: string, id: string): MapDef {
+  const rev = flags.includes("r"), mir = flags.includes("m");
+  const total = base.segs.reduce((a, g) => a + g.len, 0);
+  const flip = (d: number) => Math.max(0, total - d);
+  let segs = base.segs.map((g) => ({ len: g.len, k: (g.k ?? 0) * (mir ? -1 : 1) * (rev ? -1 : 1), rise: (g.rise ?? 0) * (rev ? -1 : 1) }));
+  if (rev) segs = segs.reverse();
+  let themes = base.themes, water = base.water;
+  if (rev) {
+    const ends = base.themes.map((t, i) => (i + 1 < base.themes.length ? base.themes[i + 1][0] : base.length));
+    themes = base.themes.map((t, i) => [flip(ends[i]), t[1]] as [number, Theme]).sort((a, b) => a[0] - b[0]);
+    themes[0] = [0, themes[0][1]];
+    water = base.water.map(([a, b]) => [flip(b), flip(a)] as [number, number]).sort((a, b) => a[0] - b[0]);
+  }
+  return { ...base, id, segs, themes, water, name: base.name + (rev ? " (return)" : " (alt)") };
+}
+
+export const getMap = (id: string): MapDef => {
+  const [base, flags] = id.split("~");
+  const m = MAPS[base] ?? MAPS.ojuelegba;
+  return flags ? variant(m, flags, id) : m;
+};

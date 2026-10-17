@@ -24,6 +24,7 @@ export function dressRider(look: RiderLook, shape: RiderShape, bones: THREE.Bone
   const lipMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(look.skin).multiplyScalar(0.55).lerp(new THREE.Color(0x6a2a2c), 0.45), roughness: 0.4 });
   const hairMat = new THREE.MeshStandardMaterial({ color: look.hair, roughness: 1 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x120c0a, roughness: 0.3 });
+  const browMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(look.hair).lerp(new THREE.Color(0x120c0a), 0.55), roughness: 0.9 });
   const white = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.25 });
   const gold = new THREE.MeshStandardMaterial({ color: 0xd9a21b, roughness: 0.3, metalness: 0.7 });
   const sph = (r: number, m: THREE.Material, sx = 1, sy = 1, sz = 1) => {
@@ -37,20 +38,22 @@ export function dressRider(look: RiderLook, shape: RiderShape, bones: THREE.Bone
     attach(sph(0.0175, white, 1.3, 0.85, 0.5), sx * 0.037, 1.742, -0.092);
     attach(sph(0.0105, dark, 1, 1, 0.5), sx * 0.037, 1.742, -0.1);
     attach(sph(0.0035, white, 1, 1, 0.5), sx * 0.04, 1.746, -0.106);
-    const brow = new THREE.Mesh(new THREE.CapsuleGeometry(0.0055 * s, 0.03 * s, 4, 8), dark);
-    brow.rotation.z = Math.PI / 2 + sx * 0.14;
-    attach(brow, sx * 0.039, 1.77, -0.088);
+    attach(sph(0.0192, skinMat, 1.3, 0.55, 0.55), sx * 0.037, 1.754, -0.0955); // upper eyelid (hides the googly top of the eye)
+    attach(sph(0.0185, skinMat, 1.3, 0.3, 0.5), sx * 0.037, 1.7295, -0.0945);  // lower lid
+    const brow = new THREE.Mesh(new THREE.CapsuleGeometry(0.0042 * s, 0.03 * s, 4, 8), browMat);
+    brow.rotation.z = Math.PI / 2 - sx * 0.05;  // relaxed (the old tilt read as permanently angry)
+    attach(brow, sx * 0.04, 1.772, -0.086);
     attach(sph(0.029, skinMat, 0.5, 1.15, 0.85), sx * 0.091, 1.712, 0.005); // ears
     attach(sph(0.0125, skinMat, 1, 0.9, 0.9), sx * 0.015, 1.693, -0.099);   // nostril wings
-    attach(sph(0.025, skinMat, 1, 0.8, 0.5), sx * 0.052, 1.683, -0.082);    // cheeks
+    attach(sph(0.017, skinMat, 1, 0.75, 0.4), sx * 0.05, 1.688, -0.078);     // cheekbones (subtle)
   }
   const bridge = rod(new THREE.Vector3(0, 1.745 * s, -0.09 * s), new THREE.Vector3(0, 1.7 * s, -0.103 * s), 0.0105 * s, skinMat, 8);
   bridge.position.sub(hp);
   headBone.add(bridge);
-  attach(sph(0.0175, skinMat, 1, 1, 1.05), 0, 1.695, -0.106);   // nose tip
-  attach(sph(0.021, lipMat, 1.55, 0.5, 0.65), 0, 1.664, -0.097); // upper lip
-  attach(sph(0.023, lipMat, 1.5, 0.55, 0.65), 0, 1.649, -0.094); // lower lip
-  attach(sph(0.026, skinMat, 1.2, 0.8, 0.8), 0, 1.622, -0.082);  // chin
+  attach(sph(0.0145, skinMat, 1, 0.95, 1.05), 0, 1.696, -0.104);   // nose tip
+  attach(sph(0.02, lipMat, 1.45, 0.45, 0.6), 0, 1.664, -0.095); // upper lip
+  attach(sph(0.022, lipMat, 1.4, 0.5, 0.6), 0, 1.65, -0.092); // lower lip
+  attach(sph(0.022, skinMat, 1.15, 0.8, 0.75), 0, 1.624, -0.083);  // chin
 
   if (look.glasses) {
     const lensMat = new THREE.MeshPhysicalMaterial({ color: look.lens, roughness: 0.05, metalness: 0.2, clearcoat: 1, transparent: true, opacity: 0.8, side: THREE.DoubleSide });

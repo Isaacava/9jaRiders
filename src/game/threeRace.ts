@@ -6,6 +6,7 @@ import { buildTraffic, TRAFFIC_SIZE, type TrafficKind } from "./models/traffic";
 import { mulberry32 } from "./models/util";
 import { getSharedRealtimeClient, type RealtimeState } from "./multiplayer";
 import { buildWorld, ROAD_HALF, laneX } from "./world";
+import { buildMarker, type Marker } from "./marker";
 import { getMap } from "./maps";
 import type { Frame } from "./track";
 import { Weather, envLabel, pickEnv, type Env } from "./weather";
@@ -105,6 +106,11 @@ const CSS = `
 .rr-mis .bars i b{display:block;height:100%;width:0;background:#ff5a5a}
 .rr-mis .bars i.bf b{background:#7dffb2}
 .rr-cap{position:absolute;left:50%;transform:translateX(-50%) translateY(10px);top:calc(max(10px,env(safe-area-inset-top)) + 84px);width:min(560px,90%);background:rgba(10,12,16,.82);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:8px 12px;color:#fff;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;font:600 14px/1.4 system-ui,sans-serif}
+.rr-wp{position:absolute;left:50%;top:30%;transform:translate(-50%,-100%);text-align:center;pointer-events:none;color:#ffd24d;font:900 12px/1.1 system-ui,sans-serif;letter-spacing:.08em;text-shadow:0 1px 4px #000;transition:opacity .2s}
+.rr-wp i{display:block;font-style:normal;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7));animation:rrbob 1s ease-in-out infinite}
+.rr-wp small{display:block;font:700 10px/1.2 system-ui,sans-serif;color:#fff;letter-spacing:.12em;max-width:160px;opacity:.9}
+@keyframes rrbob{50%{transform:translateY(-5px)}}
+.rr-fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .9s ease}
 .rr-cap.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .rr-cap .gl{display:block;font:italic 600 11px/1.3 system-ui,sans-serif;color:#ffd9a0;opacity:.85;margin-top:3px}
 .rr-cap b{display:block;font:900 10px/1 system-ui,sans-serif;letter-spacing:.14em;margin-bottom:3px}
@@ -182,10 +188,14 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
   scene.environment = envTex;
   scene.environmentIntensity = 0.6;
   const camera = new THREE.PerspectiveCamera(62, 1, 0.3, Q.fogFar + 80);
-  const world = buildWorld(scene, { map, crowd: Q.crowd, shadows: Q.shadows, shadowSize: Q.shadowSize });
+  // story missions (except proper races) end at a GTA-style destination marker instead of a finish line
+  const markerMode = !!options.mission && options.mission.objective !== "race";
+  const world = buildWorld(scene, { map, crowd: Q.crowd, shadows: Q.shadows, shadowSize: Q.shadowSize, finishLine: !markerMode });
+  const marker: Marker | null = markerMode ? buildMarker(scene, world.track, GOAL, ROAD_HALF) : null;
   const track = world.track;
   const _f: Frame = { px: 0, py: 0, pz: 0, th: 0 };
   const _w = { x: 0, y: 0, z: 0 }, _w2 = { x: 0, y: 0, z: 0 };
+  const _wp = new THREE.Vector3();
   // time of day + weather (night, rain, storm...): story missions set it, free races pick one (or ?time=night&weather=rain)
   const envSel: Env = options.env ?? (demo ? { time: "golden", weather: "clear" } : pickEnv(new URLSearchParams(window.location.search)));
   const weather = new Weather(scene, renderer, world, Q.fogFar, Q.tier === "low" ? 220 : Q.tier === "medium" ? 420 : 700);
@@ -213,6 +223,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     </div>
     <div class="rr-mis" style="display:none"><div class="g"></div><div class="row"><span class="tm"></span><span class="bag"></span></div><div class="bars"><i class="bc"><b></b></i><i class="bf"><b></b></i></div></div>
     <div class="rr-cap"></div>
+    <div class="rr-wp" style="display:none"><i>📍</i><b></b><small></small></div>
+    <div class="rr-fade"></div>
     <div class="rr-mres" style="display:none"></div>
     <div class="rr-prog" data-k="prog"></div>
     <div class="rr-mult" data-k="mult">1.00×</div>
@@ -549,11 +561,11 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     else if (!boost) r.nitro = Math.min(1, r.nitro + dt * 0.05);
     let vm = r.vmax * (boost ? 1.32 : 1);
     if (r.hit > 0) vm *= 0.6;
-    if (r.finished) vm = 12;
+    if (r.finished) vm = markerMode && r.human ? 0 : 12;
     const acc = (4 + r.accel * 0.9) * (boost ? 2.4 : 1);
     let a = acc * Math.max(0, 1 - Math.pow(r.v / vm, 1.6));
     if (r.v > vm) a = -(r.v - vm) * 1.6;
-    if (brake || r.finished) a = brake ? -26 : Math.min(a, -3);
+    if (brake || r.finished) a = brake ? -26 : Math.min(a, markerMode && r.human ? -14 : -3);
     r.braking = brake;
     r.v = Math.max(0, r.v + a * dt);
     const grip = clamp(r.v / 10, 0, 1);
@@ -739,7 +751,9 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
         drive(r, dt, r.finished || missionOver ? clamp(-r.x * 0.5, -1, 1) : steer, (input.brake && !r.finished) || missionOver);
       } else if (r.scripted) { /* driven by the mission rules */ } else driveCPU(r, dt, obs);
 
-      if (!r.finished && !r.scripted && r.dist >= GOAL) {
+      // marker missions: start braking early enough that the bike rolls to a stop inside the ring (brake decel is 26 m/s²)
+      const arriveAt = markerMode && r.human ? GOAL - r.v * r.v / 52 + 2 : GOAL;
+      if (!r.finished && !r.scripted && r.dist >= arriveAt) {
         r.finished = true; r.place = ++finishedCount; r.finishT = raceT; r.boosting = false; r.padT = 0;
         if (r.human) { if (mission) mission.onFinish(raceT); else audio.finish(); }
       }
@@ -832,6 +846,22 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     weather.update(dt, camera.position);
     world.sky.position.copy(camera.position);
     updateCamera(dt, lead, W, H);
+    if (marker && player) {
+      marker.update(dt, time, player.dist);
+      const wp = hud.querySelector(".rr-wp") as HTMLElement;
+      const rem = Math.max(0, GOAL - player.dist);
+      if (!missionOver && !player.finished) {
+        _wp.copy(marker.pos).project(camera);
+        const vis = _wp.z < 1 && Math.abs(_wp.x) < 1.15;
+        wp.style.display = vis ? "block" : "none";
+        if (vis) {
+          const sx = clamp(_wp.x, -0.85, 0.85), sy = clamp(_wp.y, -0.3, 0.8);
+          wp.style.left = `${(sx * 0.5 + 0.5) * 100}%`; wp.style.top = `${(0.5 - sy * 0.5) * 100}%`;
+          (wp.querySelector("b") as HTMLElement).textContent = `${rem >= 1000 ? (rem / 1000).toFixed(1) + " KM" : Math.round(rem / 5) * 5 + " M"}`;
+          (wp.querySelector("small") as HTMLElement).textContent = M?.goalText ?? "";
+        }
+      } else wp.style.display = "none";
+    }
 
     // audio
     if (!demo) { audio.update(lead.v / lead.vmax, lead.boosting, phase === "racing"); if (frameN % 45 === 0) audio.setRain(weather.rainLevel); }
@@ -949,7 +979,13 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
         if (missionOver) return;
         missionOver = true; audio.siren(false);
         if (res.ok) audio.missionWin(); else audio.missionFail();
-        window.setTimeout(() => showResult(res), res.ok ? 700 : 900);
+        if (res.ok && markerMode) {
+          // GTA style: arrive, the screen fades, the cutscene takes over (no result card)
+          popup(`ARRIVED${M.reward ? `  +₦${M.reward.toLocaleString()}` : ""}`, "#ffd24d");
+          const fade = hud.querySelector(".rr-fade") as HTMLElement;
+          window.setTimeout(() => { fade.style.opacity = "1"; }, 1100);
+          window.setTimeout(() => options.onMissionEnd?.({ ...res, reward: M.reward, time: raceT }), 2100);
+        } else window.setTimeout(() => showResult(res), res.ok ? 700 : 900);
       },
       nudge: (vx, mul) => { player!.vx += vx * 0.35; player!.v *= mul; }
     };

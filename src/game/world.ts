@@ -129,7 +129,7 @@ export type World = {
   mats: { road: THREE.MeshStandardMaterial; windows: THREE.MeshStandardMaterial; lampHead: THREE.MeshStandardMaterial; glow: THREE.PointsMaterial; pools: THREE.MeshBasicMaterial; neon: THREE.MeshBasicMaterial; water: THREE.MeshStandardMaterial | null };
 };
 
-export type WorldOpts = { map: MapDef; crowd?: number; shadows?: boolean; shadowSize?: number };
+export type WorldOpts = { map: MapDef; crowd?: number; shadows?: boolean; shadowSize?: number; /** false = no finish banner / chequered line at the goal (story missions use a destination marker instead) */ finishLine?: boolean };
 
 type ThemeParams = { step: number; cls: [number, number, number, number]; gap: number; gapVar: number; palette: number[]; poles: boolean; lamps: number; palms: number; umbrellas: number; neon: number };
 const PAL = {
@@ -214,12 +214,12 @@ export function buildWorld(scene: THREE.Scene, opts: WorldOpts): World {
   const [sc2, sg] = canvas(256, 32);
   for (let i = 0; i < 32; i++) for (let j = 0; j < 4; j++) { sg.fillStyle = (i + j) % 2 ? "#fff" : "#111"; sg.fillRect(i * 8, j * 8, 8, 8); }
   const checker = tex(sc2);
-  for (const d of [0, GOAL]) {
+  for (const d of opts.finishLine === false ? [0] : [0, GOAL]) {
     const strip = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_HALF * 2, 1.4), new THREE.MeshBasicMaterial({ map: checker }));
     strip.rotation.x = -Math.PI / 2; strip.position.set(0, 0.015, -d - 0.7); strip.userData.onRoad = true; group.add(strip);
   }
   const steel = std(0x2b2e33, 0.5, 0.6);
-  {
+  if (opts.finishLine !== false) {
     const g = new THREE.Group();
     for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 8, 0.5), steel); p.position.set(sx * (ROAD_HALF + 1.2), 4, 0); g.add(p); }
     const banner = new THREE.Mesh(new THREE.BoxGeometry(ROAD_HALF * 2 + 3, 2.2, 0.3), new THREE.MeshBasicMaterial({ map: billboardTexture("FINISH", "#0c7b72", "#ffffff") }));

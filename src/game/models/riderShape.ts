@@ -188,8 +188,9 @@ export function buildRiderShape(female: boolean, build: Build = "std"): RiderSha
   }
   // skull: a proper egg-shaped ellipsoid (not a tapered capsule), with a slight jaw
   const hc = J.head;
-  fs.push(ellipsoid([hc[0], hc[1] + 0.055 * P.s, hc[2]], 0.088 * P.s, 1, 1.22, 1.1));
-  fs.push(capsule([hc[0], hc[1] + 0.0, hc[2] - 0.012 * P.s], [hc[0], hc[1] + 0.03 * P.s, hc[2] - 0.012 * P.s], 0.07 * P.s, 0.08 * P.s, 1, 1, 1.05));
+  fs.push(ellipsoid([hc[0], hc[1] + 0.057 * P.s, hc[2] + 0.004 * P.s], 0.085 * P.s, 1, 1.2, 1.1));            // cranium (a little narrower: no more moon face)
+  fs.push(ellipsoid([hc[0], hc[1] - 0.018 * P.s, hc[2] - 0.016 * P.s], 0.058 * P.s, 1.02, 1.12, 1.22));        // jaw + chin
+  fs.push(capsule([hc[0], hc[1] + 0.005 * P.s, hc[2] - 0.004 * P.s], [hc[0], hc[1] + 0.03 * P.s, hc[2] - 0.004 * P.s], 0.058 * P.s, 0.068 * P.s, 1, 1, 1.02)); // cheek / temple mass
   const body = union(fs, 0.035);
   const mesh = surfaceNets(body, [-0.86, -0.02, -0.3], [0.86, 1.9, 0.3], 0.021);
 

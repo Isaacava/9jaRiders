@@ -3,7 +3,19 @@ import { Track, type Frame } from "./track";
 
 const CHUNK = 160; // metres per ribbon piece (so far-away pieces can be frustum culled)
 
-function build(track: Track, d0: number, d1: number, mat: THREE.Material, vertex: (d: number, side: 0 | 1, p: THREE.Vector3, n: THREE.Vector3) => void, uv: (d: number, side: 0 | 1) => [number, number]) {
+/**
+ * Triangle winding. Vertices per row are (side 0, side 1) and rows run forward (-z at heading 0), lateral +x is to the right.
+ *  up   = visible from above   (road, sidewalks: side 0 left, side 1 right)
+ *  down = visible from below   (deck underside)
+ *  left / right = a wall whose front face looks toward -x / +x (side 0 = bottom, side 1 = top)
+ * The old code used one fixed winding for everything, so every road ribbon faced DOWN and was back-face culled from above.
+ */
+type Wind = "up" | "down" | "left" | "right";
+const A_WIND = (k: number) => [k, k + 1, k + 2, k + 1, k + 3, k + 2]; // faces up (ribbon) / -x (wall)
+const B_WIND = (k: number) => [k, k + 2, k + 1, k + 1, k + 2, k + 3]; // faces down (ribbon) / +x (wall)
+
+function build(track: Track, d0: number, d1: number, mat: THREE.Material, vertex: (d: number, side: 0 | 1, p: THREE.Vector3, n: THREE.Vector3) => void, uv: (d: number, side: 0 | 1) => [number, number], wind: Wind = "up") {
+  const useA = wind === "up" || wind === "left";
   const group = new THREE.Group();
   group.userData.noBend = true;
   const p = new THREE.Vector3(), n = new THREE.Vector3();
@@ -18,7 +30,7 @@ function build(track: Track, d0: number, d1: number, mat: THREE.Material, vertex
         pos.push(p.x, p.y, p.z); nrm.push(n.x, n.y, n.z);
         const t = uv(d, side); uvs.push(t[0], t[1]);
       }
-      if (i > 0) { const k = (i - 1) * 2; idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); }
+      if (i > 0) { const k = (i - 1) * 2; idx.push(...(useA ? A_WIND(k) : B_WIND(k))); }
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -35,7 +47,7 @@ function build(track: Track, d0: number, d1: number, mat: THREE.Material, vertex
 
 /** Generic strip along the route: `vertex` writes the position/normal of each edge point (side 0 or 1) at distance d. */
 export function strip(track: Track, d0: number, d1: number, mat: THREE.Material, vertex: (d: number, side: 0 | 1, p: THREE.Vector3, n: THREE.Vector3) => void, vScale = 8, shadow = true) {
-  const g = build(track, d0, d1, mat, vertex, (d, side) => [side, d / vScale]);
+  const g = build(track, d0, d1, mat, vertex, (d, side) => [side, d / vScale], "down");
   if (shadow) g.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; });
   return g;
 }
@@ -48,7 +60,7 @@ export function ribbon(track: Track, x0: number, x1: number, y: number, d0: numb
     const x = side ? x1 : x0;
     p.set(f.px + Math.cos(f.th) * x, f.py + y, f.pz + Math.sin(f.th) * x);
     n.set(0, 1, 0);
-  }, (d, side) => [side, d / vScale]);
+  }, (d, side) => [side, d / vScale], "up");
 }
 
 /** Vertical strip at lateral offset x from height yBottom(d) to yTop(d) ABOVE THE ROAD SURFACE: barriers, bridge sides, retaining walls. */
@@ -60,7 +72,7 @@ export function wall(track: Track, x: number, yBottom: number | ((d: number) => 
     track.frame(d, f, true);
     p.set(f.px + Math.cos(f.th) * x, f.py + (side ? yt(d) : yb(d)), f.pz + Math.sin(f.th) * x);
     n.set(Math.cos(f.th) * facing, 0, Math.sin(f.th) * facing);
-  }, (d, side) => [side, d / 8]);
+  }, (d, side) => [side, d / 8], facing === 1 ? "right" : "left");
 }
 
 const _fr: Frame = { px: 0, py: 0, pz: 0, th: 0 };

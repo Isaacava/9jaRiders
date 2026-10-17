@@ -576,25 +576,25 @@ const MISSIONS1: Record<string, MissionCfg> = {
     comms: [{ at: 150, who: "bisi", text: "The OS girls dey watch. No shame me!" }, { at: 1200, who: "seyi", text: "Borrowed engine, borrowed speed!" }]
   },
   m7: {
-    id: "m7", title: "The Blue Helmet", chapter: "CHAPTER 5", map: "ojuelegba", env: { time: "night", weather: "rain" }, bike: "cafe", objective: "follow",
+    id: "m7", title: "The Blue Helmet", chapter: "CHAPTER 5", map: "ojuelegba~m", env: { time: "night", weather: "rain" }, bike: "cafe", objective: "follow",
     brief: "Stay close to the blue helmet. Get alongside and don't lose him. This time you want answers.", goalText: "CATCH THE BLUE HELMET (stay within 12 m)", traffic: 0.8, reward: 0,
     rivals: [{ rider: "zara_helmet", bike: "elite", role: "leader", skill: 0.9 }],
     comms: [{ at: 40, who: "aboki", text: "There you are." }, { at: 1400, who: "aboki", text: "Not today. You no go lose me." }, { at: 2300, who: "zara", text: "Follow me. Keep up.", alt: { ha: { t: "Ku biyo ni. Kada ku bar baya.", g: "Follow me. Don't fall behind.", say: "Koo bee-yoh nee. Kah-dah koo bar bah-yah." } } }]
   },
   m8: {
-    id: "m8", title: "The Circuit", chapter: "CHAPTER 6", map: "apapa", env: { time: "night", weather: "rain" }, bike: "elite", objective: "race", needPlace: 2,
+    id: "m8", title: "The Circuit", chapter: "CHAPTER 6", map: "apapa~r", env: { time: "night", weather: "rain" }, bike: "elite", objective: "race", needPlace: 2,
     brief: "An old Circuit race on the port road. Black helmets everywhere. Win it and you're in.", goalText: "FINISH IN THE TOP 2", traffic: 0.5, reward: 40000, skipAfter: 3,
     rivals: [{ rider: "seyi", bike: "elite", role: "racer", skill: 0.86 }, { rider: "shadow", bike: "speed", role: "racer", skill: 0.82 }, { rider: "tobi", bike: "speed", role: "racer", skill: 0.74 }],
     comms: [{ at: 100, who: "seyi", text: "Don't look at the black helmets. They dey watch you." }, { at: 1800, who: "zara", text: "Left lane's clean. Go." }]
   },
   m9: {
-    id: "m9", title: "Out of the OS", chapter: "CHAPTER 8", map: "vi_strip", env: { time: "night", weather: "rain" }, bike: "elite", objective: "escape",
+    id: "m9", title: "Out of the OS", chapter: "CHAPTER 8", map: "vi_strip~rm", env: { time: "night", weather: "rain" }, bike: "elite", objective: "escape",
     brief: "Circuit riders saw you at the door. Shake them off before the strip ends.", goalText: "ESCAPE THE CIRCUIT", traffic: 0.9, reward: 0, roadblocks: [1300, 2000],
     rivals: [{ rider: "shadow", bike: "speed", role: "pursuer", at: 150, skill: 0.84 }, { rider: "guard", bike: "speed", role: "pursuer", at: 350, skill: 0.8 }],
     comms: [{ at: 80, who: "bisi", text: "They're behind you! Two of them!", music: "tense", siren: false }, { at: 1200, who: "seyi", text: "Roadblock ahead. Take the left gap!" }]
   },
   m10: {
-    id: "m10", title: "Storm", chapter: "CHAPTER 9", map: "oshodi", env: { time: "night", weather: "storm" }, bike: "elite", objective: "escape",
+    id: "m10", title: "Storm", chapter: "CHAPTER 9", map: "oshodi~r", env: { time: "night", weather: "storm" }, bike: "elite", objective: "escape",
     brief: "He rides angry into the storm and the Circuit finds him. Hold on.", goalText: "SURVIVE THE STORM", traffic: 1, reward: 0, roadblocks: [1200, 1900, 2400],
     rivals: [{ rider: "shadow", bike: "speed", role: "pursuer", at: 200, skill: 0.88 }, { rider: "guard", bike: "speed", role: "pursuer", at: 400, skill: 0.84 }],
     comms: [{ at: 60, who: "aboki", text: "(He is whistling, badly.)", music: "tense" }, { at: 1100, who: "boss", text: "Aboki! Left onto the flyover. I'm clearing the road." }]

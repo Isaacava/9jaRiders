@@ -77,9 +77,13 @@ export class Track {
   }
 
   curvature(d: number) { return this.kk[Math.max(0, Math.min(this.n - 1, Math.round(d / this.step)))]; }
-  height(d: number) { return this.py[Math.max(0, Math.min(this.n - 1, Math.round(d / this.step)))]; }
-  /** road pitch (rad) at d */
-  pitch(d: number) { const a = this.height(d - 3), b = this.height(d + 3); return Math.atan2(b - a, 6); }
+  /** road height at d (linearly interpolated, so pitch never jumps between samples) */
+  height(d: number) {
+    const f = Math.max(0, Math.min(this.n - 1, d / this.step)), i = Math.min(this.n - 2, Math.floor(f)), t = f - i;
+    return this.py[i] + (this.py[i + 1] - this.py[i]) * t;
+  }
+  /** road pitch (rad) at d, measured over `span` metres (use the wheelbase for vehicles) */
+  pitch(d: number, span = 6) { const a = this.height(d - span / 2), b = this.height(d + span / 2); return Math.atan2(b - a, span); }
 
   /** world position of track coordinates (x lateral, d distance) with extra height y */
   at(d: number, x: number, y: number, out: { x: number; y: number; z: number }, f: Frame = { px: 0, py: 0, pz: 0, th: 0 }) {

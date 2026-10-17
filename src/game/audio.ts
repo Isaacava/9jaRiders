@@ -3,6 +3,9 @@
 //  - bike engine with gear shifts, wind, turbo whistle and boost whoosh
 //  - Lagos street ambience: danfo / keke / truck horns, distant traffic, conductor shouts (speech synthesis, optional)
 
+import { pickVoice, speechParams } from "./voice";
+import { voiceOf, type VoiceProfile } from "./story/cast";
+
 export type HornKind = "danfo" | "sedan" | "keke" | "truck" | "suv";
 
 const m2f = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
@@ -18,6 +21,9 @@ const KICK = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const CLAP = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0.35, 0];
 const CONGA = [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0];
 const BASS = [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0];
+
+function AudioVowel(code: number): [number, number] { return GameAudio_VOWELS["aeiou"[code % 5]]; }
+const GameAudio_VOWELS: Record<string, [number, number]> = { a: [800, 1250], e: [520, 1900], i: [330, 2350], o: [520, 920], u: [340, 800] };
 
 export class GameAudio {
   private ctx: AudioContext | null = null;
@@ -331,6 +337,99 @@ export class GameAudio {
   go() { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("square", 880, 880, t, 0.45, 0.14, this.sfxBus); this.whoosh(); }
   finish() { const t = this.ctx?.currentTime; if (t === undefined) return; [523, 659, 784, 1046].forEach((f, i) => this.tone("triangle", f, f, t + i * 0.1, 0.4, 0.14, this.sfxBus)); }
 
+
+  // ------------------------------------------------------------------ character voices (synthesised) + radio
+
+  /** one synthesised syllable in a character's voice (vowel formants on a buzzing source at their pitch) */
+  syllable(prof: VoiceProfile, ch: string, mood?: string, radio = false, at?: number) {
+    const ctx = this.ctx; if (!ctx || this.muted) return;
+    const t = at ?? ctx.currentTime;
+    const code = ch.toLowerCase().charCodeAt(0) || 97;
+    const [f1, f2] = AudioVowel(code);
+    const mm = mood === "angry" ? 0.93 : mood === "sad" ? 0.86 : mood === "laugh" ? 1.12 : 1;
+    const f0 = prof.base * Math.pow(2, (((code * 7) % 9) - 4) * 0.075) * mm;
+    const br = 0.85 + prof.bright * 0.3;
+    const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (mood === "sad" ? 0.94 : 1.04), t + 0.09);
+    if (prof.wobble > 0.01) { const lfo = ctx.createOscillator(); lfo.frequency.value = 5.2; const lg = ctx.createGain(); lg.gain.value = f0 * prof.wobble * 0.06; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + 0.14); }
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(radio ? 0.07 : 0.09, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    const out: AudioNode = radio ? this.radioChain() : this.sfxBus;
+    for (const [f, q, gain] of [[f1 * br, 7, 1], [f2 * br, 9, 0.55]] as const) {
+      const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = f; bp.Q.value = q;
+      const gg = ctx.createGain(); gg.gain.value = gain * 2.2;
+      o.connect(bp); bp.connect(gg); gg.connect(g);
+    }
+    g.connect(out); o.start(t); o.stop(t + 0.13);
+  }
+  /** a burst of syllables for a whole line */
+  babble(prof: VoiceProfile, letters: string, n: number, mood?: string, radio = false) {
+    const ctx = this.ctx; if (!ctx || this.muted || !letters) return;
+    const t0 = ctx.currentTime + (radio ? 0.08 : 0.02);
+    if (radio) this.radioClick(true);
+    for (let i = 0; i < n; i++) this.syllable(prof, letters[(i * 2.4 | 0) % letters.length], mood, radio, t0 + i * 0.082);
+    if (radio) this.radioClick(false, t0 + n * 0.082 + 0.05);
+  }
+  private radioNode: AudioNode | null = null;
+  private radioChain(): AudioNode {
+    if (this.radioNode) return this.radioNode;
+    const ctx = this.ctx!;
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 450;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2900;
+    const sh = ctx.createWaveShaper(); const c = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = (i / 255) * 2 - 1; c[i] = Math.tanh(x * 2.2); } sh.curve = c;
+    hp.connect(lp); lp.connect(sh); sh.connect(this.sfxBus);
+    this.radioNode = hp;
+    return hp;
+  }
+  /** squelch click when a radio / phone line opens or closes */
+  radioClick(open: boolean, at?: number) {
+    const ctx = this.ctx; if (!ctx || this.muted) return;
+    const t = at ?? ctx.currentTime;
+    this.burst(t, 0.05, 0.18, "highpass", 2200, 1, this.sfxBus);
+    this.tone("square", open ? 1500 : 1100, open ? 1900 : 800, t, 0.05, 0.05, this.sfxBus);
+  }
+
+  // ------------------------------------------------------------------ mission sounds
+  /** objective given: rising Afrobeat horn stab + log drum + whoosh */
+  missionStart() {
+    const t = this.ctx?.currentTime; if (t === undefined) return;
+    [57, 64, 69].forEach((n, i) => this.tone("sawtooth", m2f(n), m2f(n), t + i * 0.09, 0.5, 0.06, this.sfxBus));
+    this.logDrum(t, 33, 0.7); this.logDrum(t + 0.18, 36, 0.6); this.conga(t + 0.36, 260, 0.3); this.whoosh();
+  }
+  /** mission complete: bright pentatonic run, conga fills, shakers, a final chord */
+  missionWin() {
+    const ctx = this.ctx; if (!ctx) return; const t = ctx.currentTime;
+    [69, 72, 74, 76, 79, 81, 84].forEach((n, i) => { this.tone("triangle", m2f(n), m2f(n), t + i * 0.085, 0.38, 0.12, this.sfxBus); });
+    [0, 0.17, 0.34, 0.51].forEach((d, i) => this.conga(t + d, i % 2 ? 190 : 260, 0.3));
+    for (let i = 0; i < 8; i++) this.shaker(t + i * 0.085, 0.08);
+    [57, 61, 64, 69].forEach((n) => this.tone("sawtooth", m2f(n), m2f(n), t + 0.72, 1.1, 0.05, this.sfxBus));
+    this.lead(t + 0.75, 81, 0.1);
+  }
+  /** mission failed: falling minor line, low thud, detuned drone */
+  missionFail() {
+    const ctx = this.ctx; if (!ctx) return; const t = ctx.currentTime;
+    [69, 66, 62, 57].forEach((n, i) => this.tone("sawtooth", m2f(n), m2f(n - 1), t + i * 0.2, 0.55, 0.07, this.sfxBus));
+    this.tone("sine", 90, 30, t + 0.1, 0.9, 0.8, this.sfxBus); this.burst(t, 0.5, 0.35, "lowpass", 500, 0.7, this.sfxBus);
+  }
+  /** new objective / checkpoint ping */
+  objective() { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("sine", 988, 988, t, 0.12, 0.14, this.sfxBus); this.tone("sine", 1319, 1319, t + 0.1, 0.2, 0.14, this.sfxBus); this.tone("sine", 1760, 1760, t + 0.2, 0.3, 0.1, this.sfxBus); }
+  /** time almost out: urgent tick (call once a second) */
+  warnTick(urgent = false) { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("square", urgent ? 1560 : 1170, urgent ? 1560 : 1170, t, 0.07, urgent ? 0.1 : 0.06, this.sfxBus); if (urgent) this.tone("square", 1170, 1170, t + 0.12, 0.07, 0.07, this.sfxBus); }
+  /** the package takes a hit */
+  bagHit() { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("sine", 120, 45, t, 0.25, 0.7, this.sfxBus); this.burst(t, 0.2, 0.3, "bandpass", 1400, 1.2, this.sfxBus); this.tone("triangle", 330, 220, t + 0.06, 0.2, 0.08, this.sfxBus); }
+  /** an ally joins: two keke horns + a rising whoosh */
+  allyJoin() { const t = this.ctx?.currentTime; if (t === undefined) return; this.horn("keke", -0.4, 0.7); window.setTimeout(() => this.horn("sedan", 0.4, 0.7), 150); this.tone("sine", 400, 1200, t + 0.1, 0.4, 0.1, this.sfxBus); }
+  /** pursuer is grabbing the bag: double heartbeat */
+  caught() { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("sine", 70, 40, t, 0.18, 0.9, this.sfxBus); this.tone("sine", 70, 40, t + 0.2, 0.2, 0.7, this.sfxBus); }
+  /** roadblock ahead */
+  roadblock() { const t = this.ctx?.currentTime; if (t === undefined) return; for (let i = 0; i < 3; i++) this.tone("square", 880, 880, t + i * 0.16, 0.1, 0.09, this.sfxBus); }
+  /** chapter title card: low drum roll into a horn hit */
+  chapter() {
+    const t = this.ctx?.currentTime; if (t === undefined) return;
+    for (let i = 0; i < 6; i++) this.conga(t + i * 0.09, 150 + i * 14, 0.14 + i * 0.03);
+    this.tone("sawtooth", m2f(45), m2f(45), t + 0.6, 1.4, 0.08, this.sfxBus); this.tone("sawtooth", m2f(52), m2f(52), t + 0.6, 1.4, 0.06, this.sfxBus); this.kick(t + 0.6, 0.9);
+  }
+  /** soft UI tap */
+  tap() { const t = this.ctx?.currentTime; if (t === undefined) return; this.tone("sine", 660, 880, t, 0.06, 0.08, this.sfxBus); }
+
   /** Danfo-conductor style shout ("Oshodi! Oshodi!") using the browser's speech synthesis, rate limited. */
   voice() {
     if (this.muted || !this.ctx || typeof speechSynthesis === "undefined") return;
@@ -339,10 +438,9 @@ export class GameAudio {
     try {
       const lines = ["Oshodi! Oshodi! Oshodi!", "Yaba! Yaba! Enter with your change!", "Ojuelegba! Ojuelegba!", "Lekki Ajah! One more person!", "Mile Two! Mile Two! Apapa!"];
       const u = new SpeechSynthesisUtterance(lines[Math.floor(Math.random() * lines.length)]);
-      const vs = speechSynthesis.getVoices();
-      const v = vs.find((x) => x.lang.toLowerCase().startsWith("en-ng")) ?? vs.find((x) => x.lang.toLowerCase().startsWith("en"));
-      if (v) u.voice = v;
-      u.rate = 1.15; u.pitch = 1.15; u.volume = 0.55;
+      const prof = voiceOf("ayo"), pv = pickVoice("ayo" + Math.floor(Math.random() * 3), "m"), sp = speechParams(prof, pv.exact);
+      if (pv.voice) { u.voice = pv.voice; u.lang = pv.voice.lang; }
+      u.rate = sp.rate; u.pitch = sp.pitch * (0.92 + Math.random() * 0.2); u.volume = 0.55;
       speechSynthesis.speak(u);
     } catch { /* ignore */ }
   }

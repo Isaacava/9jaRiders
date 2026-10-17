@@ -1,5 +1,6 @@
 import type { Env } from "../weather";
 import type { StageId } from "./stages";
+import type { AltMap } from "./lang";
 
 export type Vec3 = [number, number, number];
 export type Mood = "groove" | "tense" | "calm" | "off";
@@ -12,7 +13,7 @@ export type CamSpec =
   | { k: "wide"; from: Vec3; look: Vec3; fov?: number }
   | { k: "orbit"; look: Vec3; r: number; h: number; a0: number; a1: number; fov?: number };
 
-export type Line = { who: string; text: string; phone?: boolean; mood?: "laugh" | "angry" | "sad"; hold?: number };
+export type Line = { who: string; text: string; phone?: boolean; mood?: "laugh" | "angry" | "sad"; hold?: number; /** the same line in the speaker's own language (shown in MIX mode) */ alt?: AltMap };
 
 export type Act =
   | { who: string; do: "walk"; to: [number, number]; speed?: number; delay?: number }
@@ -45,7 +46,7 @@ export type Cutscene = { id: string; title: string; stage: StageId; env: Env; mu
 
 export type RivalRole = "racer" | "pursuer" | "leader" | "ally" | "watcher";
 export type Rival = { rider: string; bike: string; role: RivalRole; skill?: number; at?: number };
-export type Comm = { at: number; who: string; text: string; ms?: number; music?: Mood; siren?: boolean; env?: Env };
+export type Comm = { at: number; who: string; text: string; alt?: AltMap; ms?: number; music?: Mood; siren?: boolean; env?: Env };
 
 export type MissionCfg = {
   id: string; title: string; chapter: string;
@@ -77,5 +78,7 @@ export const SPEAKERS: Record<string, { name: string; color: string }> = {
   unknown: { name: "UNKNOWN", color: "#c7c7c7" }, alhaji: { name: "OGA BIKE-OWNER", color: "#e8a65d" }, titi: { name: "TITI", color: "#ffc6e0" },
   amaka: { name: "AMAKA", color: "#9be3ff" }, father: { name: "FATHER (LETTER)", color: "#ffe9a8" }, guard: { name: "SECURITY", color: "#b0b0b8" },
   mech: { name: "MECHANIC", color: "#c0c4c8" }, chairman: { name: "THE CHAIRMAN", color: "#ff5c7a" }, news: { name: "RADIO", color: "#9ad1ff" },
+  ayo: { name: "AYO", color: "#ff9a6b" }, tunde: { name: "TUNDE", color: "#a8c4ff" }, ebi: { name: "PA EBI", color: "#9fd6c9" }, grace: { name: "MADAM GRACE", color: "#d9a6ff" },
+  danjuma: { name: "INSPECTOR DANJUMA", color: "#8fb3ff" },
   narrator: { name: "", color: "#ffffff" }
 };

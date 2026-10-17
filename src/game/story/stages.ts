@@ -3,7 +3,7 @@ import { buildBike } from "../models/bike";
 import type { Env } from "../weather";
 
 // Cutscene sets: small procedural Lagos locations. Origin at the centre, default camera looks down -z.
-export type StageId = "yard" | "street" | "workshop" | "foodspot" | "club" | "roof" | "oldgarage" | "skyline" | "port";
+export type StageId = "yard" | "street" | "workshop" | "foodspot" | "club" | "roof" | "oldgarage" | "skyline" | "port" | "motorpark" | "waterfront" | "school";
 export type Stage = {
   group: THREE.Group;
   /** point lights that should flicker / glow (bulbs, neon) */
@@ -188,6 +188,55 @@ export function buildStage(id: StageId, env: Env): Stage {
     bulb(g, lights, -3.5, 5.5, 1, 0xffe0a0, night ? 16 : 6, 16);
     const pl = new THREE.PointLight(0xfff0c0, 12, 9, 1.6); pl.position.set(0, 2.2, -2.8); g.add(pl); lights.push(pl);
     ticks.push((_, t) => { lights[0].intensity = 15 + Math.sin(t * 23) * 0.4; });
+  } else if (id === "motorpark") { // Oshodi motor park: rows of danfos, a conductor's stand, a flyover behind
+    floor = 0x4a4a4c; ground(0x77736a, 140);
+    g.add(plane(60, 24, M(0x2d2e31, 0.9), 0, 0.01, -3));
+    const danCols = [0xf2b705, 0xf2b705, 0xe8a800, 0xf2b705];
+    for (let i = 0; i < 9; i++) {
+      const dan = new THREE.Group();
+      dan.add(box(5.2, 1.3, 2.0, M(danCols[i % 4], 0.5, 0.2), 0, 0.45, 0), box(4.6, 1.0, 1.95, M(danCols[i % 4], 0.5, 0.2), 0, 1.7, 0), box(5.25, 0.16, 2.02, M(0x15161a), 0, 1.15, 0), box(4.4, 0.55, 1.97, M(0x0d1620, 0.1), 0, 1.85, 0));
+      dan.position.set(-17 + (i % 5) * 7.4 + (i > 4 ? 3.2 : 0), 0, -9 - Math.floor(i / 5) * 4.2); dan.rotation.y = Math.PI / 2 + (i % 3 - 1) * 0.06; g.add(dan);
+    }
+    const stand = box(3.4, 0.5, 1.6, M(0x6b4a2b), 4.2, 0, 2.2); g.add(stand);
+    const sign = label("OSHODI · MILE 2 · APAPA", "#f2b705", "#15161a", 4.2, 0.9); sign.position.set(4.2, 3.2, 1.6); g.add(sign);
+    g.add(cyl(0.07, 0.07, 3.2, M(0x2b2e33, 0.5, 0.6), 2.6, 0, 1.6, 8), cyl(0.07, 0.07, 3.2, M(0x2b2e33, 0.5, 0.6), 5.8, 0, 1.6, 8));
+    // the flyover: deck + piers behind the park
+    g.add(box(70, 1.1, 9, M(0xb4afa3, 0.95), 0, 7, -22));
+    for (let x = -30; x <= 30; x += 10) g.add(box(1.6, 7, 1.6, M(0xb4afa3, 0.95), x, 0, -22));
+    g.add(box(70, 0.9, 0.4, M(0xbdb8ac, 0.95), 0, 8.1, -17.6));
+    movingVehicle(8, 0xd8392f, 8, 1.8, 2.2, 4.4);
+    skylineBackdrop(g, -40, 48, 31, 0.8);
+    bulb(g, lights, 3.4, 4.6, 1.2, 0xffe0a0, night ? 16 : 5, 14);
+    palm(g, -9, 4);
+  } else if (id === "waterfront") { // Makoko: stilt houses, canoes, lanterns, water to the horizon
+    floor = 0x2c3a40; ground(0x1f3a44, 220);
+    const water = plane(220, 220, new THREE.MeshStandardMaterial({ color: 0x1f5260, roughness: 0.15, metalness: 0.2 }), 0, 0.02, 0); g.add(water);
+    const planks = M(0x6b4a2b, 0.95);
+    g.add(box(9, 0.2, 5, planks, 0, 0.5, 0.8)); // the jetty
+    for (let i = 0; i < 6; i++) g.add(cyl(0.12, 0.12, 0.9, M(0x4b3826, 1), -3.8 + (i % 3) * 3.8, 0, i < 3 ? -1.4 : 3, 6));
+    for (let i = 0; i < 14; i++) {
+      const x = -26 + (i % 7) * 8.4 + (i > 6 ? 4 : 0), z = -9 - Math.floor(i / 7) * 7.5;
+      g.add(box(3.8, 2.3, 3.6, M(i % 3 ? 0x8a6a46 : 0x7a5a3a, 0.95), x, 1.0, z), box(4.4, 0.18, 4.2, M(0x9aa0a6, 0.45, 0.7), x, 3.3, z));
+      for (const sx of [-1.5, 1.5]) g.add(cyl(0.1, 0.1, 1.3, M(0x4b3826, 1), x + sx, 0, z + 1.5, 6));
+    }
+    const canoe = new THREE.Group(); canoe.add(box(0.9, 0.35, 5, M(0x8a5a33, 0.9), 0, 0.05, 0), box(0.18, 1.4, 0.18, M(0x4b3826), 0, 0.3, 0.9)); canoe.position.set(-4.6, 0, 3.4); canoe.rotation.y = 0.3; g.add(canoe);
+    ticks.push((_, t) => { canoe.position.y = Math.sin(t * 1.2) * 0.05; canoe.rotation.z = Math.sin(t * 0.9) * 0.04; });
+    bulb(g, lights, -2.6, 3.2, 0.6, 0xffcf80, night ? 14 : 4, 12); bulb(g, lights, 2.8, 3.2, 1.8, 0xffcf80, night ? 12 : 3, 12);
+    skylineBackdrop(g, -60, 70, 5, 0.7);
+  } else if (id === "school") { // Titi's school: gate, flag pole, classroom block, assembly ground
+    floor = 0x8a7a60; ground(0x8d9a62, 140);
+    g.add(plane(40, 20, M(0xa89a82, 0.95), 0, 0.01, -2));
+    g.add(box(24, 3.6, 5, M(0xe8dcc0, 0.95), 0, 0, -12), box(25, 0.3, 6, M(0x2f6b45, 0.7), 0, 3.6, -12));
+    for (let i = 0; i < 6; i++) g.add(box(1.5, 1.6, 0.1, M(0x2a4a66, 0.2), -9.5 + i * 3.8, 1.2, -9.45));
+    const gate = label("STAR OF LAGOS COLLEGE", "#2f6b45", "#ffffff", 5, 1); gate.position.set(0, 3.4, 4.5); g.add(gate);
+    g.add(cyl(0.3, 0.3, 3.2, M(0xe8dcc0, 0.9), -3.2, 0, 4.5, 10), cyl(0.3, 0.3, 3.2, M(0xe8dcc0, 0.9), 3.2, 0, 4.5, 10));
+    g.add(cyl(0.05, 0.05, 8, M(0xcfd2d6, 0.4, 0.7), 8, 0, -3, 8));
+    const flag = new THREE.Group(); flag.add(box(1.5, 0.3, 0.02, M(0x008751, 0.8), -0.5, 0, 0), box(1.5, 0.3, 0.02, M(0xffffff, 0.8), 0.25, 0, 0), box(1.5, 0.3, 0.02, M(0x008751, 0.8), 1.0, 0, 0));
+    flag.position.set(8.8, 7, -3); g.add(flag);
+    ticks.push((_, t) => { flag.rotation.y = Math.sin(t * 2) * 0.12; });
+    for (const [x, z] of [[-6, 0], [-5, 2], [6, 1], [5, 3]] as const) g.add(box(0.5, 0.9, 0.3, M(0xffffff, 0.9), x, 0.4, z), cyl(0.12, 0.12, 0.2, M(0x5b3a24), x, 1.3, z, 8));
+    palm(g, -9, 3); palm(g, 10, 4);
+    skylineBackdrop(g, -40, 40, 9, 0.5, false);
   } else { // skyline: ground + a wide lit city, used for endings
     floor = 0x3a3b3e; ground(0x6d7a5a, 200);
     skylineBackdrop(g, -40, 90, 77, 1.6);

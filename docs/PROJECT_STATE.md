@@ -1,6 +1,6 @@
 # ABOKI RIDERS — PROJECT STATE (single source of truth)
 
-Last updated: this session (v8). Paste this file into the project knowledge. Everything below reflects the code in `9jaRiders-v8-story.zip`.
+Last updated: this session (v9). Paste this file into the project knowledge. Everything below reflects the code in `9jaRiders-v9-complete.zip`.
 
 ---------------------------------------------------------------------
 
@@ -28,7 +28,17 @@ Last updated: this session (v8). Paste this file into the project knowledge. Eve
 5. **v5**: Asphalt-style chase camera (portrait aware, edge-lane tracking).
 6. **v6**: arms/head fixed (all rider maths in LOCAL space), faces (eyes/brows/nose/lips/ears), shoes, boost economy + boost pads + slipstream, Lagos world pass (kerbs, footbridges, bus stops, kiosks, bunting, lagoon bridge, skyline), procedural audio.
 7. **v7 performance/offline/netcode**: mesh merging, baked model pack, graphics tiers + dynamic resolution, pooled traffic, PWA/service worker, client-side prediction + compact snapshots.
-8. **v8 (this version)**: sky fix, wide split-screen touch steering with snappy physics, **winding Lagos routes (7 maps)**, **weather + time of day**, **story mode** (21 cutscenes, 12 missions), standing characters, cutscene director, mission rules engine, offline story.
+8. **v8**: sky fix, wide split-screen touch steering with snappy physics, **winding Lagos routes (7 maps)**, **weather + time of day**, **story mode** (21 cutscenes, 12 missions), standing characters, cutscene director, mission rules engine, offline story.
+9. **v9 (this version)** "finish the project" pass:
+   - **Road / grounding ("vehicles flying")**: root causes were (a) `wall()` used absolute y so kerb faces and bridge sides stayed at ground level while the road climbed, (b) nothing held flyovers up, (c) graphics tier "low" has no shadow maps so bikes/cars had no contact shadow. Fixes: wall heights are now relative to the road surface; new `structure.ts` (retaining walls on ramps, deck beam + instanced piers + cap beams on open stretches, parapets with yellow cap, deck underside, dark ground shade); `Track.height()` is interpolated (no pitch jitter) and `pitch(d, span)`; bikes/traffic are grounded on both wheels (average height under front and rear contact patch, pitch from wheelbase); every bike and car has a soft blob contact shadow aligned to the slope, on all tiers.
+   - **Controls**: the steering zone used to sit on top of the brake/nitro buttons in the stacking order (buttons could not be pressed on touch); buttons now have a higher z-index and are bigger. Steering is an axis: 55% on touch, ramps to full lock, recentres fast, so taps make small lane changes.
+   - **Voices**: `voice.ts` (VoiceBox): per-character voices via device speech synthesis (gender picked from voice names/locales, deterministic per character, own pitch/rate, mood nudges) or fully synthesised formant voices (BLIPS, work offline anywhere, typed along with the subtitles, radio-filtered for phone lines) or off. Cutscene HUD has a voice toggle; settings screen can preview every character. Conductor shouts now use a male voice.
+   - **Languages / 9ja vibe**: `story/lang.ts` + `story/cast.ts`. Each character has a mother tongue (yo/ig/ha/pcm/en). MIX mode (default): lines authored in the native language (`alt` on a Line/Comm, with English gloss and phonetic `say`) and deterministic Yoruba/Igbo/Hausa openers on about a third of other lines, with the meaning shown underneath. PIDGIN mode shows the plain script.
+   - **Characters**: 27 personas with bios, wants, secrets, quotes, voices; CAST screen unlocks them as they are met (`save.seen`). New looks: titi, amaka, alhaji, chairman, ayo, tunde, ebi, grace, danjuma (previously titi/amaka/alhaji/chairman fell back to Aboki's look).
+   - **Mission sound**: start stinger, win fanfare, fail sting, objective ping, time warning ticks (last 16 s, urgent last 7 s), package hit, ally join, "he's on you" heartbeat, roadblock warning, radio squelch on comms, chapter-card sting.
+   - **New maps (6) and districts**: Oshodi Interchange (two flyovers), Ajegunle Lanes (tin-roof waterfront theme), Makoko Causeway (lagoon + stilt houses), Ikeja Airport Road (suburb theme), Ikorodu Road, Lekki-Epe Coast Road (coast theme). Themes added: suburb, coast, waterfront.
+   - **New stories (`story/script2.ts`)**: Oshodi (Ayo the conductor, the Chairman's park fee), Ajegunle (Tunde: races are fixed, Flash's brake line was cut), Makoko (Pa Ebi: "the ships sleep at Berth Nine"), Ikeja (Amaka the journalist and Inspector Danjuma, deliver the recording by dawn), Ikorodu (Titi's Speech Day, a no-bag breather; someone paid her fees with a whistle). 7 new cutscene stages' worth (motorpark, waterfront, school stages added). Story is now 28 cutscenes, 17 missions, 13 different maps. m10 now runs on Oshodi, m12 on Lekki-Epe.
+   - Save format: `seq: 2` + `seen[]`; old saves are migrated to the chapter of their first unfinished (old) mission. Service worker cache `aboki-v9`.
 
 ## 4. Architecture in one page
 * **Track space vs world space.** All gameplay (physics, AI, collisions, traffic, pads) stays in straight "track space" (`x` lateral, `dist` forward). `track.ts` maps that onto a winding route with elevation. `world.ts` builds scenery along a straight road and `trackMesh.bendWorld()` re-places every instance/mesh/line on the route (hides scenery that would fold through the inside of a curve or sit under a flyover). Racers, traffic, pickups, pads and the camera are placed with `track.at(dist, x, y)`.
@@ -93,7 +103,11 @@ Server: `server/` (`npm run build && node dist/index.js`); see `docs/PERFORMANCE
 ## 9. Handy checks (reproducible)
 The Node harness lives outside the repo (stand-in `mock3.js`, `hook.js`, tests `test*.js`). To re-create: compile the TS files with `tsc --target es2020 --module commonjs`, stub `three` with a Proxy that implements Vector3/Quaternion/Matrix4/Object3D/Bone, and replace `./merge` with a no-op. Tests written: rider IK, world builds, bend pass, route maths, character poses, cutscene director (fake DOM), mission simulations, story script validator, audio scheduler, net simulation.
 
-## 10. In progress (at the moment this was written)
+## 10. Verification added in v9
+- `tsc` clean on all new code (against stubbed three types: three.js is not installable offline here). Pure-logic tests (node): every map route is non-self-crossing (>=190 m), height steps <0.02 m/0.25 m, every cutscene/mission/speaker/look/rider reference resolves, every cutscene and mission is in the sequence, language flavouring is deterministic and keeps question marks, 27/27 voices distinct, old-save migration, flyover spans detected on ojuelegba/third_mainland/oshodi/makoko/citywide.
+- **NOT verified (needs a browser)**: how the new flyover piers/parapets, blob shadows, new stages and the Cast screen look; real voice quality on real phones (Nigerian-language voices are rare, so native phrases are read from the phonetic `say` text); balance of the 5 new missions (time limits are estimates: oshodi 118 s, ikeja 120 s, ikorodu 150 s).
+
+## 10b. In progress before v9 (kept for history)
 1. Fixing the Node harness so `setAnimationLoop` captures the real loop, then running the free race and each story mission for thousands of frames (countdown -> racing -> mission tick -> result card -> `onMissionEnd`). Any real runtime errors found there get fixed before shipping.
 2. After that: review mission balance by feel on a phone (time limits, pursuer aggression, leader pace) and cutscene framing.
 

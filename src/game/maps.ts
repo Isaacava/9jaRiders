@@ -1,7 +1,7 @@
 // Lagos maps: winding routes (not straight lines) with their own theme and sections.
 import { S, type Seg } from "./track";
 
-export type Theme = "mainland" | "market" | "island" | "nightlife" | "port";
+export type Theme = "mainland" | "market" | "island" | "nightlife" | "port" | "suburb" | "coast" | "waterfront";
 export type MapDef = {
   id: string; name: string; district: string; blurb: string;
   length: number;                 // race distance in metres
@@ -44,6 +44,36 @@ export const MAPS: Record<string, MapDef> = {
     id: "apapa", name: "Apapa Port Road", district: "Apapa", blurb: "Containers, trucks and wet tarmac.",
     length: 3200, themes: [[0, "port"]], water: [],
     segs: [S(260), S(200, r), S(220), S(180, -R), S(260), S(200, R), S(300), S(160, -r), S(300), S(240, -g), S(300), S(300)]
+  },
+  oshodi: {
+    id: "oshodi", name: "Oshodi Interchange", district: "Oshodi", blurb: "The busiest motor park in West Africa. Two flyovers, a hundred danfos, one road.",
+    length: 3000, themes: [[0, "mainland"], [900, "market"], [2100, "mainland"]], water: [],
+    segs: [S(240), S(160, r), S(120), S(170, 0, 6), S(150), S(160, -R), S(130, 0, -6), S(150), S(150, R), S(140, -r), S(200, 0, 6), S(160), S(160, 0, -6), S(300), S(300), S(300)]
+  },
+  ajegunle: {
+    id: "ajegunle", name: "Ajegunle Lanes", district: "Ajegunle (AJ City)", blurb: "Narrow, loud, alive. Zinc roofs, generators and music from every door.",
+    length: 2200, themes: [[0, "waterfront"]], water: [],
+    segs: [S(140), S(110, R), S(90, -R), S(100, R), S(110, -R), S(120), S(100, R), S(100, R), S(110, -R), S(160), S(120, -r), S(200), S(300)]
+  },
+  makoko: {
+    id: "makoko", name: "Makoko Causeway", district: "Makoko / Iwaya", blurb: "A lagoon road above the stilt houses. Canoes below, lanterns everywhere.",
+    length: 3200, themes: [[0, "mainland"], [500, "waterfront"]], water: [[480, 2800]],
+    segs: [S(260), S(160, -r), S(180), S(140, 0, 4), S(300, g), S(400, -g), S(300), S(300, g), S(300), S(240, 0, -4), S(200, r), S(200), S(300), S(300)]
+  },
+  ikeja: {
+    id: "ikeja", name: "Ikeja Airport Road", district: "Ikeja", blurb: "Wide, fast, policed. Planes overhead, roadblocks ahead.",
+    length: 3400, themes: [[0, "suburb"], [1500, "mainland"], [2500, "suburb"]], water: [],
+    segs: [S(300), S(220, g), S(300), S(260, -g), S(300), S(180, R), S(160), S(180, -R), S(260), S(300, g), S(300), S(300), S(300)]
+  },
+  ikorodu: {
+    id: "ikorodu", name: "Ikorodu Road", district: "Ikorodu", blurb: "The long road home. Go-slow, sunset, and a sister waiting.",
+    length: 3800, themes: [[0, "mainland"], [1200, "suburb"], [2600, "market"]], water: [],
+    segs: [S(300), S(260, g), S(260), S(280, -g), S(320), S(200, r), S(200), S(220, -r), S(300), S(300, g), S(300), S(300, -g), S(300), S(300)]
+  },
+  lekki_epe: {
+    id: "lekki_epe", name: "Lekki–Epe Coast Road", district: "Lekki Coast", blurb: "Palms, sea air and a straight stretch at dawn. A proper race.",
+    length: 3400, themes: [[0, "coast"]], water: [],
+    segs: [S(300), S(240, g), S(300), S(260, -g), S(300), S(200, r), S(260), S(200, -r), S(300), S(300), S(300), S(300)]
   },
   citywide: {
     id: "citywide", name: "Citywide: The Last Delivery", district: "All of Lagos", blurb: "Mainland to the island with the whole city behind you.",

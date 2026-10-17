@@ -33,6 +33,13 @@ function build(track: Track, d0: number, d1: number, mat: THREE.Material, vertex
   return group;
 }
 
+/** Generic strip along the route: `vertex` writes the position/normal of each edge point (side 0 or 1) at distance d. */
+export function strip(track: Track, d0: number, d1: number, mat: THREE.Material, vertex: (d: number, side: 0 | 1, p: THREE.Vector3, n: THREE.Vector3) => void, vScale = 8, shadow = true) {
+  const g = build(track, d0, d1, mat, vertex, (d, side) => [side, d / vScale]);
+  if (shadow) g.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; });
+  return g;
+}
+
 /** Flat strip lying on the road surface between lateral offsets x0..x1 at height y (follows curves and flyovers). */
 export function ribbon(track: Track, x0: number, x1: number, y: number, d0: number, d1: number, mat: THREE.Material, vScale = 24, elev = true) {
   const f: Frame = { px: 0, py: 0, pz: 0, th: 0 };
@@ -44,14 +51,14 @@ export function ribbon(track: Track, x0: number, x1: number, y: number, d0: numb
   }, (d, side) => [side, d / vScale]);
 }
 
-/** Vertical strip at lateral offset x from height yBottom(d) to yTop(d): barriers, bridge sides, embankments. */
+/** Vertical strip at lateral offset x from height yBottom(d) to yTop(d) ABOVE THE ROAD SURFACE: barriers, bridge sides, retaining walls. */
 export function wall(track: Track, x: number, yBottom: number | ((d: number) => number), yTop: number | ((d: number) => number), d0: number, d1: number, mat: THREE.Material, facing: 1 | -1 = 1) {
   const f: Frame = { px: 0, py: 0, pz: 0, th: 0 };
   const yb = typeof yBottom === "number" ? () => yBottom : yBottom;
   const yt = typeof yTop === "number" ? () => yTop : yTop;
   return build(track, d0, d1, mat, (d, side, p, n) => {
     track.frame(d, f, true);
-    p.set(f.px + Math.cos(f.th) * x, side ? yt(d) : yb(d), f.pz + Math.sin(f.th) * x);
+    p.set(f.px + Math.cos(f.th) * x, f.py + (side ? yt(d) : yb(d)), f.pz + Math.sin(f.th) * x);
     n.set(Math.cos(f.th) * facing, 0, Math.sin(f.th) * facing);
   }, (d, side) => [side, d / 8]);
 }

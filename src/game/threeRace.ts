@@ -13,6 +13,8 @@ import { Mission, type Host, type MissionResult } from "./story/mission";
 import { SPEAKERS, type MissionCfg } from "./story/types";
 import { RIDER_LOOKS } from "./models/rider";
 import { GameAudio } from "./audio";
+import { VoiceBox } from "./voice";
+import { flavor, getLangMode } from "./story/lang";
 import { DynamicRes, qualityFor, resolveTier, setGfxSetting, type GfxSetting } from "./quality";
 
 export type RaceMode = "solo" | "multiplayer" | "demo";
@@ -67,16 +69,16 @@ const CSS = `
 .rr-pop{position:absolute;left:0;right:0;top:34%;text-align:center;font-size:26px;color:#7dffb2;opacity:0}
 .rr-pop.on{animation:rrfloat 1.1s ease-out}
 @keyframes rrfloat{0%{opacity:0;transform:translateY(18px) scale(.8)}15%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-26px)}}
-.rr-steer{position:absolute;left:0;right:0;bottom:0;height:58%;display:none;touch-action:none;pointer-events:auto;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.rr-steer{z-index:2;position:absolute;left:0;right:0;bottom:0;height:58%;display:none;touch-action:none;pointer-events:auto;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .rr-steer.touch{display:flex}
 .rr-steer i{flex:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(40px + env(safe-area-inset-bottom));font-style:normal;color:rgba(255,255,255,.5);font-size:52px;transition:background .06s;border-radius:0}
 .rr-steer i.l{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,0))}
 .rr-steer i.r{background:linear-gradient(270deg,rgba(255,255,255,.05),rgba(255,255,255,0))}
 .rr-steer i.on{background:rgba(255,255,255,.16);color:#fff}
-.rr-ctl{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));display:none;justify-content:space-between;align-items:flex-end;padding:0 14px;pointer-events:none}
+.rr-ctl{z-index:4;position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));display:none;justify-content:space-between;align-items:flex-end;padding:0 14px;pointer-events:none}
 .rr-ctl.touch{display:flex}
-.rr-btn.brake{width:78px;height:78px;font-size:13px;font-weight:800;letter-spacing:.04em;border-color:rgba(255,120,120,.6)}
-.rr-btn.nitro{width:92px;height:92px}
+.rr-btn.brake{width:92px;height:92px;font-size:13px;font-weight:800;letter-spacing:.04em;border-color:rgba(255,120,120,.6)}
+.rr-btn.nitro{width:108px;height:108px}
 .rr-btn{pointer-events:auto;touch-action:none;width:74px;height:74px;border-radius:50%;border:3px solid rgba(255,255,255,.4);background:rgba(12,16,20,.55);color:#fff;font-size:30px;font-family:inherit;display:grid;place-items:center;backdrop-filter:blur(4px)}
 .rr-btn.on{background:rgba(255,210,77,.75);color:#111}
 .rr-btn.nitro{width:84px;height:84px;background:rgba(80,120,255,.6);font-size:22px}
@@ -104,6 +106,7 @@ const CSS = `
 .rr-mis .bars i.bf b{background:#7dffb2}
 .rr-cap{position:absolute;left:50%;transform:translateX(-50%) translateY(10px);top:calc(max(10px,env(safe-area-inset-top)) + 84px);width:min(560px,90%);background:rgba(10,12,16,.82);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:8px 12px;color:#fff;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;font:600 14px/1.4 system-ui,sans-serif}
 .rr-cap.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.rr-cap .gl{display:block;font:italic 600 11px/1.3 system-ui,sans-serif;color:#ffd9a0;opacity:.85;margin-top:3px}
 .rr-cap b{display:block;font:900 10px/1 system-ui,sans-serif;letter-spacing:.14em;margin-bottom:3px}
 .rr-mres{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;gap:10px;pointer-events:auto;padding:20px}
 .rr-mres h2{font:900 clamp(30px,8vw,64px)/1 Impact,Arial Black,sans-serif;margin:0;letter-spacing:.03em}
@@ -118,6 +121,30 @@ const CSS = `
 .rr-gfx{left:62px;font-size:11px;letter-spacing:.04em;width:auto;padding:0 10px;border-radius:21px}
 .rr-mute{position:absolute;left:12px;top:calc(max(10px,env(safe-area-inset-top)) + 78px);pointer-events:auto;width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(10,14,18,.6);color:#fff;font-size:18px;display:grid;place-items:center}
 `;
+
+/** soft dark blob used as a contact shadow under every bike and car (real shadow maps are off on weak phones,
+ *  and without any shadow vehicles look like they hover above the tarmac) */
+let BLOB: { geo: THREE.PlaneGeometry; mat: THREE.MeshBasicMaterial } | null = null;
+function blobShadow(w: number, l: number, strength = 0.55) {
+  if (!BLOB) {
+    const c = document.createElement("canvas"); c.width = c.height = 64;
+    const g = c.getContext("2d")!;
+    const gr = g.createRadialGradient(32, 32, 2, 32, 32, 31);
+    gr.addColorStop(0, "rgba(0,0,0,0.95)"); gr.addColorStop(0.55, "rgba(0,0,0,0.55)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    const t = new THREE.CanvasTexture(c);
+    BLOB = {
+      geo: new THREE.PlaneGeometry(1, 1),
+      mat: new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, opacity: 1, fog: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })
+    };
+  }
+  const m = new THREE.Mesh(BLOB.geo, BLOB.mat.clone());
+  (m.material as THREE.MeshBasicMaterial).opacity = strength;
+  m.scale.set(w, l, 1);
+  m.rotation.x = -Math.PI / 2;
+  m.renderOrder = 2; m.frustumCulled = false;
+  return m;
+}
 
 const ordinal = (n: number) => `${n}${["TH", "ST", "ND", "RD"][n % 100 > 10 && n % 100 < 14 ? 0 : Math.min(n % 10, 4) % 4] ?? "TH"}`;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -263,6 +290,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
 
   // ---------- audio (Afrobeats groove, engine, horns, Lagos ambience; see audio.ts) ----------
   const audio = new GameAudio();
+  const voices = new VoiceBox(audio);
+  const langMode = getLangMode();
   function startAudio() { if (!demo) audio.start(); }
   const unlockAudio = () => startAudio();
   window.addEventListener("pointerdown", unlockAudio); window.addEventListener("keydown", unlockAudio);
@@ -291,6 +320,8 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     const model = buildRacer(def.id, RIDER_LOOKS[riderId] ? riderId : getRider(riderId).id);
     model.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
     weather.registerBeam(model.bike.beam);
+    const blob = blobShadow(1.15, 2.6, 0.6); blob.position.y = 0.035; blob.name = "blob";
+    model.root.add(blob);
     scene.add(model.root);
     return {
       id, name, human, remote, model, x: 0, dist: 0, v: 0, vx: 0,
@@ -386,7 +417,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     scene.add(m);
     return { ...sc, dist: sc.at, taken: false, mesh: m };
   });
-  let draftT = 0, frameN = 0;
+  let draftT = 0, frameN = 0, steerAxis = 0;
   let mission: Mission | null = null;
   let missionOver = false;
   let gateTick: (() => void) | null = null;
@@ -448,11 +479,16 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     r.steerAng = damp(r.steerAng, clamp(-r.vx * 0.035, -0.35, 0.35), 12, dt);
     const accelHint = r.boosting ? 0.07 : 0;
     r.pitch = damp(r.pitch, accelHint - (r.braking ? 0.04 : 0), 6, dt);
+    // ground the bike on BOTH wheels: height = average under the two contact patches, pitch = slope between them
+    const WB = 0.95; // half wheelbase (m)
     track.at(r.dist, r.x, 0, _w, _f);
-    m.root.position.set(_w.x, _w.y, _w.z);
+    const hF = track.height(r.dist + WB), hR = track.height(r.dist - WB), slope = Math.atan2(hF - hR, WB * 2);
+    m.root.position.set(_w.x, (hF + hR) / 2, _w.z);
     m.root.rotation.y = -_f.th - r.vx * 0.018; // heading of the road + a little yaw from lateral motion
     m.pivot.rotation.z = r.roll;
-    m.pivot.rotation.x = r.pitch + track.pitch(r.dist);
+    m.pivot.rotation.x = r.pitch + slope;
+    const blob = m.root.getObjectByName("blob");
+    if (blob) { blob.rotation.x = -Math.PI / 2 + slope; blob.rotation.z = 0; (blob.position as THREE.Vector3).y = 0.035; (blob as THREE.Mesh).scale.x = 1.0 + Math.abs(r.roll) * 0.8; }
     const bob = Math.sin(time * (8 + r.v * 0.4)) * 0.004 * clamp(r.v / 30, 0, 1);
     m.pivot.position.y = bob + (r.boosting ? 0.02 : 0);
     const spin = (r.v / m.bike.wheelR) * dt;
@@ -626,9 +662,18 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     for (const t of traffic) {
       if (racing) t.dist += t.v * dt;
       const near = t.dist - lead.dist > -40 && t.dist - lead.dist < 300;
-      if (near && !t.mesh) { t.mesh = acquireTraffic(t.kind, t.variant); t.mesh.rotation.order = "YXZ"; scene.add(t.mesh); }
+      if (near && !t.mesh) {
+        t.mesh = acquireTraffic(t.kind, t.variant); t.mesh.rotation.order = "YXZ";
+        if (!t.mesh.getObjectByName("blob")) { const b = blobShadow(t.w * 1.3, t.l * 1.12, 0.55); b.name = "blob"; b.position.y = 0.03; t.mesh.add(b); }
+        scene.add(t.mesh);
+      }
       if (!near && t.mesh) { scene.remove(t.mesh); releaseTraffic(t.kind, t.variant, t.mesh); t.mesh = null; }
-      if (t.mesh) { track.at(t.dist, t.x, 0, _w, _f); t.mesh.position.set(_w.x, _w.y, _w.z); t.mesh.rotation.y = -_f.th; t.mesh.rotation.x = track.pitch(t.dist); }
+      if (t.mesh) {
+        const hb = t.l * 0.36;
+        track.at(t.dist, t.x, 0, _w, _f);
+        const hF = track.height(t.dist + hb), hR = track.height(t.dist - hb);
+        t.mesh.position.set(_w.x, (hF + hR) / 2, _w.z); t.mesh.rotation.y = -_f.th; t.mesh.rotation.x = Math.atan2(hF - hR, hb * 2);
+      }
     }
 
     for (const r of racers) {
@@ -681,7 +726,15 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       }
       if (!racing) { r.v = 0; r.braking = false; r.boosting = false; continue; }
       if (r.human) {
-        const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+        // steering axis: jumps to 55% the moment a side is touched (instant response), then ramps to full lock;
+        // letting go recentres quickly, so short taps make small lane corrections
+        const want = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+        if (want === 0) steerAxis = damp(steerAxis, 0, 18, dt);
+        else {
+          if (Math.sign(steerAxis) !== want) steerAxis = want * 0.55;
+          steerAxis = clamp(steerAxis + want * dt * 5.5, -1, 1);
+        }
+        const steer = Math.abs(steerAxis) < 0.02 ? 0 : steerAxis;
         if (input.nitro && r.nitro > 0.04 && !r.finished) r.boosting = true; else if (!input.nitro && r.padT <= 0) r.boosting = false;
         drive(r, dt, r.finished || missionOver ? clamp(-r.x * 0.5, -1, 1) : steer, (input.brake && !r.finished) || missionOver);
       } else if (r.scripted) { /* driven by the mission rules */ } else driveCPU(r, dt, obs);
@@ -867,10 +920,20 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       player, goal: GOAL,
       place: () => player!.place || 1,
       popup: (t, c) => popup(t, c ?? "#fff"),
-      caption: (who, text, ms) => {
+      caption: (who, text, ms, alt) => {
         const sp = SPEAKERS[who] ?? { name: who.toUpperCase(), color: "#fff" };
-        capEl.innerHTML = `<b style="color:${sp.color}">${sp.name}</b>${text}`; capEl.classList.add("on");
-        window.clearTimeout(capTimer); capTimer = window.setTimeout(() => capEl.classList.remove("on"), ms);
+        const fl = flavor(who, text, langMode, alt, who !== "aboki");
+        capEl.textContent = "";
+        const nameEl = document.createElement("b"); nameEl.style.color = sp.color; nameEl.textContent = sp.name;
+        capEl.append(nameEl, document.createTextNode(fl.text));
+        if (fl.gloss) { const g = document.createElement("i"); g.className = "gl"; g.textContent = fl.gloss; capEl.appendChild(g); }
+        capEl.classList.add("on");
+        window.clearTimeout(capTimer); capTimer = window.setTimeout(() => capEl.classList.remove("on"), ms + (fl.gloss ? 600 : 0));
+        voices.speak(who, fl.say, { radio: who !== "aboki", shown: fl.text });
+      },
+      sfx: (n) => {
+        if (n === "start") audio.missionStart(); else if (n === "warn") audio.warnTick(false); else if (n === "urgent") audio.warnTick(true);
+        else if (n === "bag") audio.bagHit(); else if (n === "ally") audio.allyJoin(); else if (n === "caught") audio.caught(); else if (n === "block") audio.roadblock(); else audio.objective();
       },
       music: (m) => audio.setMusicMode(m),
       siren: (on) => audio.siren(on),
@@ -885,7 +948,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
       end: (res) => {
         if (missionOver) return;
         missionOver = true; audio.siren(false);
-        if (res.ok) audio.finish(); else audio.crash();
+        if (res.ok) audio.missionWin(); else audio.missionFail();
         window.setTimeout(() => showResult(res), res.ok ? 700 : 900);
       },
       nudge: (vx, mul) => { player!.vx += vx * 0.35; player!.v *= mul; }
@@ -922,6 +985,7 @@ export function createThreeRace(container: HTMLElement, options: RaceOptions) {
     ro.disconnect();
     window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku);
     window.removeEventListener("pointerdown", unlockAudio); window.removeEventListener("keydown", unlockAudio);
+    voices.stop();
     audio.dispose();
     scene.traverse((o) => {
       const m = o as THREE.Mesh;

@@ -3,6 +3,8 @@ import { Character } from "../models/character";
 import { buildRacer, disposeTree, type Racer3D } from "../models/racer";
 import { lightingFor, makeSky, Rain } from "../weather";
 import type { GameAudio } from "../audio";
+import { VoiceBox } from "../voice";
+import { flavor, getLangMode } from "./lang";
 import { buildStage, type Stage } from "./stages";
 import { SPEAKERS, type Act, type Cast, type CamSpec, type Cutscene, type Line, type Shot } from "./types";
 
@@ -29,7 +31,9 @@ const CSS = `
 .cs .title{position:absolute;inset:0;z-index:4;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;pointer-events:none}
 .cs .title b{font:900 clamp(34px,9vw,84px)/1 Impact,Arial Black,sans-serif;letter-spacing:.04em;text-shadow:0 4px 24px rgba(0,0,0,.7)}
 .cs .title i{font:700 clamp(12px,2.6vw,20px)/1.4 system-ui,sans-serif;letter-spacing:.3em;opacity:.85;margin-top:10px;font-style:normal}
-.cs .loc{position:absolute;left:16px;top:calc(11% + 10px);z-index:4;color:#fff;opacity:.6;font:800 10px system-ui,sans-serif;letter-spacing:.2em}
+.cs .gl{font:italic 600 12px/1.3 system-ui,sans-serif;color:#ffd9a0;opacity:.8;margin-top:5px;min-height:1em}
+.cs .vo{position:absolute;left:12px;top:calc(11% + 8px);z-index:7;background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:16px;padding:6px 12px;font:800 11px system-ui,sans-serif;letter-spacing:.08em}
+.cs .loc{position:absolute;left:16px;top:calc(11% + 52px);z-index:4;color:#fff;opacity:.6;font:800 10px system-ui,sans-serif;letter-spacing:.2em}
 `;
 
 export type CutsceneHandle = { destroy: () => void };
@@ -39,10 +43,15 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
   const root = document.createElement("div");
   root.className = "cs";
   root.innerHTML = `<style>${CSS}</style><div class="bar t"></div><div class="bar b"></div><div class="loc"></div>
-    <div class="title"><b></b><i></i></div><div class="box" style="display:none"><div class="who"></div><div class="txt"></div><div class="nx">TAP ▼</div></div>
-    <button class="skip">SKIP ▸▸</button><div class="flash"></div><div class="fade"></div>`;
+    <div class="title"><b></b><i></i></div><div class="box" style="display:none"><div class="who"></div><div class="txt"></div><div class="gl"></div><div class="nx">TAP ▼</div></div>
+    <button class="skip">SKIP ▸▸</button><button class="vo"></button><div class="flash"></div><div class="fade"></div>`;
   container.appendChild(root);
   const $ = (s: string) => root.querySelector(s) as HTMLElement;
+  const vb = new VoiceBox(audio);
+  const langMode = getLangMode();
+  const voLabel = () => { $(".vo").textContent = vb.mode === "speech" ? "🗣 VOICES" : vb.mode === "blips" ? "🗣 BLIPS" : "🔇 NO VOICE"; };
+  voLabel();
+  let curMood: string | undefined, curWho = "";
 
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -139,6 +148,7 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
   let base = resolve(scene.shots[0].cam), blend = 1, from = { pos: base.pos.clone(), look: base.look.clone(), fov: base.fov };
   let typed = 0, fullText = "", lineDone = false, shotFinished = false, ended = false, driftOff = new THREE.Vector3();
   let shake = 0;
+  const glEl = $(".gl");
   const box = $(".box"), whoEl = $(".who"), txtEl = $(".txt"), titleEl = $(".title"), fadeEl = $(".fade"), flashEl = $(".flash");
   $(".loc").textContent = scene.title.toUpperCase();
 
@@ -167,7 +177,9 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
     const sp = SPEAKERS[ln.who] ?? { name: ln.who.toUpperCase(), color: "#fff" };
     box.style.display = "block";
     whoEl.innerHTML = `<span style="color:${sp.color}">${ln.phone ? "📞 " : ""}${sp.name}</span>`;
-    fullText = ln.text; typed = 0; lineDone = false; txtEl.textContent = "";
+    const fl = flavor(ln.who, ln.text, langMode, ln.alt, ln.phone);
+    fullText = fl.text; typed = 0; lineDone = false; txtEl.textContent = ""; glEl.textContent = fl.gloss; curMood = ln.mood; curWho = ln.who;
+    vb.speak(ln.who, fl.say, { mood: ln.mood, radio: ln.phone, shown: fl.text });
     for (const [id, a] of actors) if (a.char) { a.char.talking = id === ln.who && !ln.phone; a.char.laughing = id === ln.who && ln.mood === "laugh"; }
     // cinematic coverage: cut to a close-up of whoever speaks
     if (useClose(i)) cutTo({ k: "close", who: ln.who }, i, false);
@@ -177,6 +189,7 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
   const startShot = (i: number) => {
     shotIdx = i; shot = scene.shots[i]; shotT = 0; shotFinished = false; driftOff.set(0, 0, 0);
     shotLines = shot.lines ?? []; lineIdx = -1;
+    vb.stop();
     box.style.display = "none"; titleEl.style.display = "none";
     for (const a of actors.values()) if (a.char) { a.char.talking = false; a.char.laughing = false; }
     const fx = shot.fx;
@@ -204,14 +217,17 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
   const end = () => {
     if (ended) return; ended = true;
     audio.setMusicMode("calm");
+    vb.stop();
     fadeEl.style.opacity = "1";
     window.setTimeout(() => onDone(), 650);
   };
-  const onTap = (e: Event) => { if ((e.target as HTMLElement).classList.contains("skip")) return; advance(); };
+  const onTap = (e: Event) => { const c = (e.target as HTMLElement).classList; if (c.contains("skip") || c.contains("vo")) return; advance(); };
   root.addEventListener("pointerdown", onTap);
   const onKey = (e: KeyboardEvent) => { if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); advance(); } else if (e.code === "Escape") end(); };
   window.addEventListener("keydown", onKey);
   $(".skip").addEventListener("click", (e) => { e.stopPropagation(); end(); });
+  $(".vo").addEventListener("click", (e) => { e.stopPropagation(); vb.cycleMode(); voLabel(); });
+  $(".vo").addEventListener("pointerdown", (e) => e.stopPropagation());
 
   // ----------------------------------------------------------------- loop
   const resize = () => { const w = container.clientWidth || window.innerWidth, h = container.clientHeight || window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
@@ -249,12 +265,15 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
     }
     // typewriter
     if (shotLines.length && lineIdx >= 0 && !lineDone) {
-      typed += dt * 48;
+      const before = Math.floor(typed);
+      typed += dt * (vb.mode === "speech" ? 30 : 48); // a little slower when a voice is reading along
       if (typed >= fullText.length) { typed = fullText.length; lineDone = true; }
-      txtEl.textContent = fullText.slice(0, Math.floor(typed));
+      const now = Math.floor(typed);
+      for (let k = before; k < now; k++) vb.typed(curWho, fullText[k], curMood);
+      txtEl.textContent = fullText.slice(0, now);
     }
     const hold = shotLines[lineIdx]?.hold;
-    if (hold && lineDone) { shotAuto += dt; if (shotAuto > hold) { shotAuto = 0; if (lineIdx + 1 < shotLines.length) showLine(lineIdx + 1); else finishShot(); } } else shotAuto = 0;
+    if (hold && lineDone && !vb.busy) { shotAuto += dt; if (shotAuto > hold) { shotAuto = 0; if (lineIdx + 1 < shotLines.length) showLine(lineIdx + 1); else finishShot(); } } else shotAuto = 0;
     // shot timing (shots with no lines run for dur)
     const walking = [...actors.values()].some((a) => a.walk || a.ride);
     if (!shotLines.length) { if (shotT >= (shot?.dur ?? 2.5) && !walking) finishShot(); }
@@ -290,7 +309,7 @@ export function playCutscene(container: HTMLElement, scene: Cutscene, audio: Gam
 
   return {
     destroy: () => {
-      cancelAnimationFrame(raf); ended = true;
+      cancelAnimationFrame(raf); ended = true; vb.stop();
       window.removeEventListener("resize", resize); window.removeEventListener("keydown", onKey);
       for (const a of actors.values()) { three.remove(a.group); disposeTree(a.group); }
       disposeTree(stage.group); rain?.lines.geometry.dispose();

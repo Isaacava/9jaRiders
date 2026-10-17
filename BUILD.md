@@ -1,5 +1,13 @@
 # Build log
 
+## v9 finish pass: road, controls, voices, languages, sound, characters, new districts
+- Road: kerb/bridge walls follow road height; `structure.ts` builds flyover retaining walls, piers, parapets, underside and ground shade; interpolated height + wheelbase grounding; blob contact shadows on every vehicle (all tiers).
+- Controls: brake/nitro buttons were covered by the steering zone (fixed with z-index); steering ramp (55% instantly, full lock in ~0.1 s, fast recentre).
+- Voices: `voice.ts` (device speech by gender/pitch/rate per character, synthesised offline voices, off), `audio.ts` radio chain + syllable synth.
+- Languages: `story/lang.ts`, `story/cast.ts` (Yoruba/Igbo/Hausa/Pidgin per character, glossed).
+- Mission sounds (start, win, fail, objective, warning ticks, package hit, ally, caught, roadblock, chapter).
+- 6 new maps, 3 new themes, 3 new cutscene stages, 9 new looks, 11 new cutscenes + 5 missions (`story/script2.ts`), CAST + VOICES & LANGUAGE screens, save migration, cache v9.
+
 ## v8 sky, controls, Lagos routes, weather, STORY MODE
 - Sky fix (dome scaled inside the camera far plane). Split-screen wide touch steering (instant response), brake/nitro buttons, snappier steering physics.
 - Winding Lagos routes: `track.ts`, `maps.ts`, `trackMesh.ts` (ribbons + bend pass), 7 maps with themes (mainland, market, island, nightlife, port), flyovers, lagoon bridges.

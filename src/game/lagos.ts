@@ -14,7 +14,10 @@ const LIFE: Record<Theme, { peds: number; kiosk: number; stops: number; bunt: nu
   market: { peds: 1, kiosk: 1, stops: 0.8, bunt: 0.7, bridges: 0.6 },
   island: { peds: 0.3, kiosk: 0, stops: 0.4, bunt: 0.35, bridges: 0.7 },
   nightlife: { peds: 1, kiosk: 0, stops: 0.3, bunt: 0, bridges: 0 },
-  port: { peds: 0.08, kiosk: 0, stops: 0, bunt: 0, bridges: 0 }
+  port: { peds: 0.08, kiosk: 0, stops: 0, bunt: 0, bridges: 0 },
+  suburb: { peds: 0.25, kiosk: 0.2, stops: 0.5, bunt: 0.5, bridges: 0.5 },
+  coast: { peds: 0.12, kiosk: 0.1, stops: 0.2, bunt: 0.3, bridges: 0 },
+  waterfront: { peds: 1.4, kiosk: 1.4, stops: 0.5, bunt: 1.2, bridges: 0 }
 };
 function canvas(w: number, h: number) {
   const c = document.createElement("canvas");

@@ -1,5 +1,6 @@
 // ABOKI RIDERS: THE LAST DELIVERY. Story data: chapters, cutscenes and missions. Everything is procedural, so it plays offline.
 import type { Cast, Comm, Cutscene, MissionCfg, Node, Shot } from "./types";
+import { CUTSCENES2, MISSIONS2 } from "./script2";
 
 const C = (id: string, look: string, x: number, z: number, faceTo?: string, pose?: Cast["pose"], extra: Partial<Cast> = {}): Cast => ({ id, look, pos: [x, z], faceTo, pose, ...extra });
 const two = (a: string, b: string, d = 3.2) => ({ k: "two" as const, a, b, d });
@@ -9,7 +10,7 @@ const L = (who: string, text: string, extra: { phone?: boolean; mood?: "laugh" |
 const title = (big: string, small = "", dur = 3): Shot => ({ cam: wide([0, 1.6, 6], [0, 1.4, 0]), dur, fx: { fade: "in", title: { big, small } } });
 
 // ------------------------------------------------------------------------------------------------ CUTSCENES
-export const CUTSCENES: Record<string, Cutscene> = {
+const CUTSCENES1: Record<string, Cutscene> = {
   // ---------------------------------------------------------------- CHAPTER 1
   cracked_screen: {
     id: "cracked_screen", title: "Ojuelegba · 6:12 AM", stage: "yard", env: { time: "dawn", weather: "haze" }, music: "calm",
@@ -516,7 +517,7 @@ export const CUTSCENES: Record<string, Cutscene> = {
 
 // ------------------------------------------------------------------------------------------------ MISSIONS
 const r = (t: Comm["who"]) => t; void r;
-export const MISSIONS: Record<string, MissionCfg> = {
+const MISSIONS1: Record<string, MissionCfg> = {
   m1: {
     id: "m1", title: "₦30,000", chapter: "CHAPTER 1", map: "ojuelegba", env: { time: "golden", weather: "rain" }, bike: "starter", objective: "deliver",
     brief: "Pick up the black bag. Take it across Lagos. Don't open it. Don't stop. Give it only to the person in the message.",
@@ -524,7 +525,7 @@ export const MISSIONS: Record<string, MissionCfg> = {
     rivals: [{ rider: "shadow", bike: "speed", role: "pursuer", at: 850, skill: 0.78 }],
     roadblocks: [1650],
     comms: [
-      { at: 30, who: "kelechi", text: "Bag secure? No open am o. Ride safe, Aboki!" },
+      { at: 30, who: "kelechi", text: "Bag secure? No open am o. Ride safe, Aboki!", alt: { ig: { t: "Akpa ahụ dị mma? Emeghekwala ya o. Jee nke ọma, Aboki!", g: "Is the bag safe? Don't open it o. Go well, Aboki!", say: "Ah-kpah ah-hoo dee mmah? Eh-meh-heh-kwah-lah yah oh. Jeh nkeh aw-mah, Ah-bo-kee!" } } },
       { at: 330, who: "aboki", text: "Danfo! DANFO! Oya, make you free road!" },
       { at: 700, who: "aboki", text: "Rain don start. Lagos rain plus traffic: na combo." },
       { at: 860, who: "aboki", text: "Who be this one for my back?", music: "tense" },
@@ -578,7 +579,7 @@ export const MISSIONS: Record<string, MissionCfg> = {
     id: "m7", title: "The Blue Helmet", chapter: "CHAPTER 5", map: "ojuelegba", env: { time: "night", weather: "rain" }, bike: "cafe", objective: "follow",
     brief: "Stay close to the blue helmet. Get alongside and don't lose him. This time you want answers.", goalText: "CATCH THE BLUE HELMET (stay within 12 m)", traffic: 0.8, reward: 0,
     rivals: [{ rider: "zara_helmet", bike: "elite", role: "leader", skill: 0.9 }],
-    comms: [{ at: 40, who: "aboki", text: "There you are." }, { at: 1400, who: "aboki", text: "Not today. You no go lose me." }, { at: 2300, who: "zara", text: "Follow me. Keep up." }]
+    comms: [{ at: 40, who: "aboki", text: "There you are." }, { at: 1400, who: "aboki", text: "Not today. You no go lose me." }, { at: 2300, who: "zara", text: "Follow me. Keep up.", alt: { ha: { t: "Ku biyo ni. Kada ku bar baya.", g: "Follow me. Don't fall behind.", say: "Koo bee-yoh nee. Kah-dah koo bar bah-yah." } } }]
   },
   m8: {
     id: "m8", title: "The Circuit", chapter: "CHAPTER 6", map: "apapa", env: { time: "night", weather: "rain" }, bike: "elite", objective: "race", needPlace: 2,
@@ -593,7 +594,7 @@ export const MISSIONS: Record<string, MissionCfg> = {
     comms: [{ at: 80, who: "bisi", text: "They're behind you! Two of them!", music: "tense", siren: false }, { at: 1200, who: "seyi", text: "Roadblock ahead. Take the left gap!" }]
   },
   m10: {
-    id: "m10", title: "Storm", chapter: "CHAPTER 9", map: "ojuelegba", env: { time: "night", weather: "storm" }, bike: "elite", objective: "escape",
+    id: "m10", title: "Storm", chapter: "CHAPTER 9", map: "oshodi", env: { time: "night", weather: "storm" }, bike: "elite", objective: "escape",
     brief: "He rides angry into the storm and the Circuit finds him. Hold on.", goalText: "SURVIVE THE STORM", traffic: 1, reward: 0, roadblocks: [1200, 1900, 2400],
     rivals: [{ rider: "shadow", bike: "speed", role: "pursuer", at: 200, skill: 0.88 }, { rider: "guard", bike: "speed", role: "pursuer", at: 400, skill: 0.84 }],
     comms: [{ at: 60, who: "aboki", text: "(He is whistling, badly.)", music: "tense" }, { at: 1100, who: "boss", text: "Aboki! Left onto the flyover. I'm clearing the road." }]
@@ -619,7 +620,7 @@ export const MISSIONS: Record<string, MissionCfg> = {
     ]
   },
   m12: {
-    id: "m12", title: "The Proper Race", chapter: "THE END", map: "lekki", env: { time: "dawn", weather: "clear" }, bike: "elite", objective: "race", needPlace: 1,
+    id: "m12", title: "The Proper Race", chapter: "THE END", map: "lekki_epe", env: { time: "dawn", weather: "clear" }, bike: "elite", objective: "race", needPlace: 1,
     brief: "No Boss. No Circuit. No money. Just Aboki and Seyi.", goalText: "BEAT SEYI", traffic: 0.3, reward: 5000, skipAfter: 2,
     rivals: [{ rider: "seyi", bike: "elite", role: "racer", skill: 0.8 }],
     comms: [{ at: 100, who: "seyi", text: "I still dey faster than you." }, { at: 1800, who: "aboki", text: "Come and prove am!" }]
@@ -629,17 +630,20 @@ export const MISSIONS: Record<string, MissionCfg> = {
 // ------------------------------------------------------------------------------------------------ ORDER OF PLAY
 export const SEQUENCE: Node[] = [
   { type: "chapter", title: "CHAPTER 1", sub: "₦30,000" }, { type: "cutscene", id: "cracked_screen" }, { type: "mission", id: "m1" }, { type: "cutscene", id: "who_send_you" },
-  { type: "chapter", title: "CHAPTER 2", sub: "THE MONEY" }, { type: "cutscene", id: "morning_after" }, { type: "cutscene", id: "seyi_arrives" }, { type: "mission", id: "m2" }, { type: "cutscene", id: "word_dey_go_round" }, { type: "mission", id: "m3" },
+  { type: "chapter", title: "CHAPTER 2", sub: "THE MONEY" }, { type: "cutscene", id: "morning_after" }, { type: "cutscene", id: "seyi_arrives" }, { type: "mission", id: "m2" }, { type: "cutscene", id: "word_dey_go_round" }, { type: "cutscene", id: "oshodi_conductor" }, { type: "mission", id: "m_oshodi" }, { type: "mission", id: "m3" },
   { type: "chapter", title: "CHAPTER 3", sub: "WHO IS BOSS?" }, { type: "cutscene", id: "who_is_boss" }, { type: "mission", id: "m4" }, { type: "cutscene", id: "boss_garage" },
-  { type: "chapter", title: "CHAPTER 4", sub: "BOSS' RIDER" }, { type: "cutscene", id: "upgrades" }, { type: "mission", id: "m5" }, { type: "mission", id: "m6" }, { type: "cutscene", id: "blue_helmet_teaser" },
-  { type: "chapter", title: "CHAPTER 5", sub: "THE BLUE HELMET" }, { type: "cutscene", id: "nobody_talk" }, { type: "mission", id: "m7" }, { type: "cutscene", id: "zara" },
-  { type: "chapter", title: "CHAPTER 6", sub: "WHO IS ABOKI?" }, { type: "cutscene", id: "baba_tells" }, { type: "mission", id: "m8" }, { type: "cutscene", id: "seyi_secret" },
-  { type: "chapter", title: "CHAPTER 7", sub: "EVERYTHING CONNECTS" }, { type: "cutscene", id: "hidden_compartment" },
+  { type: "chapter", title: "CHAPTER 4", sub: "BOSS' RIDER" }, { type: "cutscene", id: "upgrades" }, { type: "mission", id: "m5" }, { type: "mission", id: "m6" }, { type: "cutscene", id: "ajegunle_call" }, { type: "mission", id: "m_ajegunle" }, { type: "cutscene", id: "ajegunle_tunde" }, { type: "cutscene", id: "blue_helmet_teaser" },
+  { type: "chapter", title: "CHAPTER 5", sub: "THE BLUE HELMET" }, { type: "cutscene", id: "nobody_talk" }, { type: "mission", id: "m7" }, { type: "cutscene", id: "zara" }, { type: "cutscene", id: "titi_promise" }, { type: "mission", id: "m_ikorodu" }, { type: "cutscene", id: "titi_speech" },
+  { type: "chapter", title: "CHAPTER 6", sub: "WHO IS ABOKI?" }, { type: "cutscene", id: "baba_tells" }, { type: "mission", id: "m8" }, { type: "cutscene", id: "seyi_secret" }, { type: "cutscene", id: "makoko_canoe" }, { type: "mission", id: "m_makoko" },
+  { type: "chapter", title: "CHAPTER 7", sub: "EVERYTHING CONNECTS" }, { type: "cutscene", id: "hidden_compartment" }, { type: "cutscene", id: "ikeja_airport" }, { type: "mission", id: "m_ikeja" },
   { type: "chapter", title: "CHAPTER 8", sub: "THE OS" }, { type: "cutscene", id: "os_lounge" }, { type: "mission", id: "m9" },
   { type: "chapter", title: "CHAPTER 9", sub: "BETRAYAL" }, { type: "cutscene", id: "spanner" }, { type: "mission", id: "m10" },
   { type: "chapter", title: "CHAPTER 10", sub: "BOSS VS ABOKI" }, { type: "cutscene", id: "boss_vs_aboki" }, { type: "cutscene", id: "kelechi_bike" },
   { type: "chapter", title: "FINAL CHAPTER", sub: "THE LAST DELIVERY" }, { type: "cutscene", id: "ships_sleep" }, { type: "mission", id: "m11" },
   { type: "chapter", title: "THE END", sub: "" }, { type: "cutscene", id: "the_end" }, { type: "mission", id: "m12" }, { type: "cutscene", id: "last_scene" }
 ];
+
+export const CUTSCENES: Record<string, Cutscene> = { ...CUTSCENES1, ...CUTSCENES2 };
+export const MISSIONS: Record<string, MissionCfg> = { ...MISSIONS1, ...MISSIONS2 };
 
 export const bikeForStep = (id: string) => MISSIONS[id]?.bike ?? "starter";

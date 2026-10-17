@@ -2,6 +2,7 @@
 // radio comms, time limits, shortcuts. threeRace.ts feeds it the live racers and shows what it asks for.
 import type { Env } from "../weather";
 import type { Comm, MissionCfg, Mood, RivalRole } from "./types";
+import type { AltMap } from "./lang";
 
 export type MR = {
   x: number; dist: number; v: number; vmax: number; vx: number;
@@ -17,7 +18,9 @@ export interface Host {
   goal: number;
   place: () => number;
   popup: (text: string, color?: string) => void;
-  caption: (who: string, text: string, ms: number) => void;
+  caption: (who: string, text: string, ms: number, alt?: AltMap) => void;
+  /** mission sound effects: start / warn / urgent / bag / ally / caught / block / obj */
+  sfx: (name: "start" | "warn" | "urgent" | "bag" | "ally" | "caught" | "block" | "obj") => void;
   music: (m: Mood) => void;
   siren: (on: boolean) => void;
   setEnv: (e: Env) => void;
@@ -47,6 +50,9 @@ export class Mission {
   private t = 0;
   private heat = 0;
   private hidden = new Set<string>();
+  private started = false;
+  private lastSec = -1;
+  private warnedBlocks = new Set<number>();
 
   constructor(readonly cfg: MissionCfg, private host: Host, rivalRefs: Array<{ id: string; r: MR }>) {
     this.blocks = [...(cfg.roadblocks ?? [])];
@@ -67,14 +73,14 @@ export class Mission {
     this.heat = Math.min(1, this.heat + 0.35);
     if (this.cfg.integrity) {
       this.integrity = Math.max(0, this.integrity - 24);
-      this.host.popup(`PACKAGE ${Math.round(this.integrity)}%`, "#ff9b6b");
+      this.host.popup(`PACKAGE ${Math.round(this.integrity)}%`, "#ff9b6b"); this.host.sfx("bag");
       if (this.integrity <= 0) this.finish(false, "The bag is ruined. Whoever was waiting for it is going to be very unhappy.");
     }
   }
   onShortcut(label: string) {
     const p = this.host.player;
     p.padT = Math.max(p.padT, 3.4); p.nitro = Math.min(1, p.nitro + 0.3);
-    this.host.popup(`${label}  +BOOST`, "#7dffb2");
+    this.host.popup(`${label}  +BOOST`, "#7dffb2"); this.host.sfx("obj");
   }
   /** called when the player crosses the finish line */
   onFinish(raceT: number) {
@@ -102,6 +108,7 @@ export class Mission {
   tick(dt: number, raceT: number, racing: boolean) {
     if (this.done || !racing) return;
     this.t += dt;
+    if (!this.started) { this.started = true; this.host.sfx("start"); }
     const P = this.host.player, c = this.cfg;
     this.heat = Math.max(0, this.heat - 0.04 * dt);
     if (P.v < P.vmax * 0.8) this.heat = Math.min(1, this.heat + 0.12 * dt);
@@ -109,7 +116,7 @@ export class Mission {
     // radio comms
     while (this.commIdx < this.comms.length && P.dist >= this.comms[this.commIdx].at) {
       const m = this.comms[this.commIdx++];
-      this.host.caption(m.who, m.text, m.ms ?? 3400);
+      this.host.caption(m.who, m.text, m.ms ?? 3400, m.alt);
       if (m.music) this.host.music(m.music);
       if (m.siren !== undefined) { this.sirenComm = m.siren; }
       if (m.env) this.host.setEnv(m.env);
@@ -120,6 +127,8 @@ export class Mission {
     if (c.timeLimit) {
       timeLeft = c.timeLimit - raceT;
       if (timeLeft <= 0) { this.finish(false, "Too late. The customer left."); return; }
+      const sec = Math.ceil(timeLeft);
+      if (timeLeft < 16 && sec !== this.lastSec) { this.lastSec = sec; this.host.sfx(timeLeft < 7 ? "urgent" : "warn"); }
     }
 
     // scripted riders
@@ -140,7 +149,7 @@ export class Mission {
         if (dz > 0 && dz < 3.4 && Math.abs(dx) < 1.0) {
           this.caught += 36 * dt;
           this.host.nudge(Math.sign(dx || 1) * 2.8, 1 - 0.5 * dt);
-          if (this.t - this.lastCaughtPopup > 3.5) { this.lastCaughtPopup = this.t; this.host.popup("HE'S ON YOU!", "#ff6b6b"); }
+          if (this.t - this.lastCaughtPopup > 3.5) { this.lastCaughtPopup = this.t; this.host.popup("HE'S ON YOU!", "#ff6b6b"); this.host.sfx("caught"); }
         } else if (dz > 7 || dz < 0) this.caught = Math.max(0, this.caught - 8 * dt);
         rv.slow = Math.min(1, rv.slow + 0.4 * dt);
         if (dz > -40 && dz < 60) pursuerNear = true;
@@ -161,7 +170,7 @@ export class Mission {
         if (this.lostT > 6) { this.finish(false, "He's gone. You lost him."); return; }
         if (this.follow >= 1) { this.finish(true, "You caught him."); return; }
       } else if (rv.role === "ally") {
-        if (!r.active) { if (P.dist >= rv.at) { r.active = true; r.dist = P.dist - 30; r.x = P.x + (rv.idx % 2 ? 1.8 : -1.8); r.v = P.v * 1.1; } else continue; }
+        if (!r.active) { if (P.dist >= rv.at) { r.active = true; r.dist = P.dist - 30; r.x = P.x + (rv.idx % 2 ? 1.8 : -1.8); r.v = P.v * 1.1; this.host.sfx("ally"); } else continue; }
         const want = P.dist + 7 + (rv.idx % 3) * 6;
         r.v = clamp(P.v + (want - r.dist) * 1.3, r.vmax * 0.4, r.vmax * 1.15 * r.skill);
         r.dist += r.v * dt;
@@ -180,6 +189,7 @@ export class Mission {
     if (this.caught >= 100) { this.finish(false, "He grabbed the bag."); return; }
 
     // sirens near roadblocks
+    for (const b of this.blocks) if (!this.warnedBlocks.has(b) && b - P.dist < 240 && b - P.dist > 0) { this.warnedBlocks.add(b); this.host.sfx("block"); this.host.popup("ROADBLOCK AHEAD", "#ff9b6b"); }
     const nearBlock = this.blocks.some((b) => b - P.dist > -30 && b - P.dist < 320);
     const want = this.sirenComm || nearBlock || (c.objective === "escape" && pursuerNear && false);
     if (want !== this.sirenOn) { this.sirenOn = want; this.host.siren(want); }

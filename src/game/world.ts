@@ -4,6 +4,7 @@ import { buildBoostPads, buildLagos, type BoostPad } from "./lagos";
 import { Track } from "./track";
 import { inWater, themeAt, type MapDef, type Theme } from "./maps";
 import { bendWorld, ribbon, wall } from "./trackMesh";
+import { buildElevated } from "./structure";
 
 export const GOAL = 5000;
 export const LANE_W = 2.4;
@@ -135,14 +136,20 @@ const PAL = {
   warm: [0xd9cdb8, 0xc8d4cf, 0xe3c7a0, 0xb7c0d3, 0xe6b8a8, 0xd8d8c4, 0xa9c4a0, 0xf0d890],
   glass: [0x7fa7c4, 0x8fb2c9, 0x6f8fb0, 0x9fbad0, 0xaac3d6, 0x86a0b8],
   night: [0x4a3d63, 0x2f4a5c, 0x5b3a52, 0x39495f, 0x6a4b3a, 0x33403f],
-  port: [0xb9b3a4, 0x9aa3a8, 0xc7bba2, 0xa6aeb6]
+  port: [0xb9b3a4, 0x9aa3a8, 0xc7bba2, 0xa6aeb6],
+  estate: [0xf0e6d2, 0xe8d8c0, 0xd9e4d6, 0xf4efe3, 0xe3d0b6, 0xcfdcd0],
+  coast: [0xf4efe3, 0xe6d9bf, 0xd7e6e8, 0xf0d9b0, 0xcfe0dc],
+  tin: [0xb08a6a, 0x9a7a5c, 0xc2a07a, 0x8e7a68, 0xa68a72, 0x7f8f88]
 };
 const THEME: Record<Theme, ThemeParams> = {
   mainland: { step: 13, cls: [0.45, 0.4, 0.15, 0], gap: 11.8, gapVar: 8, palette: PAL.warm, poles: true, lamps: 50, palms: 70, umbrellas: 44, neon: 0 },
   market: { step: 9, cls: [0.8, 0.2, 0, 0], gap: 10.2, gapVar: 3, palette: PAL.warm, poles: true, lamps: 60, palms: 140, umbrellas: 16, neon: 0 },
   island: { step: 15, cls: [0.1, 0.25, 0.3, 0.35], gap: 13, gapVar: 9, palette: PAL.glass, poles: false, lamps: 38, palms: 36, umbrellas: 400, neon: 0 },
   nightlife: { step: 12, cls: [0.15, 0.45, 0.3, 0.1], gap: 11, gapVar: 5, palette: PAL.night, poles: false, lamps: 34, palms: 60, umbrellas: 400, neon: 0.55 },
-  port: { step: 40, cls: [0.5, 0.3, 0.2, 0], gap: 16, gapVar: 12, palette: PAL.port, poles: true, lamps: 70, palms: 400, umbrellas: 400, neon: 0 }
+  port: { step: 40, cls: [0.5, 0.3, 0.2, 0], gap: 16, gapVar: 12, palette: PAL.port, poles: true, lamps: 70, palms: 400, umbrellas: 400, neon: 0 },
+  suburb: { step: 24, cls: [0.55, 0.35, 0.1, 0], gap: 14, gapVar: 10, palette: PAL.estate, poles: false, lamps: 34, palms: 38, umbrellas: 400, neon: 0 },
+  coast: { step: 46, cls: [0.7, 0.3, 0, 0], gap: 20, gapVar: 14, palette: PAL.coast, poles: false, lamps: 46, palms: 16, umbrellas: 400, neon: 0 },
+  waterfront: { step: 7, cls: [0.9, 0.1, 0, 0], gap: 9.4, gapVar: 2.2, palette: PAL.tin, poles: true, lamps: 70, palms: 220, umbrellas: 14, neon: 0 }
 };
 
 export function buildWorld(scene: THREE.Scene, opts: WorldOpts): World {
@@ -421,6 +428,9 @@ export function buildWorld(scene: THREE.Scene, opts: WorldOpts): World {
   // ---- Lagos props (footbridges, bus stops, kiosks, people, bunting, lagoon + bridge) + boost pads
   const lagos = buildLagos(group, track, map, L, rnd, ROAD_HALF, crowd);
   const padObj = buildBoostPads(group, GOAL, rnd, laneX);
+
+  // flyover / bridge supports (retaining walls, deck beam, piers, parapets) so the road never hangs in mid-air
+  buildElevated(group, track, L, ROAD_HALF);
 
   // lay everything built along the straight road onto the winding route
   bendWorld(group, track);

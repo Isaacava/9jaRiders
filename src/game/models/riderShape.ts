@@ -52,7 +52,26 @@ export const RIDER_LOOKS: Record<string, RiderLook> = {
   // the Circuit's man in the club / security
   guard: { outfit: "jacket", build: "tall", skin: 0x2f1c14, hair: 0x0a0a0a, hairStyle: "fade", jacket: 0x16171b, trim: 0x16171b, pants: 0x16171b, boots: 0x0e0f12, shorts: false, female: false, beard: true, hoops: false, glasses: true, lens: 0x050505, tee: true },
   // locs in a bun, leather jacket, aviator-dark lenses, tall
-  chidi: { outfit: "jacket", build: "tall", skin: 0x5b3a24, hair: 0x1a120d, hairStyle: "locs", jacket: 0x6b3f1e, trim: 0xe0a526, pants: 0x20242b, boots: 0x14100c, shorts: false, female: false, beard: true, hoops: false, glasses: true, lens: 0x0d0d0d, tee: false }
+  chidi: { outfit: "jacket", build: "tall", skin: 0x5b3a24, hair: 0x1a120d, hairStyle: "locs", jacket: 0x6b3f1e, trim: 0xe0a526, pants: 0x20242b, boots: 0x14100c, shorts: false, female: false, beard: true, hoops: false, glasses: true, lens: 0x0d0d0d, tee: false },
+  // ------------------------------------------------------------- STORY CAST, part 2 (new districts)
+  // Titi: Aboki's little sister, school uniform colours, neat braids
+  titi: { outfit: "crop", build: "slim", skin: 0x6e4630, hair: 0x120d0b, hairStyle: "braids", jacket: 0x2e6bd1, trim: 0xffffff, pants: 0x1a2a55, boots: 0xf2f2f2, shorts: false, female: true, beard: false, hoops: false, glasses: false, lens: 0, tee: true },
+  // Amaka Obi: investigative journalist, sharp teal blazer, short natural hair
+  amaka: { outfit: "jacket", build: "std", skin: 0x4a2f20, hair: 0x0a0a0a, hairStyle: "afro", jacket: 0x0e6b6b, trim: 0xf2f2f2, pants: 0x1b1f2a, boots: 0x15161a, shorts: false, female: true, beard: false, hoops: true, glasses: true, lens: 0x1a2a30, tee: true },
+  // Alhaji Bello: the bike's owner, white kaftan and a cap, grey beard
+  alhaji: { outfit: "kaftan", build: "stocky", skin: 0x5b3a24, hair: 0xe6e6e6, hairStyle: "fila", jacket: 0xf2efe6, trim: 0xb89b4a, pants: 0xf2efe6, boots: 0x2b2118, shorts: false, female: false, beard: true, hoops: false, glasses: false, lens: 0, tee: false },
+  // The Chairman: the man behind The Circuit. Immaculate agbada, gold trim, dark glasses
+  chairman: { outfit: "kaftan", build: "tall", skin: 0x3a2418, hair: 0x0a0a0a, hairStyle: "fila", jacket: 0x5b1730, trim: 0xe0b43a, pants: 0x5b1730, boots: 0x0e0c0a, shorts: false, female: false, beard: true, hoops: false, glasses: true, lens: 0x0a0a0a, tee: false },
+  // Ayo: danfo conductor from Oshodi, loud, quick, yellow vest over a football shirt
+  ayo: { outfit: "jacket", build: "slim", skin: 0x6b4226, hair: 0x0a0a0a, hairStyle: "cap", jacket: 0xd8392f, trim: 0xf2c230, pants: 0x2a3340, boots: 0x3a2a1c, shorts: false, female: false, beard: false, hoops: false, glasses: false, lens: 0, tee: true },
+  // Tunde: Seyi's older brother, quiet, hoodie colours, tired eyes
+  tunde: { outfit: "jacket", build: "tall", skin: 0x6b4226, hair: 0x0a0a0a, hairStyle: "fade", jacket: 0x3a4a5a, trim: 0xd8392f, pants: 0x1a1d24, boots: 0x2b2b2b, shorts: false, female: false, beard: true, hoops: false, glasses: false, lens: 0, tee: true },
+  // Pa Ebi: old boatman of Makoko, faded blue kaftan and a straw-coloured fila
+  ebi: { outfit: "kaftan", build: "std", skin: 0x3e261c, hair: 0xdedede, hairStyle: "fila", jacket: 0x2d4a6b, trim: 0xc9b57a, pants: 0x2d4a6b, boots: 0x3a2a1c, shorts: false, female: false, beard: true, hoops: false, glasses: false, lens: 0, tee: false },
+  // Madam Grace: Titi's headmistress, ankara, gele
+  grace: { outfit: "ankara", build: "std", skin: 0x4a2f20, hair: 0x7a1f8c, hairStyle: "gele", jacket: 0x7a1f8c, trim: 0xf2c230, pants: 0x2b2b3a, boots: 0x3a2a1c, shorts: false, female: true, beard: false, hoops: true, glasses: true, lens: 0x1a1a22, tee: false },
+  // Inspector Danjuma: airport-road police inspector, Hausa, tall, navy cap
+  danjuma: { outfit: "jacket", build: "tall", skin: 0x5a3a28, hair: 0x14213d, hairStyle: "cap", jacket: 0x1f2d4a, trim: 0xf2c230, pants: 0x1a2236, boots: 0x111111, shorts: false, female: false, beard: true, hoops: false, glasses: false, lens: 0, tee: false },
 };
 
 type R2 = readonly [number, number]; // [half-width x, half-depth z]
